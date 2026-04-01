@@ -8,7 +8,7 @@
         name: bastion
         ansible_host: "{{ bastion_host }}"
         ansible_port: "{{ bastion_port | default(22) }}"
-        ansible_user: "{{ student_user }}"
+        ansible_user: "{{ bastion_user | default('lab-user') }}"
         ansible_password: "{{ bastion_password }}"
         ansible_ssh_common_args: "-o StrictHostKeyChecking=no"
 
@@ -22,11 +22,8 @@
       register: r_validate
       ignore_errors: true
 
-    - name: Show output
-      ansible.builtin.debug:
-        msg: "{{ r_validate.stdout }}"
-
-    - name: Fail if validation failed
-      ansible.builtin.fail:
-        msg: "Module 1 validation failed"
-      when: r_validate.rc != 0
+    - name: Report validation result
+      validation_check:
+        check: "{{ r_validate.rc == 0 }}"
+        pass_msg: "{{ r_validate.stdout | trim }}"
+        error_msg: "{{ r_validate.stdout | trim }}\n{{ r_validate.stderr | trim }}"
