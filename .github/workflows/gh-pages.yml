@@ -3,9 +3,7 @@ name: github pages
 on:
   workflow_dispatch:
   push:
-    branches: 
-     - main
-     - summit26
+    branches: [main, summit26]
     paths-ignore:
       - "README.adoc"
       - ".gitignore"
