@@ -50,6 +50,8 @@ curl -k -X POST \
 +
 * Upon successful execution, you will receive a JSON response confirming the integration has been created and tested.
 * At this point, *ACS* can securely access images stored in *Quay* and perform scans automatically.
++
+NOTE: For more details on configuring Quay Container Registry as a scanner integration, refer to the link:https://docs.redhat.com/en/documentation/red_hat_advanced_cluster_security_for_kubernetes/4.9/html/integrating/integrate-with-image-vulnerability-scanners#integrate-with-qcr-scanner_integrate-with-image-vulnerability-scanners[official Red Hat ACS documentation^].
 
 ---
 
