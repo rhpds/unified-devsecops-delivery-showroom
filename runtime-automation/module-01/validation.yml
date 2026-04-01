@@ -1,8 +1,32 @@
 ---
-- name: Module 01 - Validation
+# Module 1 — run existing validate-module-1.sh on bastion
+- name: Build SSH inventory
   hosts: localhost
   gather_facts: false
   tasks:
-    - name: Validation placeholder
+    - ansible.builtin.add_host:
+        name: bastion
+        ansible_host: "{{ bastion_host }}"
+        ansible_port: "{{ bastion_port | default(22) }}"
+        ansible_user: "{{ student_user }}"
+        ansible_password: "{{ bastion_password }}"
+        ansible_ssh_common_args: "-o StrictHostKeyChecking=no"
+
+- name: Module 1 Validation — run validate-module-1.sh on bastion
+  hosts: bastion
+  gather_facts: false
+  tasks:
+    - name: Run validate-module-1.sh
+      ansible.builtin.shell: |
+        bash $HOME/lab-assets/validate-module-1.sh
+      register: r_validate
+      ignore_errors: true
+
+    - name: Show output
       ansible.builtin.debug:
-        msg: "Module 01 validation - to be implemented"
+        msg: "{{ r_validate.stdout }}"
+
+    - name: Fail if validation failed
+      ansible.builtin.fail:
+        msg: "Module 1 validation failed"
+      when: r_validate.rc != 0
