@@ -1,0 +1,8 @@
+---
+- name: Module 01 - Validation
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Validation placeholder
+      ansible.builtin.debug:
+        msg: "Module 01 validation - to be implemented"
