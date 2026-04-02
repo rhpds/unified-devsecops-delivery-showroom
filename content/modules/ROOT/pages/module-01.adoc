@@ -621,6 +621,6 @@ pass:[<script type="text/plain" id="solve-module-1" style="display: none;">~/lab
 
 pass:[<script type="text/plain" id="validate-module-1" style="display: none;">~/lab-assets/validate-module-1.sh</script>]
 
-pass:[<div class="module-buttons"><button class="solve-button" data-solve-script="solve-module-1">✅ Solve Module 1</button><button class="validate-button" data-validate-script="validate-module-1">🔍 Validate Module 1</button></div>]
+pass:[<div class="module-buttons"><button class="solve-button" data-solve-script="solve-module-1">✅ Solve</button><button class="validate-button" data-validate-script="validate-module-1">🔍 Validate</button></div>]
 
 include::partial$execute-button-init.adoc[]
