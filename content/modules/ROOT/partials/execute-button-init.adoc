@@ -54,7 +54,7 @@
     box-shadow: 0 2px 4px rgba(0,0,0,0.2); display: inline-block;
 }
 .validate-button:hover { background: #0056b3; transform: translateY(-2px); }
-.validate-button.success { background: #27ae60; }
+.validate-button.success { background: #0056b3; }
 
 /* Hidden script blocks */
 .send-to-hidden {
