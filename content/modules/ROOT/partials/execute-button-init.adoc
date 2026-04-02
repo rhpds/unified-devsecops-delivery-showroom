@@ -77,11 +77,11 @@
     });
 
     // Initialize standalone buttons for hidden scripts
-    document.querySelectorAll('[data-send-to-script], [data-solve-script]').forEach(function(btn) {
+    document.querySelectorAll('[data-send-to-script], [data-solve-script], [data-validate-script]').forEach(function(btn) {
       if (btn.dataset.sendToInitialized) return;
 
       btn.onclick = function() {
-        const scriptId = btn.dataset.sendToScript || btn.dataset.solveScript;
+        const scriptId = btn.dataset.sendToScript || btn.dataset.solveScript || btn.dataset.validateScript;
         console.log('[Send-To] Button clicked, script ID:', scriptId);
         const scriptBlock = document.getElementById(scriptId);
         if (scriptBlock) {
