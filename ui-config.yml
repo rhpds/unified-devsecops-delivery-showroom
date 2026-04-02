@@ -56,5 +56,3 @@ tabs:
   - name: Argo CD
     url: 'https://argocd-server-openshift-gitops.${DOMAIN}'
     external: false
-
-skipModuleEnabled: true
