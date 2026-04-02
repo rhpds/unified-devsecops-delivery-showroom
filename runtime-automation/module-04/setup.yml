@@ -1,8 +1,0 @@
----
-- name: Module 04 - Setup
-  hosts: localhost
-  gather_facts: false
-  tasks:
-    - name: Setup placeholder
-      ansible.builtin.debug:
-        msg: "Module 04 setup - to be implemented"
