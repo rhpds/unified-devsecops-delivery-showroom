@@ -764,8 +764,8 @@ ec validate image \
 
 ---
 
-pass:[<script type=”text/plain” id=”solve-module-4” style=”display: none;”>~/lab-assets/solve-module-4.sh</script>]
+pass:[<script type="text/plain" id="solve-module-4" style="display: none;">~/lab-assets/solve-module-4.sh</script>]
 
-pass:[<div style=”text-align: center; margin: 1rem 0;”><button class=”solve-button” data-solve-script=”solve-module-4”>✅ Solve Module 4</button></div>]
+pass:[<div style="text-align: center; margin: 1rem 0;"><button class="solve-button" data-solve-script="solve-module-4">✅ Solve Module 4</button></div>]
 
 include::partial$execute-button-init.adoc[]
