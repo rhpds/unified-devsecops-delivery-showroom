@@ -282,7 +282,7 @@ image::tas_commit_client_logout_settings.png[New Client Logout Settings,align="c
 
 * In Showroom terminal, run the following command to apply the *RHTAS* Instance CR:
 
-[source, role="execute", subs="attributes"]
+[source, role="send-to", subs="attributes"]
 ----
 cat << 'EOF' >> ~/.bashrc
 export TAS_CHAINS_CLIENT_ID={tas_chains_client_id}
@@ -461,7 +461,7 @@ image::tas_verify_deploy.png[Verify RHTAS deploy,align="center",link=self,window
 
 . First, retrieve the Keycloak admin credentials from the keycloak-initial-admin secret in the tssc-keycloak namespace:
 +
-[source, role="execute", subs="attributes"]
+[source, role="send-to", subs="attributes"]
 ----
 export keycloak_admin_user=$(oc get secret keycloak-initial-admin -n tssc-keycloak -o jsonpath='{.data.username}' | base64 -d)
 export keycloak_admin_password=$(oc get secret keycloak-initial-admin -n tssc-keycloak -o jsonpath='{.data.password}' | base64 -d)
@@ -469,7 +469,7 @@ export keycloak_admin_password=$(oc get secret keycloak-initial-admin -n tssc-ke
 +
 . Next, use the credentials to request an access token:
 +
-[source, role="execute", subs="attributes"]
+[source, role="send-to", subs="attributes"]
 ----
 KEYCLOAK_ACCESS_TOKEN=$(curl -s -X POST "${KEYCLOAK_URL}/realms/master/protocol/openid-connect/token" \
 -H "Content-Type: application/x-www-form-urlencoded" \
@@ -481,7 +481,7 @@ KEYCLOAK_ACCESS_TOKEN=$(curl -s -X POST "${KEYCLOAK_URL}/realms/master/protocol/
 +
 . Next, retrieve the client secret for the trusted-artifact-signer client from the tas-chains realm:
 +
-[source, role="execute", subs="attributes"]
+[source, role="send-to", subs="attributes"]
 ----
 export TAS_CHAINS_CLIENT_SECRET=$(curl -s -X GET "${KEYCLOAK_URL}/admin/realms/$TAS_CHAINS_REALM/clients?clientId=$TAS_CHAINS_CLIENT_ID" \
   -H "Authorization: Bearer $KEYCLOAK_ACCESS_TOKEN" | jq -r '.[0].secret')
@@ -489,7 +489,7 @@ export TAS_CHAINS_CLIENT_SECRET=$(curl -s -X GET "${KEYCLOAK_URL}/admin/realms/$
 +
 . Finally, create the Kubernetes Secret containing the OIDC configuration, then deploy the refresher application:
 +
-[source, role="execute"]
+[source, role="send-to"]
 ----
 envsubst < ~/lab-assets/oidc-info-secret.yml | oc apply -n openshift-pipelines -f -
 oc apply -f ~/lab-assets/oidc-refresher-app.yml -n openshift-pipelines
@@ -497,7 +497,7 @@ oc apply -f ~/lab-assets/oidc-refresher-app.yml -n openshift-pipelines
 +
 . Use the following command to continuously monitor the refresher pod until it reaches the Running state:
 +
-[source, role="execute"]
+[source, role="send-to"]
 ----
 watch -n 2 "oc get pods -n openshift-pipelines | awk '/^oidc-token-refresher/ { print; exit }'"
 ----
@@ -521,7 +521,7 @@ watch -n 2 "oc get pods -n openshift-pipelines | awk '/^oidc-token-refresher/ { 
 
 * Patch the Tekton configuration to point *Tekton Chains* at the *RHTAS* services and token source:
 
-[source, role="execute"]
+[source, role="send-to"]
 ----
 oc patch tektonconfig config -n openshift-pipelines --type=merge  --patch "$(cat ~/lab-assets/tekton-chains-patch.yml)"
 ----
@@ -568,7 +568,7 @@ transparency:
 
 * Create a temporary service account with the permissions required to run buildah, which requires elevated SCCs.
 
-[source, role="execute", subs="attributes"]
+[source, role="send-to", subs="attributes"]
 ----
 oc create sa chains-signing-image-tester -n tssc-app-ci
 oc adm policy add-scc-to-user anyuid -z chains-signing-image-tester -n tssc-app-ci
@@ -608,7 +608,7 @@ steps:
 
 * Run the *Tekton Task* that builds and pushes an image:
 
-[source, role="execute"]
+[source, role="send-to"]
 ----
 oc create -f ~/lab-assets/example-image-sign.yml -n tssc-app-ci
 ----
@@ -616,7 +616,7 @@ oc create -f ~/lab-assets/example-image-sign.yml -n tssc-app-ci
 * *Tekton* will execute the task, and upon successful completion, *Tekton Chains* will automatically call Cosign to sign the resulting image.
 * Wait until the PipelineTask status shows Succeeded = true.
 
-[source,role="execute"]
+[source,role="send-to"]
 ----
 watch -n 2 "oc get taskrun -n tssc-app-ci"
 ----
@@ -786,7 +786,7 @@ image::Cosign_signature_shield.png[Cosign signature shield,align="center",link=s
 
 Once verification is complete, remove the elevated permissions and delete the service account:
 
-[source, role="execute", subs="attributes"]
+[source, role="send-to", subs="attributes"]
 ----
 oc adm policy remove-scc-from-user anyuid -z chains-signing-image-tester -n tssc-app-ci
 oc adm policy remove-scc-from-user privileged -z chains-signing-image-tester -n tssc-app-ci
@@ -795,9 +795,17 @@ oc delete sa chains-signing-image-tester -n tssc-app-ci
 
 ===  Module 2: Summary
 
-* In this module, you addressed the second customer challenge: “We cannot trust that our code and images were really produced by us, or that they haven’t been modified along the way.” 
+* In this module, you addressed the second customer challenge: “We cannot trust that our code and images were really produced by us, or that they haven’t been modified along the way.”
 * As a consultant, you learned how to deploy *Red Hat Trusted Artifact Signer (RHTAS)* and implement keyless signing for both code commits and container images, ensuring artifacts are cryptographically verifiable and protected from tampering.
-* For customers, this means build integrity is no longer assumed — it is provable. They can verify who authored the code, which system built the image and whether the artifact has been altered since it was produced. 
+* For customers, this means build integrity is no longer assumed — it is provable. They can verify who authored the code, which system built the image and whether the artifact has been altered since it was produced.
 * For technical sellers, this is the moment where the story resonates with customers: “This is how we prove your software really came from you and was not tampered with.”
-* With identity and integrity established, the next challenge becomes: “How do we keep developers fast without compromising security?” 
+* With identity and integrity established, the next challenge becomes: “How do we keep developers fast without compromising security?”
 * In Module 3, you will focus on developer workflows and show how *Red Hat Advanced Developer Suite (RHADS)* security guardrails are built into developer flows without slowing developers down.
+
+---
+
+pass:[<script type=”text/plain” id=”solve-module-2” style=”display: none;”>~/lab-assets/solve-module-2.sh</script>]
+
+pass:[<div style=”text-align: center; margin: 1rem 0;”><button class=”solve-button” data-solve-script=”solve-module-2”>✅ Solve Module 2</button></div>]
+
+include::partial$execute-button-init.adoc[]

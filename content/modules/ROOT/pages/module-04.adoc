@@ -22,7 +22,7 @@ NOTE: Enterprise Contract is the policy engine that governs whether an applicati
 * You will use the ACS API to create the integration programmatically, mirroring how platform teams automate integration setup in production environments.
 * In the Showroom terminal, run the following command to create the Quay integration:
 +
-[source, role="execute", subs="attributes"]
+[source, role="send-to", subs="attributes"]
 ----
 curl -k -X POST \
   -u "{rhacs_admin_user}:{rhacs_admin_password}" \
@@ -61,14 +61,14 @@ NOTE: For more details on configuring Quay Container Registry as a scanner integ
 * This next command retrieves vulnerability data for the image and returns a detailed scan report.
 * In the Showroom terminal, run:
 
-[source, role="execute", subs="attributes"]
+[source, role="send-to", subs="attributes"]
 ----
 roxctl image scan --image={quay_host}/tssc/tekton-chains-test:latest
 ----
 
 * This command evaluates the image against ACS policies and reports whether it meets deployment requirements.
 
-[source, role="execute", subs="attributes"]
+[source, role="send-to", subs="attributes"]
 ----
 roxctl image check --image={quay_host}/tssc/tekton-chains-test:latest
 ----
@@ -416,7 +416,7 @@ image::open_new_terminal.png[open_new_terminal,align="center"]
 +
 Then run the following command, you may be prompted by your browser to allow paste access into the terminal. If so, approve the prompt to proceed.
 +
-[source, role="execute"]
+[source, role="send-to"]
 ----
 git config --global --list
 ----
@@ -440,7 +440,7 @@ image::Index_Markdown_Updated.png[Updated Index Markdown File,link=self,window=b
 +
 . To begin commiting your code to the repository, run the following command to add your changes to staging and commiting your changes:
 +
-[source, role="execute"]
+[source, role="send-to"]
 ----
 git add .
 git commit -m "feat: test secure signing."
@@ -488,7 +488,7 @@ image::Gitsign_Commit_Signed.png[Successfully Signed Commit with Gitsign,link=se
 +
 . Push the code to the repository with the below command:
 +
-[source, role="execute"]
+[source, role="send-to"]
 ----
 git push origin master
 ----
@@ -761,3 +761,11 @@ ec validate image \
 * For consultants, this module provides a reusable pattern for embedding policy enforcement and release governance into real-world CI and CD pipelines, without introducing friction or slowing development teams down.
 * For technical sellers, this completes the workshop story: *Red Hat Advanced Developer Suite (RHADS)* prevents unsafe releases and turns every deployment into a controlled, compliant, and predictable outcome.
 * The key takeaway is this: with RHADS, developer velocity is preserved because trust is verified automatically, and enterprise risk is reduced because policy-driven guardrails ensure only trusted, compliant artifacts are promoted to production.
+
+---
+
+pass:[<script type=”text/plain” id=”solve-module-4” style=”display: none;”>~/lab-assets/solve-module-4.sh</script>]
+
+pass:[<div style=”text-align: center; margin: 1rem 0;”><button class=”solve-button” data-solve-script=”solve-module-4”>✅ Solve Module 4</button></div>]
+
+include::partial$execute-button-init.adoc[]

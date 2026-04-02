@@ -101,7 +101,7 @@ image::keycloak_realmimport.png[Keycloak Realm Import,align="center",link=self,w
 
 * Execute the following command in the Showroom terminal to set the required variables for this module.
 
-[source, role="execute", subs="attributes"]
+[source, role="send-to", subs="attributes"]
 ----
 cat << 'EOF' >> ~/.bashrc
 export TPA_REALM={tpa_realm}
@@ -115,7 +115,7 @@ source ~/.bashrc
 
 * Execute the following command to apply the configuration in the *keycloak-tpa-realm.yml* and import the new *tpa* realm configuration to the *tssc-keycloak* namespace.
 
-[source, role="execute"]
+[source, role="send-to"]
 ----
 envsubst '${TPA_REALM} ${TPA_CLI_CLIENT_SECRET} ${TPA_ADMIN_USERNAME} ${TPA_ADMIN_PASSWORD}' < ~/lab-assets/keycloak-tpa-realm.yml | oc apply -n tssc-keycloak -f -
 ----
@@ -370,7 +370,7 @@ image::cli_account_roles.png[cli_account_roles,align="center",link=self,window=b
 * The *RHTPA* components authenticate to the Identity Provider using an OIDC Client ID and Client Secret stored in a Kubernetes Secret.
 * Run the following command in the showroom terminal to create the *tpa-realm-cli-clients* secret:
 
-[source,role="execute"]
+[source,role="send-to"]
 ----
 envsubst < ~/lab-assets/tpa-cli-credentials.yml | oc apply -n tssc-tpa -f -
 ----
@@ -383,7 +383,7 @@ envsubst < ~/lab-assets/tpa-cli-credentials.yml | oc apply -n tssc-tpa -f -
 * The Custom Resource defines the desired state of the *RHTPA* deployment and instructs the *RHTPA Operator* to provision it's components.
 * Run the following command to apply the *RHTPA* Instance CR:
 
-[source,role="execute"]
+[source,role="send-to"]
 ----
 envsubst < ~/lab-assets/tpa-instance.yml | oc apply -n tssc-tpa -f -
 ----
@@ -512,7 +512,7 @@ image::tpa_server_pod.png[TPA Server Pod,align="center",link=self,window=blank]
 
 * In the Showroom terminal, run the following command to extract the external route for the RHTPA server:
 
-[source,role="execute"]
+[source,role="send-to"]
 ----
 export TPA_SERVER_URL="https://$(oc get route -l app.kubernetes.io/component=server -n tssc-tpa -o json \
   | jq -r '.items[0].spec.host')"
@@ -522,7 +522,7 @@ export TPA_SERVER_URL="https://$(oc get route -l app.kubernetes.io/component=ser
 * The CLI client does this by obtaining an access token from *Red Hat Build of Keycloak (RHBK)*, which is then included in each API call.
 * Run the following commands to discover the token endpoint and obtain an access token:
 
-[source,role="execute"]
+[source,role="send-to"]
 ----
 TOKEN_EP=$(curl "$KEYCLOAK_URL/realms/$TPA_REALM/.well-known/openid-configuration" | jq -r .token_endpoint)
 TOKEN=$(curl -s -X POST "$TOKEN_EP" \
@@ -533,7 +533,7 @@ TOKEN=$(curl -s -X POST "$TOKEN_EP" \
 
 * Use the token to POST an SBOM file to the ingestion API:
 
-[source,role="execute"]
+[source,role="send-to"]
 ----
 curl -X POST ${TPA_SERVER_URL}/api/v2/sbom?id=test-sbom  -H "Authorization: Bearer ${TOKEN}" -H "Content-Type: application/json" --data-binary @/home/lab-user/lab-assets/example-sbom.json
 ----
@@ -615,7 +615,10 @@ image::rhtpa_vulnerabilities_complete.png[rhtpa_vulnerabilities_complete,align="
 * And now that we know what is in our software, the next question naturally follows: “How do we know these artifacts haven’t been tampered with?” That is the next trust boundary we will solve.
 * Head to Module 2 to learn how to cryptographically sign and verify artifacts using *Red Hat Trusted Artifact Signer (RHTAS)*, ensuring every image you build can be traced, trusted and validated.
 
+---
 
+pass:[<script type=”text/plain” id=”solve-module-1” style=”display: none;”>~/lab-assets/solve-module-1.sh</script>]
 
+pass:[<div style=”text-align: center; margin: 1rem 0;”><button class=”solve-button” data-solve-script=”solve-module-1”>✅ Solve Module 1</button></div>]
 
- 
+include::partial$execute-button-init.adoc[]

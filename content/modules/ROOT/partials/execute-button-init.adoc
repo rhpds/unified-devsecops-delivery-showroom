@@ -1,0 +1,152 @@
+++++
+<style>
+.listingblock { position: relative; }
+.send-to-command-btn {
+    position: absolute; top: 0.5rem; right: 0.5rem;
+    background: #0066cc; color: white; border: none; border-radius: 4px;
+    padding: 0.5rem 1rem; font-size: 0.875rem; font-weight: 600;
+    cursor: pointer; transition: all 0.2s; z-index: 100;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    opacity: 0.3;
+}
+.send-to-command-btn:hover {
+    background: #0052a3;
+    transform: translateY(-2px);
+    opacity: 1;
+}
+.send-to-command-btn.success { background: #27ae60; }
+.send-to-command-btn.copied { background: #3498db; }
+.listingblock pre.send-to { padding-top: 3rem !important; }
+
+/* Standalone button style */
+.send-to-button {
+    background: #0066cc; color: white; border: none; border-radius: 4px;
+    padding: 0.75rem 1.5rem; font-size: 1rem; font-weight: 600;
+    cursor: pointer; transition: all 0.2s; margin: 1rem 0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2); display: inline-block;
+}
+.send-to-button:hover { background: #0052a3; transform: translateY(-2px); }
+.send-to-button.success { background: #27ae60; }
+
+/* Solve button style */
+.solve-button {
+    background: #28a745; color: white; border: none; border-radius: 4px;
+    padding: 0.75rem 1.5rem; font-size: 1rem; font-weight: 600;
+    cursor: pointer; transition: all 0.2s; margin: 1rem 0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2); display: inline-block;
+}
+.solve-button:hover { background: #218838; transform: translateY(-2px); }
+.solve-button.success { background: #27ae60; }
+
+/* Hidden script blocks */
+.send-to-hidden {
+    display: none !important;
+    visibility: hidden !important;
+    position: absolute !important;
+    width: 0 !important;
+    height: 0 !important;
+    overflow: hidden !important;
+}
+</style>
+<script>
+(function() {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+
+  function init() {
+    // Add buttons to code blocks with role=send-to
+    document.querySelectorAll('pre.send-to, .send-to').forEach(function(block) {
+      if (block.dataset.sendToButtonAdded) return;
+      const listingBlock = block.closest('.listingblock');
+      if (!listingBlock) return;
+
+      const btn = document.createElement('button');
+      btn.className = 'send-to-command-btn';
+      btn.innerHTML = '▶';
+
+      btn.onclick = function() {
+        const cmd = (block.querySelector('code') || block).textContent.trim();
+        sendToTerminal(cmd, btn);
+      };
+
+      listingBlock.appendChild(btn);
+      block.dataset.sendToButtonAdded = 'true';
+    });
+
+    // Initialize standalone buttons for hidden scripts
+    document.querySelectorAll('[data-send-to-script], [data-solve-script]').forEach(function(btn) {
+      if (btn.dataset.sendToInitialized) return;
+
+      btn.onclick = function() {
+        const scriptId = btn.dataset.sendToScript || btn.dataset.solveScript;
+        console.log('[Send-To] Button clicked, script ID:', scriptId);
+        const scriptBlock = document.getElementById(scriptId);
+        if (scriptBlock) {
+          const cmd = scriptBlock.textContent.trim();
+          console.log('[Send-To] Found script, executing:', cmd);
+          sendToTerminal(cmd, btn);
+        } else {
+          console.error('[Send-To] Script block not found:', scriptId);
+        }
+      };
+
+      btn.dataset.sendToInitialized = 'true';
+    });
+  }
+
+  function sendToTerminal(command, button) {
+    // Find wetty iframe - it's in the parent window
+    let wettyFrame = null;
+
+    try {
+      if (window.parent && window.parent !== window) {
+        const frames = window.parent.document.querySelectorAll('iframe');
+        for (let i = 0; i < frames.length; i++) {
+          const src = frames[i].src || '';
+          if (src.indexOf('/wetty') !== -1 || src.indexOf('/tty') !== -1) {
+            wettyFrame = frames[i];
+            break;
+          }
+        }
+      }
+    } catch (e) {
+      console.log('[Send-To] Cannot access parent:', e.message);
+    }
+
+    if (wettyFrame) {
+      // Send command via postMessage
+      wettyFrame.contentWindow.postMessage({
+        type: 'execute',
+        data: command + '\r'
+      }, '*');
+
+      // Store original text
+      const originalText = button.innerHTML;
+
+      button.classList.add('success');
+      button.innerHTML = '✓ Sent!';
+      setTimeout(function() {
+        button.classList.remove('success');
+        button.innerHTML = originalText;
+      }, 2000);
+    } else {
+      // Fallback to clipboard
+      navigator.clipboard.writeText(command).then(function() {
+        const originalText = button.innerHTML;
+        button.classList.add('copied');
+        button.innerHTML = '📋 Copied!';
+        setTimeout(function() {
+          button.classList.remove('copied');
+          button.innerHTML = originalText;
+        }, 2000);
+      }).catch(function() {
+        button.innerHTML = '✗ Failed';
+      });
+    }
+  }
+})();
+</script>
+++++
