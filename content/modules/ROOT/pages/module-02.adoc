@@ -804,8 +804,10 @@ oc delete sa chains-signing-image-tester -n tssc-app-ci
 
 ---
 
-pass:[<script type=”text/plain” id=”solve-module-2” style=”display: none;”>~/lab-assets/solve-module-2.sh</script>]
+pass:[<script type="text/plain" id="solve-module-2" style="display: none;">~/lab-assets/solve-module-2.sh</script>]
 
-pass:[<div style=”text-align: center; margin: 1rem 0;”><button class=”solve-button” data-solve-script=”solve-module-2”>✅ Solve Module 2</button></div>]
+pass:[<script type="text/plain" id="validate-module-2" style="display: none;">~/lab-assets/validate-module-2.sh</script>]
+
+pass:[<div class="module-buttons"><button class="solve-button" data-solve-script="solve-module-2">✅ Solve</button><button class="validate-button" data-validate-script="validate-module-2">🔍 Validate</button></div>]
 
 include::partial$execute-button-init.adoc[]
