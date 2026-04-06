@@ -68,25 +68,27 @@ def run_playbook(playbook_name, output_queue):
                 env=env
             )
 
-        # Stream output from tail
+        # Stream output from tail while playbook is running
         while playbook_process.poll() is None:
-            line = tail_process.stdout.readline()
-            if line:
-                output_queue.put(line)
-
-        # Give tail a moment to catch up
-        time.sleep(0.5)
-
-        # Read any remaining lines
-        while True:
-            line = tail_process.stdout.readline()
-            if not line:
+            try:
+                line = tail_process.stdout.readline()
+                if line:
+                    output_queue.put(line)
+            except:
                 break
-            output_queue.put(line)
 
-        # Kill tail process
+        # Playbook finished, kill tail and read final output directly from log file
         tail_process.terminate()
-        tail_process.wait()
+        tail_process.wait(timeout=1)
+
+        # Read any remaining lines directly from log file
+        time.sleep(0.2)  # Brief pause to let file writes flush
+        with open(log_file, 'r') as final_read:
+            # Skip to end of what we've already sent
+            all_lines = final_read.readlines()
+            # Just send the last few lines we might have missed
+            for line in all_lines[-10:]:
+                output_queue.put(line)
 
         # Wait for playbook to complete
         playbook_process.wait()
