@@ -351,7 +351,7 @@
 
         - name: Get Keycloak admin token
           ansible.builtin.shell: |
-              ADMIN_TOKEN=$(curl -s -X POST "{{ keycloak_url }}/realms/master/protocol/openid-connect/token" \
+              ADMIN_TOKEN=$(curl -s -X POST "{{ keycloak_admin_console }}/realms/master/protocol/openid-connect/token" \
                 -H "Content-Type: application/x-www-form-urlencoded" \
                 -d "client_id=admin-cli" \
                 -d "username={{ keycloak_admin_username }}" \
@@ -368,7 +368,7 @@
             - name: Get trusted-artifact-signer client ID from sso realm
               ansible.builtin.shell: |
                   SSO_CLIENT_ID=$(curl -s -H "Authorization: Bearer {{ admin_token.stdout }}" \
-                    "{{ keycloak_url }}/admin/realms/{{ tas_sso_realm }}/clients?clientId={{ tas_client_id }}" | jq -r '.[0].id // empty')
+                    "{{ keycloak_admin_console }}/admin/realms/{{ tas_sso_realm }}/clients?clientId={{ tas_client_id }}" | jq -r '.[0].id // empty')
                   echo "$SSO_CLIENT_ID"
               register: sso_client_id
               changed_when: false
@@ -379,7 +379,7 @@
               block:
                 - name: Delete client from sso realm
                   ansible.builtin.shell: |
-                      curl -s -X DELETE "{{ keycloak_url }}/admin/realms/{{ tas_sso_realm }}/clients/{{ sso_client_id.stdout }}" \
+                      curl -s -X DELETE "{{ keycloak_admin_console }}/admin/realms/{{ tas_sso_realm }}/clients/{{ sso_client_id.stdout }}" \
                         -H "Authorization: Bearer {{ admin_token.stdout }}"
                   changed_when: true
                   no_log: true
@@ -387,7 +387,7 @@
                 - name: Verify client deletion from sso realm
                   ansible.builtin.shell: |
                       VERIFY_CLIENT=$(curl -s -H "Authorization: Bearer {{ admin_token.stdout }}" \
-                        "{{ keycloak_url }}/admin/realms/{{ tas_sso_realm }}/clients?clientId={{ tas_client_id }}" | jq -r '.[0].id // empty')
+                        "{{ keycloak_admin_console }}/admin/realms/{{ tas_sso_realm }}/clients?clientId={{ tas_client_id }}" | jq -r '.[0].id // empty')
                       echo "$VERIFY_CLIENT"
                   register: verify_sso_client
                   changed_when: false
@@ -406,7 +406,7 @@
               ansible.builtin.shell: |
                   REALM_EXISTS=$(curl -s -o /dev/null -w "%{http_code}" \
                     -H "Authorization: Bearer {{ admin_token.stdout }}" \
-                    "{{ keycloak_url }}/admin/realms/{{ tas_chains_realm }}")
+                    "{{ keycloak_admin_console }}/admin/realms/{{ tas_chains_realm }}")
                   echo "$REALM_EXISTS"
               register: realm_exists
               changed_when: false
@@ -417,7 +417,7 @@
               block:
                 - name: Delete realm
                   ansible.builtin.shell: |
-                      curl -s -X DELETE "{{ keycloak_url }}/admin/realms/{{ tas_chains_realm }}" \
+                      curl -s -X DELETE "{{ keycloak_admin_console }}/admin/realms/{{ tas_chains_realm }}" \
                         -H "Authorization: Bearer {{ admin_token.stdout }}"
                   changed_when: true
                   no_log: true
@@ -426,7 +426,7 @@
                   ansible.builtin.shell: |
                       VERIFY_REALM=$(curl -s -o /dev/null -w "%{http_code}" \
                         -H "Authorization: Bearer {{ admin_token.stdout }}" \
-                        "{{ keycloak_url }}/admin/realms/{{ tas_chains_realm }}")
+                        "{{ keycloak_admin_console }}/admin/realms/{{ tas_chains_realm }}")
                       echo "$VERIFY_REALM"
                   register: verify_realm
                   changed_when: false
@@ -606,7 +606,7 @@
 
         - name: Get Keycloak admin access token
           ansible.builtin.shell: |
-              ADMIN_TOKEN=$(curl -s -X POST "{{ keycloak_url }}/realms/master/protocol/openid-connect/token" \
+              ADMIN_TOKEN=$(curl -s -X POST "{{ keycloak_admin_console }}/realms/master/protocol/openid-connect/token" \
                 -H "Content-Type: application/x-www-form-urlencoded" \
                 -d "client_id=admin-cli" \
                 -d "username={{ keycloak_admin_username }}" \
@@ -636,7 +636,7 @@
           ansible.builtin.shell: |
               REALM_EXISTS=$(curl -s -o /dev/null -w "%{http_code}" \
                 -H "Authorization: Bearer {{ kc_admin_token.stdout }}" \
-                "{{ keycloak_url }}/admin/realms/{{ tas_chains_realm }}")
+                "{{ keycloak_admin_console }}/admin/realms/{{ tas_chains_realm }}")
               echo "$REALM_EXISTS"
           register: check_realm
           changed_when: false
@@ -647,7 +647,7 @@
           block:
             - name: Create realm
               ansible.builtin.shell: |
-                  curl -s -X POST "{{ keycloak_url }}/admin/realms" \
+                  curl -s -X POST "{{ keycloak_admin_console }}/admin/realms" \
                     -H "Authorization: Bearer {{ kc_admin_token.stdout }}" \
                     -H "Content-Type: application/json" \
                     -d "{
@@ -673,7 +673,7 @@
         - name: Check if client exists in tas-chains realm
           ansible.builtin.shell: |
               CLIENT_EXISTS=$(curl -s -H "Authorization: Bearer {{ kc_admin_token.stdout }}" \
-                "{{ keycloak_url }}/admin/realms/{{ tas_chains_realm }}/clients?clientId={{ tas_client_id }}" | jq -r '.[0].id // empty')
+                "{{ keycloak_admin_console }}/admin/realms/{{ tas_chains_realm }}/clients?clientId={{ tas_client_id }}" | jq -r '.[0].id // empty')
               echo "$CLIENT_EXISTS"
           register: check_client
           changed_when: false
@@ -684,7 +684,7 @@
           block:
             - name: Create client
               ansible.builtin.shell: |
-                  curl -s -X POST "{{ keycloak_url }}/admin/realms/{{ tas_chains_realm }}/clients" \
+                  curl -s -X POST "{{ keycloak_admin_console }}/admin/realms/{{ tas_chains_realm }}/clients" \
                     -H "Authorization: Bearer {{ kc_admin_token.stdout }}" \
                     -H "Content-Type: application/json" \
                     -d "{
@@ -711,7 +711,7 @@
         - name: Get client ID for service account configuration
           ansible.builtin.shell: |
               CLIENT_ID=$(curl -s -H "Authorization: Bearer {{ kc_admin_token.stdout }}" \
-                "{{ keycloak_url }}/admin/realms/{{ tas_chains_realm }}/clients?clientId={{ tas_client_id }}" | jq -r '.[0].id')
+                "{{ keycloak_admin_console }}/admin/realms/{{ tas_chains_realm }}/clients?clientId={{ tas_client_id }}" | jq -r '.[0].id')
               echo "$CLIENT_ID"
           register: tas_client_uuid
           changed_when: false
@@ -724,7 +724,7 @@
         - name: Get service account user ID
           ansible.builtin.shell: |
               SERVICE_ACCOUNT_USER=$(curl -s -H "Authorization: Bearer {{ kc_admin_token.stdout }}" \
-                "{{ keycloak_url }}/admin/realms/{{ tas_chains_realm }}/clients/{{ tas_client_uuid.stdout }}/service-account-user" | jq -r '.id')
+                "{{ keycloak_admin_console }}/admin/realms/{{ tas_chains_realm }}/clients/{{ tas_client_uuid.stdout }}/service-account-user" | jq -r '.id')
               echo "$SERVICE_ACCOUNT_USER"
           register: service_account_user_id
           changed_when: false
@@ -732,7 +732,7 @@
 
         - name: Update service account with email verification
           ansible.builtin.shell: |
-              curl -s -X PUT "{{ keycloak_url }}/admin/realms/{{ tas_chains_realm }}/users/{{ service_account_user_id.stdout }}" \
+              curl -s -X PUT "{{ keycloak_admin_console }}/admin/realms/{{ tas_chains_realm }}/users/{{ service_account_user_id.stdout }}" \
                 -H "Authorization: Bearer {{ kc_admin_token.stdout }}" \
                 -H "Content-Type: application/json" \
                 -d "{
@@ -761,7 +761,7 @@
         - name: Check if client exists in sso realm
           ansible.builtin.shell: |
               SSO_CLIENT_EXISTS=$(curl -s -H "Authorization: Bearer {{ kc_admin_token.stdout }}" \
-                "{{ keycloak_url }}/admin/realms/{{ tas_sso_realm }}/clients?clientId={{ tas_client_id }}" | jq -r '.[0].id // empty')
+                "{{ keycloak_admin_console }}/admin/realms/{{ tas_sso_realm }}/clients?clientId={{ tas_client_id }}" | jq -r '.[0].id // empty')
               echo "$SSO_CLIENT_EXISTS"
           register: check_sso_client
           changed_when: false
@@ -772,7 +772,7 @@
           block:
             - name: Create client in sso realm
               ansible.builtin.shell: |
-                  curl -s -X POST "{{ keycloak_url }}/admin/realms/{{ tas_sso_realm }}/clients" \
+                  curl -s -X POST "{{ keycloak_admin_console }}/admin/realms/{{ tas_sso_realm }}/clients" \
                     -H "Authorization: Bearer {{ kc_admin_token.stdout }}" \
                     -H "Content-Type: application/json" \
                     -d "{
@@ -869,7 +869,7 @@
         - name: Get TAS client UUID
           ansible.builtin.shell: |
               TAS_CHAINS_CLIENT_ID_UUID=$(curl -s -H "Authorization: Bearer {{ kc_admin_token.stdout }}" \
-                "{{ keycloak_url }}/admin/realms/{{ tas_chains_realm }}/clients?clientId={{ tas_client_id }}" | jq -r '.[0].id')
+                "{{ keycloak_admin_console }}/admin/realms/{{ tas_chains_realm }}/clients?clientId={{ tas_client_id }}" | jq -r '.[0].id')
               echo "$TAS_CHAINS_CLIENT_ID_UUID"
           register: tas_chains_client_uuid
           changed_when: false
@@ -878,7 +878,7 @@
         - name: Get TAS client secret
           ansible.builtin.shell: |
               TAS_CHAINS_CLIENT_SECRET=$(curl -s -H "Authorization: Bearer {{ kc_admin_token.stdout }}" \
-                "{{ keycloak_url }}/admin/realms/{{ tas_chains_realm }}/clients/{{ tas_chains_client_uuid.stdout }}/client-secret" | jq -r '.value')
+                "{{ keycloak_admin_console }}/admin/realms/{{ tas_chains_realm }}/clients/{{ tas_chains_client_uuid.stdout }}/client-secret" | jq -r '.value')
               echo "$TAS_CHAINS_CLIENT_SECRET"
           register: tas_client_secret
           changed_when: false
