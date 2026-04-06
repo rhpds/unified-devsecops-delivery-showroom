@@ -24,15 +24,9 @@
     lab_assets_dir: "/home/lab-user/lab-assets"
 
   module_defaults:
-    kubernetes.core.k8s:
+    group/kubernetes.core.k8s:
       host: "{{ openshift_api_server_url }}"
-      username: "{{ openshift_cluster_admin_username }}"
-      password: "{{ openshift_cluster_admin_password }}"
-      validate_certs: false
-    kubernetes.core.k8s_info:
-      host: "{{ openshift_api_server_url }}"
-      username: "{{ openshift_cluster_admin_username }}"
-      password: "{{ openshift_cluster_admin_password }}"
+      api_key: "{{ hostvars['localhost']['openshift_token'] | default('') }}"
       validate_certs: false
 
   tasks:
@@ -49,6 +43,20 @@
         ansible_port: "{{ bastion_ssh_port }}"
         ansible_ssh_common_args: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
 
+    - name: Login to OpenShift and get token
+      ansible.builtin.shell:
+        cmd: |
+          oc login {{ openshift_api_server_url }} -u {{ openshift_cluster_admin_username }} -p {{ openshift_cluster_admin_password }} --insecure-skip-tls-verify=true
+          oc whoami -t
+      delegate_to: bastion
+      register: oc_login_result
+      changed_when: false
+      no_log: true
+
+    - name: Set OpenShift token fact
+      ansible.builtin.set_fact:
+        openshift_token: "{{ oc_login_result.stdout_lines[-1] }}"
+      no_log: true
     ###########################################
     # STEP 0: Reset Module 1 (reset-module-1.sh)
     ###########################################
@@ -59,10 +67,8 @@
         name: trustedprofileanalyzer
         namespace: "{{ tpa_namespace }}"
         state: absent
-        wait: true
-        wait_timeout: 300
 
-    - name: Verify RHTPA instance deletion
+    - name: Wait for RHTPA instance deletion
       kubernetes.core.k8s_info:
         api_version: trusted-profile-analyzer.redhat.com/v1alpha1
         kind: TrustedProfileAnalyzer
@@ -70,7 +76,7 @@
         namespace: "{{ tpa_namespace }}"
       register: tpa_verify
       until: tpa_verify.resources | length == 0
-      retries: 12
+      retries: 60
       delay: 5
       failed_when: false
 
@@ -109,8 +115,6 @@
         name: "{{ tpa_realm }}"
         namespace: "{{ keycloak_namespace }}"
         state: absent
-        wait: true
-        wait_timeout: 60
 
     - name: Verify TPA Realm deletion
       kubernetes.core.k8s_info:
@@ -120,8 +124,8 @@
         namespace: "{{ keycloak_namespace }}"
       register: realm_verify
       until: realm_verify.resources | length == 0
-      retries: 6
-      delay: 2
+      retries: 12
+      delay: 5
       failed_when: false
 
     - name: Display realm deletion result
