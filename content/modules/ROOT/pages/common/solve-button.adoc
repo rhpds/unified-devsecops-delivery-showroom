@@ -1,6 +1,5 @@
-// Solve Button Component
-// Usage: :module-name: module-01
-//        include::common/solve-button.adoc[]
+// Solve Button Component - CSS and JavaScript only
+// Placeholder divs should be added manually in module files
 
 [pass,subs="attributes"]
 ++++
@@ -14,8 +13,6 @@
 .solve-output-content {margin: 0 !important; padding: 0 !important; color: #00ff00 !important; background: transparent !important; font-family: 'Courier New', 'Courier', monospace; font-size: 14px; line-height: 1.8; white-space: pre-wrap; word-wrap: break-word; font-weight: 500;}
 @keyframes pulse {0%, 100% {opacity: 1;} 50% {opacity: 0.5;}}
 </style>
-
-<div class="solve-button-placeholder" data-module="{module-name}"></div>
 
 <script>
 (function(){if(typeof window.solveButtonInit!=='undefined')return;window.solveButtonInit=true;function createSolveSection(n){const s=document.createElement('div');s.className='solve-section';s.innerHTML=`<div class="solve-controls"><button class="solve-button" data-module="${n}">🚀 Solve Module</button></div><div class="solve-output" id="solve-output-${n}" style="display:none;"><pre class="solve-output-content" id="solve-output-content-${n}"></pre></div>`;return s}function executePlaybook(n){const o=document.getElementById(`solve-output-${n}`),c=document.getElementById(`solve-output-content-${n}`),b=document.querySelector(`.solve-button[data-module="${n}"]`);o.style.display='block';c.textContent='';b.disabled=true;b.textContent='⏳ Running...';const e=new EventSource(`/api/solve/${n}`);e.onmessage=function(d){if(d.data==='__DONE__'){e.close();b.disabled=false;b.textContent='🚀 Solve Module';return}try{const l=JSON.parse(d.data);c.textContent+=l}catch(x){c.textContent+=d.data+'\n'}o.scrollTop=o.scrollHeight};e.onerror=function(){console.error('SSE Error');e.close();b.disabled=false;b.textContent='🚀 Solve Module';c.textContent+='\n❌ Connection closed\n'};}document.addEventListener('DOMContentLoaded',function(){document.querySelectorAll('.solve-button-placeholder').forEach(p=>{const m=p.getAttribute('data-module'),s=createSolveSection(m);p.replaceWith(s)});document.querySelectorAll('.solve-button').forEach(b=>{b.addEventListener('click',function(){executePlaybook(this.getAttribute('data-module'))})})})})();

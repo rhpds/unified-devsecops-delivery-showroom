@@ -1,6 +1,5 @@
-// Validate Button Component
-// Usage: :module-name: module-01
-//        include::common/validate-button.adoc[]
+// Validate Button Component - CSS and JavaScript only
+// Placeholder divs should be added manually in module files
 
 [pass,subs="attributes"]
 ++++
@@ -14,8 +13,6 @@
 .validate-output-content {margin: 0 !important; padding: 0 !important; color: #00bfff !important; background: transparent !important; font-family: 'Courier New', 'Courier', monospace; font-size: 14px; line-height: 1.8; white-space: pre-wrap; word-wrap: break-word; font-weight: 500;}
 @keyframes pulse {0%, 100% {opacity: 1;} 50% {opacity: 0.5;}}
 </style>
-
-<div class="validate-button-placeholder" data-module="{module-name}"></div>
 
 <script>
 (function(){if(typeof window.validateButtonInit!=='undefined')return;window.validateButtonInit=true;function createValidateSection(n){const s=document.createElement('div');s.className='validate-section';s.innerHTML=`<div class="validate-controls"><button class="validate-button" data-module="${n}">✓ Validate Module</button></div><div class="validate-output" id="validate-output-${n}" style="display:none;"><pre class="validate-output-content" id="validate-output-content-${n}"></pre></div>`;return s}function executeValidation(n){const o=document.getElementById(`validate-output-${n}`),c=document.getElementById(`validate-output-content-${n}`),b=document.querySelector(`.validate-button[data-module="${n}"]`);o.style.display='block';c.textContent='';b.disabled=true;b.textContent='⏳ Validating...';const e=new EventSource(`/api/validate/${n}`);e.onmessage=function(d){if(d.data==='__DONE__'){e.close();b.disabled=false;b.textContent='✓ Validate Module';return}try{const l=JSON.parse(d.data);c.textContent+=l}catch(x){c.textContent+=d.data+'\n'}o.scrollTop=o.scrollHeight};e.onerror=function(){console.error('SSE Error');e.close();b.disabled=false;b.textContent='✓ Validate Module';c.textContent+='\n❌ Connection closed\n'};}document.addEventListener('DOMContentLoaded',function(){document.querySelectorAll('.validate-button-placeholder').forEach(p=>{const m=p.getAttribute('data-module'),s=createValidateSection(m);p.replaceWith(s)});document.querySelectorAll('.validate-button').forEach(b=>{b.addEventListener('click',function(){executeValidation(this.getAttribute('data-module'))})})})})();
