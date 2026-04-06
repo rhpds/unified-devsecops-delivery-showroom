@@ -808,10 +808,11 @@
 
         - name: Apply RHTAS Instance CR
           ansible.builtin.shell: |
-              export TAS_CHAINS_CLIENT_ID="{{ tas_client_id }}"
-              export TAS_CHAINS_REALM="{{ tas_chains_realm }}"
-              export TAS_SSO_REALM="{{ tas_sso_realm }}"
               envsubst < $(eval echo "{{ lab_assets_dir }}/tas-instance.yml") | oc apply -n {{ tas_namespace }} -f -
+          environment:
+            TAS_CHAINS_CLIENT_ID: "{{ tas_client_id }}"
+            TAS_CHAINS_REALM: "{{ tas_chains_realm }}"
+            TAS_SSO_REALM: "{{ tas_sso_realm }}"
           changed_when: true
 
         - name: Display RHTAS Instance CR applied
@@ -895,8 +896,9 @@
 
         - name: Create OIDC info secret
           ansible.builtin.shell: |
-              export TAS_CHAINS_CLIENT_SECRET="{{ tas_client_secret.stdout }}"
               envsubst < $(eval echo "{{ lab_assets_dir }}/oidc-info-secret.yml") | oc apply -n {{ pipelines_namespace }} -f -
+          environment:
+            TAS_CHAINS_CLIENT_SECRET: "{{ tas_client_secret.stdout }}"
           changed_when: true
           no_log: true
 
