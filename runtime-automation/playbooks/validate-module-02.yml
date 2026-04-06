@@ -11,9 +11,12 @@
     tas_namespace: "tssc-tas"
     pipelines_namespace: "openshift-pipelines"
     app_ci_namespace: "tssc-app-ci"
+    quay_namespace: "quay-enterprise"
     tas_chains_realm: "tas-chains"
     tas_sso_realm: "sso"
     tas_client_id: "trusted-artifact-signer"
+    quay_org: "tssc"
+    quay_repo: "tekton-chains-test"
 
   module_defaults:
     group/kubernetes.core.k8s:
@@ -646,6 +649,61 @@
         msg: ""
 
   #######################################
+  # Check 8: Quay Repository Created
+  #######################################
+  - name: "Check 8: Quay Repository Created"
+    block:
+    - name: Display check header
+      ansible.builtin.debug:
+        msg:
+          - "Check 8: Quay Repository Created"
+          - "---------------------------------"
+
+    - name: Get Quay route
+      ansible.builtin.command:
+        cmd: "oc get route -n {{ quay_namespace }} -l quay-component=quay-app-route -o jsonpath='{.items[0].spec.host}'"
+      register: quay_host_check
+      delegate_to: bastion
+      changed_when: false
+      failed_when: false
+
+    - name: Check if Quay repository exists
+      ansible.builtin.uri:
+        url: "https://{{ quay_host_check.stdout }}/api/v1/repository/{{ quay_org }}/{{ quay_repo }}"
+        method: GET
+        validate_certs: false
+        headers:
+          Authorization: "Bearer {{ quay_admin_token }}"
+        status_code: [200, 404]
+      register: quay_repo_check
+      delegate_to: localhost
+      changed_when: false
+      failed_when: false
+      when: quay_host_check.stdout != ""
+
+    - name: Validate Quay repository exists
+      ansible.builtin.set_fact:
+        validation_failed: "{{ validation_failed | int + 1 }}"
+      when: >
+        quay_host_check.stdout == "" or
+        (quay_repo_check.status | default(404)) != 200
+
+    - name: Display Quay repository result
+      ansible.builtin.debug:
+        msg: >-
+          {% if quay_host_check.stdout != "" and quay_repo_check.status == 200 %}
+          ✓ PASS: Quay repository {{ quay_org }}/{{ quay_repo }} exists
+          {% elif quay_host_check.stdout == "" %}
+          ✗ FAIL: Could not retrieve Quay route
+          {% else %}
+          ✗ FAIL: Quay repository {{ quay_org }}/{{ quay_repo }} does not exist
+          {% endif %}
+
+    - name: Display blank line
+      ansible.builtin.debug:
+        msg: ""
+
+  #######################################
   # Summary
   #######################################
   - name: Display validation summary
@@ -671,6 +729,7 @@
           - "  ✓ OIDC token refresher running"
           - "  ✓ Tekton Chains configured for keyless signing"
           - "  ✓ Image signing test PipelineRun completed successfully"
+          - "  ✓ Quay repository created for signed images"
           - ""
       when: validation_failed | int == 0
 
