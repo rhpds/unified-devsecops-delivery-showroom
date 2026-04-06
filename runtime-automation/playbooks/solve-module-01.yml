@@ -249,25 +249,19 @@
     # STEP 2: Upload SBOM (upload-sbom.sh)
     ###########################################
     - name: Check TPA endpoint availability
-      ansible.builtin.shell:
-        cmd: |
-          TPA_SERVER_URL="https://server-{{ tpa_namespace }}.{{ cluster_domain }}"
-          TIMEOUT=300
-          ELAPSED=0
-          while [ $ELAPSED -lt $TIMEOUT ]; do
-            HTTP_CODE=$(curl -k -s -o /dev/null -w "%{http_code}" ${TPA_SERVER_URL} || echo "000")
-            if echo "${HTTP_CODE}" | grep -qE "200|302|401"; then
-              echo "ready"
-              exit 0
-            fi
-            sleep 10
-            ELAPSED=$((ELAPSED + 10))
-          done
-          echo "timeout"
-          exit 1
-      changed_when: false
+      ansible.builtin.uri:
+        url: "https://server-{{ tpa_namespace }}.{{ cluster_domain }}"
+        validate_certs: false
+        status_code:
+          - 200
+          - 302
+          - 401
       register: tpa_endpoint_check
-      failed_when: tpa_endpoint_check.stdout == "timeout"
+      until: tpa_endpoint_check.status in [200, 302, 401]
+      retries: 30
+      delay: 10
+      changed_when: false
+      delegate_to: localhost
 
     - name: Display TPA endpoint status
       ansible.builtin.debug:
