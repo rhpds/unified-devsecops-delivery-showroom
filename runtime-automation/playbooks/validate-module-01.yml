@@ -160,7 +160,7 @@
 
     - name: Check if RHTPA instance exists
       kubernetes.core.k8s_info:
-        api_version: rhtpa.io/v1alpha1
+        api_version: rhtpa.io/v1
         kind: TrustedProfileAnalyzer
         name: trustedprofileanalyzer
         namespace: "{{ tpa_namespace }}"
