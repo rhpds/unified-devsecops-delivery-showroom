@@ -15,6 +15,7 @@ app = Flask(__name__)
 CORS(app)
 
 PLAYBOOKS_DIR = "playbooks"
+USER_DATA_FILE = "/user_data/user_data.yml"
 
 def run_playbook(playbook_name, output_queue):
     """Execute ansible-playbook and stream output to queue"""
@@ -26,9 +27,16 @@ def run_playbook(playbook_name, output_queue):
         return
 
     try:
+        # Build ansible-playbook command with extra vars file
+        cmd = ["ansible-playbook", playbook_path, "-v"]
+
+        # Add user data vars file if it exists
+        if os.path.exists(USER_DATA_FILE):
+            cmd.extend(["-e", f"@{USER_DATA_FILE}"])
+
         # Run ansible-playbook with line-buffered output
         process = subprocess.Popen(
-            ["ansible-playbook", playbook_path, "-v"],
+            cmd,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             bufsize=1,

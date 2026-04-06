@@ -65,3 +65,6 @@ spec:
           mountPath: /repo
           subPath: repo
           readOnly: true
+        - name: user-data
+          mountPath: /user_data
+          readOnly: true
