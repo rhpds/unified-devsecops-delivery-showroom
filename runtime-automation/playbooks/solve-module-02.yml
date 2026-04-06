@@ -722,6 +722,10 @@
           changed_when: false
           no_log: true
 
+        - name: DEBUG - Display client UUID
+          ansible.builtin.debug:
+            msg: "Client UUID for {{ tas_client_id }}: {{ tas_client_uuid.stdout }}"
+
         - name: Configure service account user
           ansible.builtin.debug:
             msg: "Configuring service account user..."
@@ -734,6 +738,10 @@
           register: service_account_user_id
           changed_when: false
           no_log: true
+
+        - name: DEBUG - Display service account user ID
+          ansible.builtin.debug:
+            msg: "Service account user ID: {{ service_account_user_id.stdout }}"
 
         - name: Update service account with email verification
           ansible.builtin.shell: |
@@ -752,6 +760,10 @@
           failed_when: email_update_result.stdout not in ["200", "204"]
           no_log: true
 
+        - name: DEBUG - Display email update HTTP response
+          ansible.builtin.debug:
+            msg: "Email update HTTP response code: {{ email_update_result.stdout }}"
+
         - name: Verify email verification was set
           ansible.builtin.shell: |
               curl -s -H "Authorization: Bearer {{ kc_admin_token.stdout }}" \
@@ -760,6 +772,10 @@
           changed_when: false
           failed_when: verify_email_verified.stdout != "true"
           no_log: true
+
+        - name: DEBUG - Display email verified status
+          ansible.builtin.debug:
+            msg: "Service account emailVerified field: {{ verify_email_verified.stdout }}"
 
         - name: Display service account configured
           ansible.builtin.debug:

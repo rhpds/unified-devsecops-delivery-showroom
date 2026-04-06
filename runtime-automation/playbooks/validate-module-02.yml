@@ -212,6 +212,20 @@
         tas_chains_client_id is defined and
         tas_chains_client_id != ''
 
+    - name: DEBUG - Display service account API response
+      ansible.builtin.debug:
+        msg:
+          - "Service Account API Response:"
+          - "  Status Code: {{ service_account_check.status | default('N/A') }}"
+          - "  emailVerified: {{ service_account_check.json.emailVerified | default('NOT_SET') }}"
+          - "  email: {{ service_account_check.json.email | default('NOT_SET') }}"
+          - "  firstName: {{ service_account_check.json.firstName | default('NOT_SET') }}"
+          - "  lastName: {{ service_account_check.json.lastName | default('NOT_SET') }}"
+          - "  Full Response: {{ service_account_check.json | default('NO_JSON') }}"
+      when: >
+        service_account_check is defined and
+        service_account_check.json is defined
+
     - name: Validate tas-chains client and service account
       ansible.builtin.set_fact:
         validation_failed: "{{ validation_failed | int + 1 }}"
