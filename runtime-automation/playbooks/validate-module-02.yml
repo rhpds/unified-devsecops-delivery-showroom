@@ -5,6 +5,7 @@
   vars:
     # Variables from user_data.yml (injected via -e @/user_data/user_data.yml)
     cluster_domain: "{{ openshift_cluster_ingress_domain }}"
+    # tas_chains_client_id - comes from user_data.yml
 
     # Static variables
     keycloak_namespace: "tssc-keycloak"
@@ -13,7 +14,7 @@
     app_ci_namespace: "tssc-app-ci"
     tas_chains_realm: "tas-chains"
     tas_sso_realm: "sso"
-    tas_client_id: "trusted-artifact-signer"
+    tas_sso_client_id: "trusted-artifact-signer"
 
   module_defaults:
     group/kubernetes.core.k8s:
@@ -146,17 +147,17 @@
   #######################################
   # Check 2: trusted-artifact-signer Client in tas-chains
   #######################################
-  - name: "Check 2: {{ tas_client_id }} Client in tas-chains Realm"
+  - name: "Check 2: {{ tas_chains_client_id }} Client in tas-chains Realm"
     block:
     - name: Display check header
       ansible.builtin.debug:
         msg:
-          - "Check 2: {{ tas_client_id }} Client in tas-chains Realm"
+          - "Check 2: {{ tas_chains_client_id }} Client in tas-chains Realm"
           - "-----------------------------------------------------"
 
     - name: Get trusted-artifact-signer client in tas-chains realm
       ansible.builtin.uri:
-        url: "{{ keycloak_admin_console }}/admin/realms/{{ tas_chains_realm }}/clients?clientId={{ tas_client_id }}"
+        url: "{{ keycloak_admin_console }}/admin/realms/{{ tas_chains_realm }}/clients?clientId={{ tas_chains_client_id }}"
         method: GET
         validate_certs: false
         headers:
@@ -173,7 +174,7 @@
 
     - name: Display client existence result
       ansible.builtin.debug:
-        msg: "✓ PASS: {{ tas_client_id }} client exists in tas-chains realm"
+        msg: "✓ PASS: {{ tas_chains_client_id }} client exists in tas-chains realm"
       when: >
         tas_chains_client_check.json is defined and
         tas_chains_client_check.json | length > 0
@@ -224,7 +225,7 @@
       ansible.builtin.debug:
         msg: >-
           {% if tas_chains_client_check.json is not defined or tas_chains_client_check.json | length == 0 %}
-          ✗ FAIL: {{ tas_client_id }} client not found in tas-chains realm
+          ✗ FAIL: {{ tas_chains_client_id }} client not found in tas-chains realm
           {% elif service_account_check.json is defined and service_account_check.json.emailVerified | default(false) == true %}
           ✓ PASS: Service account email is verified
           {% else %}
@@ -250,17 +251,17 @@
   #######################################
   # Check 3: trusted-artifact-signer Client in sso Realm
   #######################################
-  - name: "Check 3: {{ tas_client_id }} Client in sso Realm"
+  - name: "Check 3: {{ tas_sso_client_id }} Client in sso Realm"
     block:
     - name: Display check header
       ansible.builtin.debug:
         msg:
-          - "Check 3: {{ tas_client_id }} Client in sso Realm"
+          - "Check 3: {{ tas_sso_client_id }} Client in sso Realm"
           - "----------------------------------------------"
 
     - name: Get trusted-artifact-signer client in sso realm
       ansible.builtin.uri:
-        url: "{{ keycloak_admin_console }}/admin/realms/{{ tas_sso_realm }}/clients?clientId={{ tas_client_id }}"
+        url: "{{ keycloak_admin_console }}/admin/realms/{{ tas_sso_realm }}/clients?clientId={{ tas_sso_client_id }}"
         method: GET
         validate_certs: false
         headers:
@@ -293,9 +294,9 @@
       ansible.builtin.debug:
         msg: >-
           {% if sso_client_id is defined and sso_client_id != '' %}
-          ✓ PASS: {{ tas_client_id }} client exists in sso realm
+          ✓ PASS: {{ tas_sso_client_id }} client exists in sso realm
           {% else %}
-          ✗ FAIL: {{ tas_client_id }} client not found in sso realm
+          ✗ FAIL: {{ tas_sso_client_id }} client not found in sso realm
           {% endif %}
       when: >
         admin_token is defined and
