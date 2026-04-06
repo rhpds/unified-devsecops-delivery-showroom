@@ -122,23 +122,23 @@
       delegate_to: bastion
       changed_when: false
       failed_when: false
-      when: acs_central_url is defined and acs_central_url != ''
+      when: acs_route is defined and acs_route != ''
 
     - name: Validate ACS Central availability
       ansible.builtin.set_fact:
         validation_failed: "{{ validation_failed | int + 1 }}"
       when: >
-        acs_central_url is not defined or
-        acs_central_url == '' or
+        acs_route is not defined or
+        acs_route == '' or
         acs_central_check.status is not defined or
         acs_central_check.status not in [200, 302, 401]
 
     - name: Display ACS Central availability result
       ansible.builtin.debug:
         msg: >-
-          {% if acs_central_url is defined and acs_central_url != '' and acs_central_check.status is defined and acs_central_check.status in [200, 302, 401] %}
+          {% if acs_route is defined and acs_route != '' and acs_central_check.status is defined and acs_central_check.status in [200, 302, 401] %}
           ✓ PASS: ACS Central is accessible (HTTP {{ acs_central_check.status }})
-          {% elif acs_central_url is not defined or acs_central_url == '' %}
+          {% elif acs_route is not defined or acs_route == '' %}
           ✗ FAIL: ACS Central route not found
           {% else %}
           ✗ FAIL: ACS Central is not accessible (HTTP {{ acs_central_check.status | default('000') }})
