@@ -11,6 +11,7 @@
     keycloak_namespace: "tssc-keycloak"
     tas_namespace: "tssc-tas"
     pipelines_namespace: "openshift-pipelines"
+    app_ci_namespace: "tssc-app-ci"
     tas_chains_realm: "tas-chains"
     tas_sso_realm: "sso"
     tas_client_id: "trusted-artifact-signer"
@@ -596,6 +597,73 @@
         msg: ""
 
   #######################################
+  # Check 7: TaskRuns and PipelineRuns Cleanup
+  #######################################
+  - name: "Check 7: TaskRuns and PipelineRuns Cleanup"
+    block:
+    - name: Display check header
+      ansible.builtin.debug:
+        msg:
+          - "Check 7: TaskRuns and PipelineRuns Cleanup"
+          - "-------------------------------------------"
+
+    - name: Check TaskRun count
+      ansible.builtin.command:
+        cmd: "oc get taskrun -n {{ app_ci_namespace }} --no-headers"
+      register: taskrun_check
+      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      changed_when: false
+      failed_when: false
+
+    - name: Count TaskRuns
+      ansible.builtin.set_fact:
+        taskrun_count: "{{ taskrun_check.stdout_lines | length }}"
+
+    - name: Validate no TaskRuns exist
+      ansible.builtin.set_fact:
+        validation_failed: "{{ validation_failed | int + 1 }}"
+      when: taskrun_count | int > 0
+
+    - name: Display TaskRun cleanup result
+      ansible.builtin.debug:
+        msg: >-
+          {% if taskrun_count | int == 0 %}
+          ✓ PASS: All TaskRuns cleaned up
+          {% else %}
+          ✗ FAIL: {{ taskrun_count }} TaskRun(s) still exist
+          {% endif %}
+
+    - name: Check PipelineRun count
+      ansible.builtin.command:
+        cmd: "oc get pipelinerun -n {{ app_ci_namespace }} --no-headers"
+      register: pipelinerun_check
+      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      changed_when: false
+      failed_when: false
+
+    - name: Count PipelineRuns
+      ansible.builtin.set_fact:
+        pipelinerun_count: "{{ pipelinerun_check.stdout_lines | length }}"
+
+    - name: Validate no PipelineRuns exist
+      ansible.builtin.set_fact:
+        validation_failed: "{{ validation_failed | int + 1 }}"
+      when: pipelinerun_count | int > 0
+
+    - name: Display PipelineRun cleanup result
+      ansible.builtin.debug:
+        msg: >-
+          {% if pipelinerun_count | int == 0 %}
+          ✓ PASS: All PipelineRuns cleaned up
+          {% else %}
+          ✗ FAIL: {{ pipelinerun_count }} PipelineRun(s) still exist
+          {% endif %}
+
+    - name: Display blank line
+      ansible.builtin.debug:
+        msg: ""
+
+  #######################################
   # Summary
   #######################################
   - name: Display validation summary
@@ -620,9 +688,7 @@
           - "  ✓ RHTAS instance deployed (Fulcio, Rekor, TUF)"
           - "  ✓ OIDC token refresher running"
           - "  ✓ Tekton Chains configured for keyless signing"
-          - ""
-          - "Note: To verify image signing works, check that a"
-          - "TaskRun has been executed and the image is signed."
+          - "  ✓ TaskRuns and PipelineRuns cleaned up"
           - ""
       when: validation_failed | int == 0
 
