@@ -6,14 +6,18 @@
   gather_facts: false
 
   vars:
-    # Match script variables exactly
-    cluster_domain: "{{ lookup('env', 'GUID') }}.{{ lookup('env', 'BASE_DOMAIN') | default('example.opentlc.com', true) }}"
+    # Variables from user_data.yml (injected via -e @/user_data/user_data.yml)
+    cluster_domain: "{{ openshift_cluster_ingress_domain }}"
+    guid: "{{ guid }}"
+    tpa_realm: "{{ tpa_realm }}"
+    tpa_cli_client_secret: "{{ tpa_cli_client_secret }}"
+    tpa_admin_username: "{{ tpa_admin_username }}"
+    tpa_admin_password: "{{ tpa_admin_password }}"
+    bastion_hostname: "{{ bastion_public_hostname }}"
+
+    # Static variables (not in user_data)
     keycloak_namespace: "tssc-keycloak"
     tpa_namespace: "tssc-tpa"
-    tpa_realm: "tpa"
-    tpa_cli_client_secret: "{{ lookup('env', 'TPA_CLI_CLIENT_SECRET') | default('changeme', true) }}"
-    tpa_admin_username: "tpaadmin"
-    tpa_admin_password: "{{ lookup('env', 'TPA_ADMIN_PASSWORD') | default('changeme', true) }}"
     keycloak_url: "https://sso.{{ cluster_domain }}"
     sbom_file: "~/lab-assets/example-sbom.json"
     sbom_id: "test-sbom"
