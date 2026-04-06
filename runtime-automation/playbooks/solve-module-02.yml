@@ -811,7 +811,7 @@
               export TAS_CHAINS_CLIENT_ID="{{ tas_client_id }}"
               export TAS_CHAINS_REALM="{{ tas_chains_realm }}"
               export TAS_SSO_REALM="{{ tas_sso_realm }}"
-              export KEYCLOAK_URL="{{ keycloak_url }}"
+              export KEYCLOAK_URL="{{ keycloak_admin_console }}"
               envsubst '${TAS_CHAINS_CLIENT_ID} ${TAS_CHAINS_REALM} ${TAS_SSO_REALM} ${KEYCLOAK_URL}' < {{ lab_assets_dir }}/tas-instance.yml | oc apply -n {{ tas_namespace }} -f -
           changed_when: true
 
