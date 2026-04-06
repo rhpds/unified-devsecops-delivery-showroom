@@ -215,25 +215,19 @@
           changed_when: true
 
         - name: Wait for RHTPA server to be ready
-          ansible.builtin.shell:
-            cmd: |
-              TPA_SERVER_URL="https://server-{{ tpa_namespace }}.{{ cluster_domain }}"
-              TIMEOUT=600
-              ELAPSED=0
-              while [ $ELAPSED -lt $TIMEOUT ]; do
-                HTTP_CODE=$(curl -k -s -o /dev/null -w "%{http_code}" ${TPA_SERVER_URL} || echo "000")
-                if echo "${HTTP_CODE}" | grep -qE "200|302|401"; then
-                  echo "ready"
-                  exit 0
-                fi
-                sleep 10
-                ELAPSED=$((ELAPSED + 10))
-              done
-              echo "timeout"
-              exit 1
-          changed_when: false
+          ansible.builtin.uri:
+            url: "https://server-{{ tpa_namespace }}.{{ cluster_domain }}"
+            validate_certs: false
+            status_code:
+              - 200
+              - 302
+              - 401
           register: rhtpa_ready
-          failed_when: rhtpa_ready.stdout == "timeout"
+          until: rhtpa_ready.status in [200, 302, 401]
+          retries: 60
+          delay: 10
+          changed_when: false
+          delegate_to: localhost
 
         - name: Display RHTPA installation result
           ansible.builtin.debug:
