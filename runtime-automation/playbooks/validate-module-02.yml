@@ -3,17 +3,51 @@
   hosts: localhost
   gather_facts: false
   vars:
-    # Environment variables matching shell script
+    # Variables from user_data.yml (injected via -e @/user_data/user_data.yml)
     cluster_domain: "{{ openshift_cluster_ingress_domain }}"
-    keycloak_url: "https://sso.{{ openshift_cluster_ingress_domain }}"
-    keycloak_namespace: "{{ rhpds_build_secured_dev_workflows_lab_scripts_keycloak_namespace }}"
-    tas_namespace: "{{ rhpds_build_secured_dev_workflows_lab_scripts_tas_namespace }}"
-    pipelines_namespace: "{{ rhpds_build_secured_dev_workflows_lab_scripts_pipelines_namespace }}"
-    tas_chains_realm: "{{ rhpds_build_secured_dev_workflows_lab_scripts_tas_chains_realm }}"
-    tas_sso_realm: "{{ rhpds_build_secured_dev_workflows_lab_scripts_tas_sso_realm }}"
-    tas_client_id: "{{ rhpds_build_secured_dev_workflows_lab_scripts_tas_client_id }}"
+    guid: "{{ guid }}"
+    bastion_hostname: "{{ bastion_public_hostname }}"
+
+    # Static variables
+    keycloak_url: "https://sso.{{ cluster_domain }}"
+    keycloak_namespace: "tssc-keycloak"
+    tas_namespace: "tssc-tas"
+    pipelines_namespace: "openshift-pipelines"
+    tas_chains_realm: "tas-chains"
+    tas_sso_realm: "sso"
+    tas_client_id: "trusted-artifact-signer"
+
+  module_defaults:
+    group/kubernetes.core.k8s:
+      host: "{{ openshift_api_server_url }}"
+      api_key: "{{ hostvars['localhost']['openshift_token'] | default('') }}"
+      validate_certs: false
 
   tasks:
+  - name: Add bastion host to inventory
+    ansible.builtin.add_host:
+      name: "bastion"
+      ansible_host: "{{ bastion_hostname }}"
+      ansible_user: "{{ bastion_ssh_user_name }}"
+      ansible_ssh_pass: "{{ bastion_ssh_password }}"
+      ansible_port: "{{ bastion_ssh_port }}"
+      ansible_ssh_common_args: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+
+  - name: Login to OpenShift and get token
+    ansible.builtin.shell:
+      cmd: |
+        oc login {{ openshift_api_server_url }} -u {{ openshift_cluster_admin_username }} -p {{ openshift_cluster_admin_password }} --insecure-skip-tls-verify=true
+        oc whoami -t
+    delegate_to: bastion
+    register: oc_login_result
+    changed_when: false
+    no_log: true
+
+  - name: Set OpenShift token fact
+    ansible.builtin.set_fact:
+      openshift_token: "{{ oc_login_result.stdout_lines[-1] }}"
+    no_log: true
+
   - name: Initialize validation tracking
     ansible.builtin.set_fact:
       validation_failed: 0
