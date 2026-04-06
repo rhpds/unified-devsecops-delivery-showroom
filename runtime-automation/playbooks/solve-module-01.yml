@@ -283,7 +283,9 @@
 
     - name: Display token endpoint status
       ansible.builtin.debug:
-        msg: "✓ Token endpoint available"
+        msg:
+          - "✓ Token endpoint available"
+          - "Token endpoint URL: {{ oidc_config.json.token_endpoint }}"
 
     - name: Get OAuth access token
       ansible.builtin.uri:

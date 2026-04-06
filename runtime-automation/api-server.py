@@ -28,7 +28,7 @@ def run_playbook(playbook_name, output_queue):
 
     try:
         # Build ansible-playbook command with extra vars file
-        cmd = ["ansible-playbook", playbook_path, "-vv"]
+        cmd = ["ansible-playbook", playbook_path, "-vvv"]
 
         # Add user data vars file if it exists
         if os.path.exists(USER_DATA_FILE):
@@ -53,6 +53,9 @@ def run_playbook(playbook_name, output_queue):
         for line in iter(process.stdout.readline, ''):
             if line:
                 output_queue.put(line)
+                # Force flush to ensure real-time streaming
+                import sys
+                sys.stdout.flush()
 
         process.wait()
 
