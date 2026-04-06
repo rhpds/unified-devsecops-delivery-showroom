@@ -9,12 +9,24 @@
     tpa_realm: "{{ tpa_realm }}"
     tpa_cli_client_secret: "{{ tpa_cli_client_secret }}"
     bastion_hostname: "{{ bastion_public_hostname }}"
+    openshift_api_url: "{{ openshift_api_url }}"
+    openshift_cluster_admin_token: "{{ openshift_cluster_admin_token }}"
 
     # Static variables
     keycloak_namespace: "tssc-keycloak"
     tpa_namespace: "tssc-tpa"
     keycloak_url: "https://sso.{{ cluster_domain }}"
     sbom_id: "test-sbom"
+
+  module_defaults:
+    kubernetes.core.k8s:
+      host: "{{ openshift_api_url }}"
+      api_key: "{{ openshift_cluster_admin_token }}"
+      validate_certs: false
+    kubernetes.core.k8s_info:
+      host: "{{ openshift_api_url }}"
+      api_key: "{{ openshift_cluster_admin_token }}"
+      validate_certs: false
 
   tasks:
   - name: Add bastion host to inventory
@@ -49,37 +61,34 @@
           - "-------------------------"
 
     - name: Check if TPA Realm import exists
-      ansible.builtin.command:
-        cmd: "oc get keycloakrealmimport {{ tpa_realm }} -n {{ keycloak_namespace }}"
+      kubernetes.core.k8s_info:
+        api_version: k8s.keycloak.org/v2alpha1
+        kind: KeycloakRealmImport
+        name: "{{ tpa_realm }}"
+        namespace: "{{ keycloak_namespace }}"
       register: realm_import_check
-      delegate_to: bastion
-      changed_when: false
       failed_when: false
       no_log: true
 
     - name: Get TPA Realm import status
-      ansible.builtin.command:
-        cmd: "oc get keycloakrealmimport {{ tpa_realm }} -n {{ keycloak_namespace }} -o jsonpath='{.status.conditions[?(@.type==\"Done\")].status}'"
-      register: realm_status
-      delegate_to: bastion
-      changed_when: false
-      failed_when: false
-      no_log: true
-      when: realm_import_check.rc == 0
+      ansible.builtin.set_fact:
+        realm_status:
+          stdout: "{{ realm_import_check.resources[0].status.conditions | selectattr('type', 'equalto', 'Done') | map(attribute='status') | first | default('Unknown') }}"
+      when: realm_import_check.resources | length > 0
 
     - name: Validate TPA Realm import status
       ansible.builtin.set_fact:
         validation_failed: "{{ validation_failed | int + 1 }}"
       when: >
-        realm_import_check.rc != 0 or
+        realm_import_check.resources | length == 0 or
         (realm_status.stdout | default('Unknown')) != 'True'
 
     - name: Display TPA Realm import result
       ansible.builtin.debug:
         msg: >-
-          {% if realm_import_check.rc == 0 and realm_status.stdout == 'True' %}
+          {% if realm_import_check.resources | length > 0 and realm_status.stdout == 'True' %}
           ✓ PASS: TPA Realm imported successfully
-          {% elif realm_import_check.rc == 0 %}
+          {% elif realm_import_check.resources | length > 0 %}
           ✗ FAIL: TPA Realm import exists but status is: {{ realm_status.stdout | default('Unknown') }}
           {% else %}
           ✗ FAIL: TPA Realm import not found
@@ -101,23 +110,24 @@
           - "------------------------------------"
 
     - name: Check if TPA CLI credentials secret exists
-      ansible.builtin.command:
-        cmd: "oc get secret tpa-realm-cli-clients -n {{ tpa_namespace }}"
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Secret
+        name: tpa-realm-cli-clients
+        namespace: "{{ tpa_namespace }}"
       register: cli_secret_check
-      delegate_to: bastion
-      changed_when: false
       failed_when: false
       no_log: true
 
     - name: Validate TPA CLI credentials secret
       ansible.builtin.set_fact:
         validation_failed: "{{ validation_failed | int + 1 }}"
-      when: cli_secret_check.rc != 0
+      when: cli_secret_check.resources | length == 0
 
     - name: Display TPA CLI credentials secret result
       ansible.builtin.debug:
         msg: >-
-          {% if cli_secret_check.rc == 0 %}
+          {% if cli_secret_check.resources | length > 0 %}
           ✓ PASS: TPA CLI credentials secret exists
           {% else %}
           ✗ FAIL: TPA CLI credentials secret not found
@@ -139,52 +149,49 @@
           - "-----------------------------------"
 
     - name: Check if RHTPA instance exists
-      ansible.builtin.command:
-        cmd: "oc get trustedprofileanalyzer trustedprofileanalyzer -n {{ tpa_namespace }}"
+      kubernetes.core.k8s_info:
+        api_version: trusted-profile-analyzer.redhat.com/v1alpha1
+        kind: TrustedProfileAnalyzer
+        name: trustedprofileanalyzer
+        namespace: "{{ tpa_namespace }}"
       register: tpa_instance_check
-      delegate_to: bastion
-      changed_when: false
       failed_when: false
       no_log: true
 
     - name: Display RHTPA instance existence result
       ansible.builtin.debug:
         msg: "✓ PASS: RHTPA instance exists"
-      when: tpa_instance_check.rc == 0
+      when: tpa_instance_check.resources | length > 0
 
     - name: Get RHTPA instance deployed status
-      ansible.builtin.command:
-        cmd: "oc get trustedprofileanalyzer trustedprofileanalyzer -n {{ tpa_namespace }} -o jsonpath='{.status.conditions[?(@.type==\"Deployed\")].status}'"
-      register: tpa_deployed_status
-      delegate_to: bastion
-      changed_when: false
-      failed_when: false
-      no_log: true
-      when: tpa_instance_check.rc == 0
+      ansible.builtin.set_fact:
+        tpa_deployed_status:
+          stdout: "{{ tpa_instance_check.resources[0].status.conditions | selectattr('type', 'equalto', 'Deployed') | map(attribute='status') | first | default('Unknown') }}"
+      when: tpa_instance_check.resources | length > 0
 
     - name: Validate RHTPA instance deployment
       ansible.builtin.set_fact:
         validation_failed: "{{ validation_failed | int + 1 }}"
       when: >
-        tpa_instance_check.rc != 0 or
+        tpa_instance_check.resources | length == 0 or
         (tpa_deployed_status.stdout | default('Unknown')) != 'True'
 
     - name: Display RHTPA instance deployment result
       ansible.builtin.debug:
         msg: >-
-          {% if tpa_instance_check.rc == 0 and tpa_deployed_status.stdout == 'True' %}
+          {% if tpa_instance_check.resources | length > 0 and tpa_deployed_status.stdout == 'True' %}
           ✓ PASS: RHTPA instance is deployed
-          {% elif tpa_instance_check.rc == 0 %}
+          {% elif tpa_instance_check.resources | length > 0 %}
           ✗ FAIL: RHTPA instance deployed status is: {{ tpa_deployed_status.stdout | default('Unknown') }}
           {% else %}
           ✗ FAIL: RHTPA instance not found
           {% endif %}
-      when: tpa_instance_check.rc == 0 or (tpa_instance_check.rc != 0 and tpa_deployed_status is defined)
+      when: tpa_instance_check.resources | length > 0 or (tpa_instance_check.resources | length == 0 and tpa_deployed_status is defined)
 
     - name: Display RHTPA instance not found
       ansible.builtin.debug:
         msg: "✗ FAIL: RHTPA instance not found"
-      when: tpa_instance_check.rc != 0 and tpa_deployed_status is not defined
+      when: tpa_instance_check.resources | length == 0 and tpa_deployed_status is not defined
 
     - name: Display blank line
       ansible.builtin.debug:
@@ -274,17 +281,27 @@
       when: openid_config.json is defined and (openid_config.json.token_endpoint | default('')) != ''
 
     - name: Get TPA server route
-      ansible.builtin.command:
-        cmd: "oc get route -l app.kubernetes.io/component=server -n {{ tpa_namespace }} -o jsonpath='{.items[0].spec.host}'"
-      register: tpa_server_route
-      delegate_to: bastion
-      changed_when: false
+      kubernetes.core.k8s_info:
+        api_version: route.openshift.io/v1
+        kind: Route
+        namespace: "{{ tpa_namespace }}"
+        label_selectors:
+          - app.kubernetes.io/component=server
+      register: tpa_server_route_result
       failed_when: false
       no_log: true
       when: >
         oauth_token.json is defined and
         (oauth_token.json.access_token | default('')) != '' and
         oauth_token.json.access_token != 'null'
+
+    - name: Set TPA server route fact
+      ansible.builtin.set_fact:
+        tpa_server_route:
+          stdout: "{{ tpa_server_route_result.resources[0].spec.host }}"
+      when: >
+        tpa_server_route_result is defined and
+        tpa_server_route_result.resources | length > 0
 
     - name: Check if SBOM exists in TPA
       ansible.builtin.uri:
