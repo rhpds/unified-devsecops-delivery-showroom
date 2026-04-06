@@ -181,7 +181,7 @@
             TPA_ADMIN_USERNAME: "{{ tpa_admin_username }}"
             TPA_ADMIN_PASSWORD: "{{ tpa_admin_password }}"
           changed_when: true
-          no_log: true
+          no_log: false
 
         - name: Wait for TPA Realm import completion
           ansible.builtin.command:
@@ -199,7 +199,7 @@
           environment:
             TPA_CLI_CLIENT_SECRET: "{{ tpa_cli_client_secret }}"
           changed_when: true
-          no_log: true
+          no_log: false
 
         - name: Display client secret configuration result
           ansible.builtin.debug:
@@ -307,7 +307,7 @@
           changed_when: false
           register: oauth_token
           failed_when: oauth_token.stdout == "error"
-          no_log: true
+          no_log: false
 
         - name: Display OAuth token status
           ansible.builtin.debug:
@@ -322,7 +322,7 @@
                 -H "Content-Type: application/json" \
                 --data-binary @{{ sbom_file }}
           changed_when: true
-          no_log: true
+          no_log: false
 
         - name: SBOM upload complete
           ansible.builtin.debug:
