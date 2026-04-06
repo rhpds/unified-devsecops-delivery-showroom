@@ -62,7 +62,7 @@
     ###########################################
     - name: Delete RHTPA instance
       kubernetes.core.k8s:
-        api_version: trusted-profile-analyzer.redhat.com/v1alpha1
+        api_version: trustedprofileanalyzer.redhat.com/v1alpha1
         kind: TrustedProfileAnalyzer
         name: trustedprofileanalyzer
         namespace: "{{ tpa_namespace }}"
@@ -70,7 +70,7 @@
 
     - name: Wait for RHTPA instance deletion
       kubernetes.core.k8s_info:
-        api_version: trusted-profile-analyzer.redhat.com/v1alpha1
+        api_version: trustedprofileanalyzer.redhat.com/v1alpha1
         kind: TrustedProfileAnalyzer
         name: trustedprofileanalyzer
         namespace: "{{ tpa_namespace }}"
