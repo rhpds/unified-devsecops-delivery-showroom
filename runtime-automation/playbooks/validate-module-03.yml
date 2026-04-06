@@ -5,12 +5,11 @@
   vars:
     # Environment variables matching shell script
     cluster_domain: "{{ openshift_cluster_ingress_domain }}"
-    keycloak_url: "https://sso.{{ openshift_cluster_ingress_domain }}"
-    keycloak_namespace: "{{ rhpds_build_secured_dev_workflows_lab_scripts_keycloak_namespace }}"
-    devspaces_namespace: "{{ rhpds_build_secured_dev_workflows_lab_scripts_devspaces_namespace }}"
-    app_ci_namespace: "{{ rhpds_build_secured_dev_workflows_lab_scripts_app_ci_namespace }}"
-    sso_realm: "{{ rhpds_build_secured_dev_workflows_lab_scripts_tas_sso_realm }}"
-    developer_username: "{{ rhpds_build_secured_dev_workflows_lab_scripts_developer_username }}"
+    keycloak_namespace: tssc-keycloak
+    devspaces_namespace: openshift-devspaces
+    app_ci_namespace: tssc-app-ci
+    sso_realm: "{{ tas_sso_realm }}"
+    developer_username: "{{ user }}"
 
   tasks:
   - name: Initialize validation tracking
@@ -61,7 +60,7 @@
 
     - name: Get admin access token
       ansible.builtin.uri:
-        url: "{{ keycloak_url }}/realms/master/protocol/openid-connect/token"
+        url: "{{ keycloak_admin_console }}/realms/master/protocol/openid-connect/token"
         method: POST
         validate_certs: false
         body_format: form-urlencoded
@@ -104,7 +103,7 @@
 
     - name: Get developer user from Keycloak
       ansible.builtin.uri:
-        url: "{{ keycloak_url }}/admin/realms/{{ sso_realm }}/users?username={{ developer_username }}"
+        url: "{{ keycloak_admin_console }}/admin/realms/{{ sso_realm }}/users?username={{ developer_username }}"
         method: GET
         validate_certs: false
         headers:
@@ -137,7 +136,7 @@
 
     - name: Get developer user details
       ansible.builtin.uri:
-        url: "{{ keycloak_url }}/admin/realms/{{ sso_realm }}/users/{{ user_exists }}"
+        url: "{{ keycloak_admin_console }}/admin/realms/{{ sso_realm }}/users/{{ user_exists }}"
         method: GET
         validate_certs: false
         headers:
@@ -245,7 +244,7 @@
 
     - name: Get user group memberships
       ansible.builtin.uri:
-        url: "{{ keycloak_url }}/admin/realms/{{ sso_realm }}/users/{{ user_exists }}/groups"
+        url: "{{ keycloak_admin_console }}/admin/realms/{{ sso_realm }}/users/{{ user_exists }}/groups"
         method: GET
         validate_certs: false
         headers:

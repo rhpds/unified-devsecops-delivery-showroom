@@ -7,7 +7,6 @@
     cluster_domain: "{{ openshift_cluster_ingress_domain }}"
     acs_namespace: "stackrox"
     app_ci_namespace: "tssc-app-ci"
-    quay_namespace: "quay-enterprise"
     # Hard-coded integration name matching script line 18
     acs_integration_name: "acs_quay"
 
@@ -93,23 +92,9 @@
           - "Check 2: ACS Central Availability"
           - "----------------------------------"
 
-    - name: Get ACS Central route
-      ansible.builtin.command:
-        cmd: "oc get route central -n {{ acs_namespace }} -o jsonpath='{.spec.host}'"
-      register: acs_central_route
-      delegate_to: bastion
-      changed_when: false
-      failed_when: false
-      no_log: true
-
-    - name: Set ACS Central URL
-      ansible.builtin.set_fact:
-        acs_central_url: "{{ acs_central_route.stdout }}"
-      when: acs_central_route.rc == 0 and acs_central_route.stdout is defined and acs_central_route.stdout != ''
-
     - name: Check ACS Central endpoint accessibility
       ansible.builtin.uri:
-        url: "https://{{ acs_central_url }}"
+        url: "{{ acs_route }}"
         method: GET
         validate_certs: false
         status_code: [200, 302, 401]
@@ -163,7 +148,7 @@
 
     - name: Get ACS-Quay integration
       ansible.builtin.uri:
-        url: "https://{{ acs_central_url }}/v1/imageintegrations"
+        url: "{{ acs_route }}/v1/imageintegrations"
         method: GET
         validate_certs: false
         headers:
@@ -195,7 +180,7 @@
 
     - name: Get integration details
       ansible.builtin.uri:
-        url: "https://{{ acs_central_url }}/v1/imageintegrations/{{ integration_id }}"
+        url: "{{ acs_route }}/v1/imageintegrations/{{ integration_id }}"
         method: GET
         validate_certs: false
         headers:
