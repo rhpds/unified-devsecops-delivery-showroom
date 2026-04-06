@@ -19,11 +19,10 @@
     gitlab_namespace: "gitlab"
     sso_realm: "sso"
     tas_client_id: "trusted-artifact-signer"
-    tpa_realm: "tpa"
     developer_username: "user1"
-    developer_email: "user1@example.com"
-    developer_firstname: "User"
-    developer_lastname: "One"
+    developer_email: user1@demo.redhat.com
+    developer_firstname: "User1"
+    developer_lastname: "Demo"
     lab_assets_dir: "/home/lab-user/lab-assets"
 
   module_defaults:
@@ -57,7 +56,6 @@
         openshift_token: "{{ oc_login_result.stdout_lines[-1] }}"
       no_log: true
 
-  tasks:
     - name: Display module information
       ansible.builtin.debug:
         msg: "Solving Module 03: Developer Setup and Platform Configuration"
