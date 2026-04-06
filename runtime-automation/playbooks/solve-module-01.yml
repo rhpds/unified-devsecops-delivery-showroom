@@ -316,25 +316,16 @@
       ansible.builtin.debug:
         msg: "✓ OAuth access token obtained"
 
-    - name: Read SBOM file from bastion
-      ansible.builtin.slurp:
-        src: "{{ sbom_file }}"
-      register: sbom_content
-      delegate_to: bastion
-
     - name: Upload SBOM to RHTPA
-      ansible.builtin.uri:
-        url: "https://server-{{ tpa_namespace }}.{{ cluster_domain }}/api/v2/sbom?id={{ sbom_id }}"
-        method: POST
-        body: "{{ sbom_content.content | b64decode }}"
-        headers:
-          Authorization: "Bearer {{ oauth_token }}"
-          Content-Type: "application/json"
-        validate_certs: false
-        status_code: [200, 201]
+      ansible.builtin.shell:
+        cmd: |
+          TPA_SERVER_URL="https://server-{{ tpa_namespace }}.{{ cluster_domain }}"
+          curl -k -X POST ${TPA_SERVER_URL}/api/v2/sbom?id={{ sbom_id }} \
+            -H "Authorization: Bearer {{ oauth_token }}" \
+            -H "Content-Type: application/json" \
+            --data-binary @{{ sbom_file }}
       changed_when: true
-      no_log: false
-      delegate_to: localhost
+      delegate_to: bastion
 
     - name: SBOM upload complete
       ansible.builtin.debug:
