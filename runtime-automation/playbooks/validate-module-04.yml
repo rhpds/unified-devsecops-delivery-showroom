@@ -11,6 +11,28 @@
     acs_integration_name: "acs_quay"
 
   tasks:
+  - name: Add bastion host to inventory
+    ansible.builtin.add_host:
+      name: "bastion"
+      ansible_host: "{{ bastion_public_hostname }}"
+      ansible_user: "{{ bastion_ssh_user_name }}"
+      ansible_ssh_pass: "{{ bastion_ssh_password }}"
+      ansible_port: "{{ bastion_ssh_port }}"
+      ansible_ssh_common_args: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+
+  - name: Login to OpenShift and get token
+    ansible.builtin.shell:
+      cmd: |
+        oc login {{ openshift_api_server_url }} -u {{ openshift_cluster_admin_username }} -p {{ openshift_cluster_admin_password }} --insecure-skip-tls-verify=true
+        oc whoami -t
+    delegate_to: bastion
+    register: oc_login_result
+    changed_when: false
+
+  - name: Set OpenShift token fact
+    ansible.builtin.set_fact:
+      openshift_token: "{{ oc_login_result.stdout_lines[-1] }}"
+
   - name: Initialize validation tracking
     ansible.builtin.set_fact:
       validation_failed: 0
