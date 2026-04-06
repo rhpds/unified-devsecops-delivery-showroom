@@ -5,7 +5,6 @@
   vars:
     # Variables from user_data.yml (injected via -e @/user_data/user_data.yml)
     cluster_domain: "{{ openshift_cluster_ingress_domain }}"
-    bastion_hostname: "{{ bastion_public_hostname }}"
 
     # Static variables
     keycloak_namespace: "tssc-keycloak"
@@ -77,7 +76,7 @@
           grant_type: password
         return_content: true
       register: admin_token_result
-      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      delegate_to: bastion
       changed_when: false
       failed_when: false
       no_log: true
@@ -116,7 +115,7 @@
           Authorization: "Bearer {{ admin_token }}"
         status_code: [200, 404]
       register: realm_exists_check
-      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      delegate_to: bastion
       changed_when: false
       failed_when: false
       no_log: true
@@ -169,7 +168,7 @@
           Authorization: "Bearer {{ admin_token }}"
         return_content: true
       register: tas_chains_client_check
-      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      delegate_to: bastion
       changed_when: false
       failed_when: false
       no_log: true
@@ -202,7 +201,7 @@
           Authorization: "Bearer {{ admin_token }}"
         return_content: true
       register: service_account_check
-      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      delegate_to: bastion
       changed_when: false
       failed_when: false
       no_log: true
@@ -269,7 +268,7 @@
           Authorization: "Bearer {{ admin_token }}"
         return_content: true
       register: sso_client_check
-      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      delegate_to: bastion
       changed_when: false
       failed_when: false
       no_log: true
@@ -333,7 +332,7 @@
       ansible.builtin.command:
         cmd: "oc get securesign trusted-artifact-signer -n {{ tas_namespace }}"
       register: rhtas_instance_check
-      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      delegate_to: bastion
       changed_when: false
       failed_when: false
       no_log: true
@@ -347,7 +346,7 @@
       ansible.builtin.command:
         cmd: "oc get pods -n {{ tas_namespace }} -l app.kubernetes.io/component=tuf -o jsonpath='{.items[0].status.phase}'"
       register: tuf_status_check
-      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      delegate_to: bastion
       changed_when: false
       failed_when: false
       no_log: true
@@ -399,7 +398,7 @@
       ansible.builtin.command:
         cmd: "oc get secret oidc-info -n {{ pipelines_namespace }}"
       register: oidc_secret_check
-      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      delegate_to: bastion
       changed_when: false
       failed_when: false
       no_log: true
@@ -422,7 +421,7 @@
       ansible.builtin.command:
         cmd: "oc get deployment oidc-token-refresher -n {{ pipelines_namespace }}"
       register: oidc_deployment_check
-      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      delegate_to: bastion
       changed_when: false
       failed_when: false
       no_log: true
@@ -436,7 +435,7 @@
       ansible.builtin.command:
         cmd: "oc get pods -n {{ pipelines_namespace }} -l app=oidc-token-refresher -o jsonpath='{.items[0].status.phase}'"
       register: refresher_status_check
-      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      delegate_to: bastion
       changed_when: false
       failed_when: false
       no_log: true
@@ -488,7 +487,7 @@
       ansible.builtin.command:
         cmd: "oc get tektonconfig config -n {{ pipelines_namespace }} -o jsonpath='{.spec.chain.artifacts\\.oci\\.storage}'"
       register: oci_storage_check
-      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      delegate_to: bastion
       changed_when: false
       failed_when: false
       no_log: true
@@ -515,7 +514,7 @@
       ansible.builtin.command:
         cmd: "oc get tektonconfig config -n {{ pipelines_namespace }} -o jsonpath='{.spec.chain.artifacts\\.taskrun\\.format}'"
       register: taskrun_format_check
-      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      delegate_to: bastion
       changed_when: false
       failed_when: false
       no_log: true
@@ -542,7 +541,7 @@
       ansible.builtin.command:
         cmd: "oc get tektonconfig config -n {{ pipelines_namespace }} -o jsonpath='{.spec.chain.artifacts\\.taskrun\\.storage}'"
       register: taskrun_storage_check
-      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      delegate_to: bastion
       changed_when: false
       failed_when: false
       no_log: true
@@ -569,7 +568,7 @@
       ansible.builtin.command:
         cmd: "oc get tektonconfig config -n {{ pipelines_namespace }} -o jsonpath='{.spec.chain.transparency\\.enabled}'"
       register: transparency_check
-      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      delegate_to: bastion
       changed_when: false
       failed_when: false
       no_log: true
@@ -611,7 +610,7 @@
       ansible.builtin.command:
         cmd: "oc get taskrun -n {{ app_ci_namespace }} --no-headers"
       register: taskrun_check
-      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      delegate_to: bastion
       changed_when: false
       failed_when: false
 
@@ -637,7 +636,7 @@
       ansible.builtin.command:
         cmd: "oc get pipelinerun -n {{ app_ci_namespace }} --no-headers"
       register: pipelinerun_check
-      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      delegate_to: bastion
       changed_when: false
       failed_when: false
 
