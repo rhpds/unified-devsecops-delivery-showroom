@@ -9,18 +9,10 @@
   vars:
     # Variables from user_data.yml (injected via -e @/user_data/user_data.yml)
     cluster_domain: "{{ openshift_cluster_ingress_domain }}"
-    guid: "{{ guid }}"
     bastion_hostname: "{{ bastion_public_hostname }}"
     quay_token: "{{ quay_admin_token }}"
-    quay_url: "{{ quay_url }}"
-    quay_host: "{{ quay_host }}"
-    keycloak_admin_username: "{{ keycloak_admin_username }}"
-    keycloak_admin_password: "{{ keycloak_admin_password }}"
-    keycloak_url: "{{ keycloak_url }}"
 
     # Static variables
-    # quay_url has https://, quay_host does not
-    # keycloak_url is from user_data
     keycloak_namespace: "tssc-keycloak"
     tas_namespace: "tssc-tas"
     pipelines_namespace: "openshift-pipelines"
