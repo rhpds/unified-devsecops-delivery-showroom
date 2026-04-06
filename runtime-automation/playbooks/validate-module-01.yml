@@ -35,12 +35,10 @@
     delegate_to: bastion
     register: oc_login_result
     changed_when: false
-    no_log: true
 
   - name: Set OpenShift token fact
     ansible.builtin.set_fact:
       openshift_token: "{{ oc_login_result.stdout_lines[-1] }}"
-    no_log: true
 
   - name: Initialize validation tracking
     ansible.builtin.set_fact:
@@ -73,7 +71,6 @@
         namespace: "{{ keycloak_namespace }}"
       register: realm_import_check
       failed_when: false
-      no_log: true
 
     - name: Get TPA Realm import status
       ansible.builtin.set_fact:
@@ -122,7 +119,6 @@
         namespace: "{{ tpa_namespace }}"
       register: cli_secret_check
       failed_when: false
-      no_log: true
 
     - name: Validate TPA CLI credentials secret
       ansible.builtin.set_fact:
@@ -161,7 +157,6 @@
         namespace: "{{ tpa_namespace }}"
       register: tpa_instance_check
       failed_when: false
-      no_log: true
 
     - name: Display RHTPA instance existence result
       ansible.builtin.debug:
@@ -224,7 +219,6 @@
       delegate_to: localhost
       changed_when: false
       failed_when: false
-      no_log: true
 
     - name: Validate RHTPA server endpoint
       ansible.builtin.set_fact:
@@ -265,7 +259,6 @@
       delegate_to: localhost
       changed_when: false
       failed_when: false
-      no_log: true
 
     - name: Get OAuth token from Keycloak
       ansible.builtin.uri:
@@ -282,7 +275,6 @@
       delegate_to: localhost
       changed_when: false
       failed_when: false
-      no_log: true
       when: openid_config.json is defined and (openid_config.json.token_endpoint | default('')) != ''
 
     - name: Get TPA server route
@@ -294,7 +286,6 @@
           - app.kubernetes.io/component=server
       register: tpa_server_route_result
       failed_when: false
-      no_log: true
       when: >
         oauth_token.json is defined and
         (oauth_token.json.access_token | default('')) != '' and
@@ -320,7 +311,6 @@
       delegate_to: localhost
       changed_when: false
       failed_when: false
-      no_log: true
       when: >
         oauth_token.json is defined and
         (oauth_token.json.access_token | default('')) != '' and

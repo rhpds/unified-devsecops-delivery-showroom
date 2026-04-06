@@ -48,12 +48,10 @@
           oc whoami -t
       register: oc_login_result
       changed_when: false
-      no_log: true
 
     - name: Set OpenShift token fact
       ansible.builtin.set_fact:
         openshift_token: "{{ oc_login_result.stdout_lines[-1] }}"
-      no_log: true
 
     - name: Display module information
       ansible.builtin.debug:
@@ -360,7 +358,6 @@
               echo "$ADMIN_TOKEN"
           register: admin_token
           changed_when: false
-          no_log: true
 
         - name: Process Keycloak client and realm deletion
           when: admin_token.stdout != "" and admin_token.stdout != "null"
@@ -372,7 +369,6 @@
                   echo "$SSO_CLIENT_ID"
               register: sso_client_id
               changed_when: false
-              no_log: true
 
             - name: Delete trusted-artifact-signer client from sso realm
               when: sso_client_id.stdout != ""
@@ -382,7 +378,6 @@
                       curl -s -X DELETE "{{ keycloak_admin_console }}/admin/realms/{{ tas_sso_realm }}/clients/{{ sso_client_id.stdout }}" \
                         -H "Authorization: Bearer {{ admin_token.stdout }}"
                   changed_when: true
-                  no_log: true
 
                 - name: Verify client deletion from sso realm
                   ansible.builtin.shell: |
@@ -391,7 +386,6 @@
                       echo "$VERIFY_CLIENT"
                   register: verify_sso_client
                   changed_when: false
-                  no_log: true
 
                 - name: Display client deletion result
                   ansible.builtin.debug:
@@ -410,7 +404,6 @@
                   echo "$REALM_EXISTS"
               register: realm_exists
               changed_when: false
-              no_log: true
 
             - name: Delete tas-chains realm
               when: realm_exists.stdout == "200"
@@ -420,7 +413,6 @@
                       curl -s -X DELETE "{{ keycloak_admin_console }}/admin/realms/{{ tas_chains_realm }}" \
                         -H "Authorization: Bearer {{ admin_token.stdout }}"
                   changed_when: true
-                  no_log: true
 
                 - name: Verify realm deletion
                   ansible.builtin.shell: |
@@ -430,7 +422,6 @@
                       echo "$VERIFY_REALM"
                   register: verify_realm
                   changed_when: false
-                  no_log: true
 
                 - name: Display realm deletion result
                   ansible.builtin.debug:
@@ -520,7 +511,6 @@
                       echo "$CHECK_CODE"
                   register: repo_check
                   changed_when: false
-                  no_log: true
 
                 - name: Display repository not found
                   when: repo_check.stdout == "404"
@@ -542,7 +532,6 @@
                           echo "$HTTP_CODE"
                       register: delete_result
                       changed_when: delete_result.stdout in ["204", "200"]
-                      no_log: true
 
                     - name: Display repository deletion result
                       ansible.builtin.debug:
@@ -621,7 +610,6 @@
           register: kc_admin_token
           changed_when: false
           failed_when: kc_admin_token.stdout == "" or kc_admin_token.stdout == "null"
-          no_log: true
 
         - name: Display Keycloak authentication success
           ansible.builtin.debug:
@@ -645,7 +633,6 @@
               echo "$REALM_EXISTS"
           register: check_realm
           changed_when: false
-          no_log: true
 
         - name: Create tas-chains realm if it doesn't exist
           when: check_realm.stdout == "404"
@@ -660,7 +647,6 @@
                       \"enabled\": true
                     }"
               changed_when: true
-              no_log: true
 
             - name: Display realm creation result
               ansible.builtin.debug:
@@ -682,7 +668,6 @@
               echo "$CLIENT_EXISTS"
           register: check_client
           changed_when: false
-          no_log: true
 
         - name: Create trusted-artifact-signer client if it doesn't exist
           when: check_client.stdout == ""
@@ -702,7 +687,6 @@
                       \"frontchannelLogout\": false
                     }"
               changed_when: true
-              no_log: true
 
             - name: Display client creation result
               ansible.builtin.debug:
@@ -720,7 +704,6 @@
               echo "$CLIENT_ID"
           register: tas_client_uuid
           changed_when: false
-          no_log: true
 
         - name: Configure service account user
           ansible.builtin.debug:
@@ -733,7 +716,6 @@
               echo "$SERVICE_ACCOUNT_USER"
           register: service_account_user_id
           changed_when: false
-          no_log: true
 
         - name: Update service account with email verification
           ansible.builtin.shell: |
@@ -750,7 +732,6 @@
           register: email_update_result
           changed_when: email_update_result.stdout in ["200", "204"]
           failed_when: email_update_result.stdout not in ["200", "204"]
-          no_log: true
 
         - name: Verify email verification was set
           ansible.builtin.shell: |
@@ -759,7 +740,6 @@
           register: verify_email_verified
           changed_when: false
           failed_when: verify_email_verified.stdout != "true"
-          no_log: true
 
         - name: Display service account configured
           ansible.builtin.debug:
@@ -782,7 +762,6 @@
               echo "$SSO_CLIENT_EXISTS"
           register: check_sso_client
           changed_when: false
-          no_log: true
 
         - name: Create trusted-artifact-signer client in sso realm if it doesn't exist
           when: check_sso_client.stdout == ""
@@ -802,7 +781,6 @@
                       \"frontchannelLogout\": false
                     }"
               changed_when: true
-              no_log: true
 
             - name: Display sso client creation result
               ansible.builtin.debug:
@@ -891,7 +869,6 @@
               echo "$TAS_CHAINS_CLIENT_ID_UUID"
           register: tas_chains_client_uuid
           changed_when: false
-          no_log: true
 
         - name: Get TAS client secret
           ansible.builtin.shell: |
@@ -901,7 +878,6 @@
           register: tas_client_secret
           changed_when: false
           failed_when: tas_client_secret.stdout == "" or tas_client_secret.stdout == "null"
-          no_log: true
 
         - name: Display client secret retrieved
           ansible.builtin.debug:
@@ -919,7 +895,6 @@
               export TAS_CHAINS_REALM="{{ tas_chains_realm }}"
               envsubst '${TAS_CHAINS_CLIENT_ID} ${TAS_CHAINS_CLIENT_SECRET} ${TAS_CHAINS_REALM}' < {{ lab_assets_dir }}/oidc-info-secret.yml | oc apply -n {{ pipelines_namespace }} -f -
           changed_when: true
-          no_log: true
 
         - name: Display OIDC info secret created
           ansible.builtin.debug:

@@ -49,12 +49,10 @@
       delegate_to: bastion
       register: oc_login_result
       changed_when: false
-      no_log: true
 
     - name: Set OpenShift token fact
       ansible.builtin.set_fact:
         openshift_token: "{{ oc_login_result.stdout_lines[-1] }}"
-      no_log: true
 
     - name: Display module information
       ansible.builtin.debug:
@@ -113,7 +111,6 @@
               echo "${ADMIN_USER}:${ADMIN_PASS}"
           changed_when: false
           register: kc_reset_creds
-          no_log: true
 
         - name: Get Keycloak admin token
           ansible.builtin.shell:
@@ -128,7 +125,6 @@
                 -d "grant_type=password" | jq -r '.access_token'
           changed_when: false
           register: reset_admin_token
-          no_log: true
 
         - name: Check if token is valid
           ansible.builtin.set_fact:
@@ -144,7 +140,6 @@
                     "{{ keycloak_admin_console }}/admin/realms/{{ sso_realm }}/users?username={{ developer_username }}" | jq -r '.[0].id // empty'
               register: reset_user_id
               changed_when: false
-              no_log: true
 
             - name: Delete user if exists
               when: reset_user_id.stdout != ""
@@ -153,7 +148,6 @@
                   curl -s -X DELETE "{{ keycloak_admin_console }}/admin/realms/{{ sso_realm }}/users/{{ reset_user_id.stdout }}" \
                     -H "Authorization: Bearer {{ reset_admin_token.stdout }}"
               changed_when: true
-              no_log: true
 
             - name: Verify user deletion
               when: reset_user_id.stdout != ""
@@ -163,7 +157,6 @@
                     "{{ keycloak_admin_console }}/admin/realms/{{ sso_realm }}/users?username={{ developer_username }}" | jq -r '.[0].id // empty'
               register: verify_user_delete
               changed_when: false
-              no_log: true
 
         - name: Reset GitOps Backstage Configuration
           ansible.builtin.shell:
@@ -193,7 +186,6 @@
               echo "${ADMIN_USER}:${ADMIN_PASS}"
           changed_when: false
           register: kc_create_creds
-          no_log: true
 
         - name: Get Keycloak admin token for user creation
           ansible.builtin.shell:
@@ -208,7 +200,6 @@
                 -d "grant_type=password" | jq -r '.access_token'
           changed_when: false
           register: create_admin_token
-          no_log: true
 
         - name: Verify admin token
           ansible.builtin.fail:
@@ -222,7 +213,6 @@
                 "{{ keycloak_admin_console }}/admin/realms/{{ sso_realm }}/users?username={{ developer_username }}" | jq -r '.[0].id // empty'
           changed_when: false
           register: existing_user_id
-          no_log: true
 
         - name: Create developer user
           when: existing_user_id.stdout == ""
@@ -240,7 +230,6 @@
                   \"enabled\": true
                 }"
           changed_when: true
-          no_log: true
 
         - name: Wait for user creation
           when: existing_user_id.stdout == ""
@@ -254,7 +243,6 @@
                 "{{ keycloak_admin_console }}/admin/realms/{{ sso_realm }}/users?username={{ developer_username }}" | jq -r '.[0].id'
           changed_when: false
           register: user_id
-          no_log: true
 
         - name: Verify user ID exists
           ansible.builtin.fail:
@@ -268,7 +256,6 @@
                 "{{ keycloak_admin_console }}/admin/realms/{{ sso_realm }}/groups?search=tssc" | jq -r '.[0].id // empty'
           changed_when: false
           register: tssc_group_id
-          no_log: true
 
         - name: Get users group ID
           ansible.builtin.shell:
@@ -277,7 +264,6 @@
                 "{{ keycloak_admin_console }}/admin/realms/{{ sso_realm }}/groups?search=users" | jq -r '.[0].id // empty'
           changed_when: false
           register: users_group_id
-          no_log: true
 
         - name: Check if user is member of tssc group
           when: tssc_group_id.stdout != ""
@@ -287,7 +273,6 @@
                 "{{ keycloak_admin_console }}/admin/realms/{{ sso_realm }}/users/{{ user_id.stdout }}/groups" | jq -r ".[] | select(.id==\"{{ tssc_group_id.stdout }}\") | .id"
           register: tssc_member_check
           changed_when: false
-          no_log: true
 
         - name: Add user to tssc group
           when: tssc_group_id.stdout != "" and tssc_member_check.stdout == ""
@@ -296,7 +281,6 @@
               curl -s -X PUT "{{ keycloak_admin_console }}/admin/realms/{{ sso_realm }}/users/{{ user_id.stdout }}/groups/{{ tssc_group_id.stdout }}" \
                 -H "Authorization: Bearer {{ create_admin_token.stdout }}"
           changed_when: true
-          no_log: true
 
         - name: Check if user is member of users group
           when: users_group_id.stdout != ""
@@ -306,7 +290,6 @@
                 "{{ keycloak_admin_console }}/admin/realms/{{ sso_realm }}/users/{{ user_id.stdout }}/groups" | jq -r ".[] | select(.id==\"{{ users_group_id.stdout }}\") | .id"
           register: users_member_check
           changed_when: false
-          no_log: true
 
         - name: Add user to users group
           when: users_group_id.stdout != "" and users_member_check.stdout == ""
@@ -315,7 +298,6 @@
               curl -s -X PUT "{{ keycloak_admin_console }}/admin/realms/{{ sso_realm }}/users/{{ user_id.stdout }}/groups/{{ users_group_id.stdout }}" \
                 -H "Authorization: Bearer {{ create_admin_token.stdout }}"
           changed_when: true
-          no_log: true
 
         - name: Set user password
           ansible.builtin.shell:
@@ -329,7 +311,6 @@
                   \"temporary\": false
                 }"
           changed_when: true
-          no_log: true
 
         - name: Developer user creation complete
           ansible.builtin.debug:
@@ -441,7 +422,6 @@
               type: Opaque
               EOF
           changed_when: true
-          no_log: true
 
         - name: Get GitLab personal access token
           ansible.builtin.shell:
@@ -449,7 +429,6 @@
               oc get secret root-user-personal-token -n {{ gitlab_namespace }} -o jsonpath='{.data.token}' | base64 -d
           changed_when: false
           register: gitlab_token
-          no_log: true
 
         - name: Verify GitLab token
           ansible.builtin.fail:
@@ -470,7 +449,6 @@
               type: kubernetes.io/basic-auth
               EOF
           changed_when: true
-          no_log: true
 
         - name: Pipeline secrets created
           ansible.builtin.debug:

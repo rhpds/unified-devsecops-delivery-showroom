@@ -58,7 +58,6 @@
       delegate_to: bastion
       changed_when: false
       failed_when: false
-      no_log: true
 
     - name: Get Keycloak admin password
       ansible.builtin.command:
@@ -67,13 +66,11 @@
       delegate_to: bastion
       changed_when: false
       failed_when: false
-      no_log: true
 
     - name: Decode Keycloak admin credentials
       ansible.builtin.set_fact:
         keycloak_admin_user: "{{ keycloak_admin_user_b64.stdout | b64decode }}"
         keycloak_admin_password: "{{ keycloak_admin_password_b64.stdout | b64decode }}"
-      no_log: true
       when: >
         keycloak_admin_user_b64.rc == 0 and
         keycloak_admin_password_b64.rc == 0 and
@@ -96,7 +93,6 @@
       delegate_to: bastion
       changed_when: false
       failed_when: false
-      no_log: true
       when: >
         keycloak_admin_user is defined and
         keycloak_admin_password is defined and
@@ -106,7 +102,6 @@
     - name: Set admin token
       ansible.builtin.set_fact:
         admin_token: "{{ admin_token_result.json.access_token }}"
-      no_log: true
       when: >
         admin_token_result.json is defined and
         (admin_token_result.json.access_token | default('')) != '' and
@@ -135,7 +130,6 @@
       delegate_to: bastion
       changed_when: false
       failed_when: false
-      no_log: true
       when: >
         admin_token is defined and
         admin_token != '' and
@@ -144,7 +138,6 @@
     - name: Set user ID from response
       ansible.builtin.set_fact:
         user_exists: "{{ (user_exists_check.json | default([{}]))[0].id | default('') }}"
-      no_log: true
       when: >
         user_exists_check.json is defined and
         user_exists_check.json | length > 0
@@ -168,7 +161,6 @@
       delegate_to: bastion
       changed_when: false
       failed_when: false
-      no_log: true
       when: >
         admin_token is defined and
         admin_token != '' and
@@ -179,7 +171,6 @@
     - name: Check if user is enabled
       ansible.builtin.set_fact:
         user_enabled: "{{ user_data_check.json.enabled | default(false) }}"
-      no_log: true
       when: >
         user_data_check.json is defined
 
@@ -205,7 +196,6 @@
     - name: Check if email is verified
       ansible.builtin.set_fact:
         email_verified: "{{ user_data_check.json.emailVerified | default(false) }}"
-      no_log: true
       when: >
         user_data_check.json is defined
 
@@ -276,7 +266,6 @@
       delegate_to: bastion
       changed_when: false
       failed_when: false
-      no_log: true
       when: >
         admin_token is defined and
         admin_token != '' and
@@ -287,7 +276,6 @@
     - name: Extract group names
       ansible.builtin.set_fact:
         user_groups: "{{ user_groups_check.json | default([]) | map(attribute='name') | list }}"
-      no_log: true
       when: >
         user_groups_check.json is defined
 
@@ -367,7 +355,6 @@
       delegate_to: bastion
       changed_when: false
       failed_when: false
-      no_log: true
 
     - name: Display ConfigMap existence result
       ansible.builtin.debug:
@@ -381,7 +368,6 @@
       delegate_to: bastion
       changed_when: false
       failed_when: false
-      no_log: true
       when: configmap_check.rc == 0
 
     - name: Set TAS_FULCIO_URL
@@ -413,7 +399,6 @@
       delegate_to: bastion
       changed_when: false
       failed_when: false
-      no_log: true
       when: configmap_check.rc == 0
 
     - name: Set TAS_REKOR_URL
@@ -444,7 +429,6 @@
       delegate_to: bastion
       changed_when: false
       failed_when: false
-      no_log: true
       when: configmap_check.rc == 0
 
     - name: Set TAS_ISSUER_URL
@@ -475,7 +459,6 @@
       delegate_to: bastion
       changed_when: false
       failed_when: false
-      no_log: true
       when: configmap_check.rc == 0
 
     - name: Set TAS_CLIENT_ID
@@ -506,7 +489,6 @@
       delegate_to: bastion
       changed_when: false
       failed_when: false
-      no_log: true
       when: configmap_check.rc == 0
 
     - name: Set ConfigMap annotation
@@ -557,7 +539,6 @@
       delegate_to: bastion
       changed_when: false
       failed_when: false
-      no_log: true
 
     - name: Display tpa-secret existence result
       ansible.builtin.debug:
@@ -571,7 +552,6 @@
       delegate_to: bastion
       changed_when: false
       failed_when: false
-      no_log: true
       when: tpa_secret_check.rc == 0
 
     - name: Check if tpa-secret contains bombastic_api_url
@@ -608,7 +588,6 @@
       delegate_to: bastion
       changed_when: false
       failed_when: false
-      no_log: true
 
     - name: Display gitlab-auth-secret existence result
       ansible.builtin.debug:
@@ -622,7 +601,6 @@
       delegate_to: bastion
       changed_when: false
       failed_when: false
-      no_log: true
       when: gitlab_secret_check.rc == 0
 
     - name: Check if gitlab-auth-secret contains password

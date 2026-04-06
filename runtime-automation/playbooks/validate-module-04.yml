@@ -63,7 +63,6 @@
       delegate_to: bastion
       changed_when: false
       failed_when: false
-      no_log: true
 
     - name: Get ACS API token from secret
       ansible.builtin.command:
@@ -72,13 +71,11 @@
       delegate_to: bastion
       changed_when: false
       failed_when: false
-      no_log: true
       when: token_secret_check.rc == 0
 
     - name: Decode ACS API token
       ansible.builtin.set_fact:
         acs_api_token: "{{ token_b64.stdout | b64decode }}"
-      no_log: true
       when: token_secret_check.rc == 0 and token_b64.stdout is defined and token_b64.stdout != ''
 
     - name: Validate ACS API token secret
@@ -125,7 +122,6 @@
       delegate_to: bastion
       changed_when: false
       failed_when: false
-      no_log: true
       when: acs_central_url is defined and acs_central_url != ''
 
     - name: Validate ACS Central availability
@@ -180,13 +176,11 @@
       delegate_to: bastion
       changed_when: false
       failed_when: false
-      no_log: true
       when: acs_credentials_available | bool
 
     - name: Extract integration ID
       ansible.builtin.set_fact:
         integration_id: "{{ integrations_response.json.integrations | selectattr('name', 'equalto', acs_integration_name) | map(attribute='id') | first | default('') }}"
-      no_log: true
       when: >
         acs_credentials_available | bool and
         integrations_response.json is defined and
@@ -212,7 +206,6 @@
       delegate_to: bastion
       changed_when: false
       failed_when: false
-      no_log: true
       when: >
         acs_credentials_available | bool and
         integration_id is defined and
@@ -221,7 +214,6 @@
     - name: Extract integration categories
       ansible.builtin.set_fact:
         integration_categories: "{{ integration_details.json.categories | default([]) }}"
-      no_log: true
       when: >
         acs_credentials_available | bool and
         integration_id is defined and
@@ -284,7 +276,6 @@
       delegate_to: bastion
       changed_when: false
       failed_when: false
-      no_log: true
 
     - name: Get roxctl version
       ansible.builtin.command:
@@ -293,7 +284,6 @@
       delegate_to: bastion
       changed_when: false
       failed_when: false
-      no_log: true
       when: roxctl_check.rc == 0
 
     - name: Extract roxctl version string

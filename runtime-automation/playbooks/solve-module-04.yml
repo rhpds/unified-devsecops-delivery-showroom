@@ -41,12 +41,10 @@
       delegate_to: bastion
       register: oc_login_result
       changed_when: false
-      no_log: true
 
     - name: Set OpenShift token fact
       ansible.builtin.set_fact:
         openshift_token: "{{ oc_login_result.stdout_lines[-1] }}"
-      no_log: true
 
     - name: Display module information
       ansible.builtin.debug:
@@ -73,7 +71,6 @@
                 cmd: oc get secret rox-api-token -n {{ app_ci_namespace }} -o jsonpath='{.data.rox-api-token}' | base64 -d
               register: acs_api_token
               changed_when: false
-              no_log: true
 
             - name: Check if token was retrieved
               when: acs_api_token.stdout != ""
@@ -88,7 +85,6 @@
                             jq -r '.integrations[] | select(.name=="{{ acs_integration_name }}") | .id' 2>/dev/null || echo ""
                       register: integration_id
                       changed_when: false
-                      no_log: true
 
                     - name: Delete integration if exists
                       when: integration_id.stdout != ""
@@ -101,7 +97,6 @@
                                 -H "Authorization: Bearer {{ acs_api_token.stdout }}" 2>/dev/null || echo "000"
                           register: delete_response
                           changed_when: delete_response.stdout in ["200", "204"]
-                          no_log: true
 
                         - name: Verify integration deletion
                           ansible.builtin.shell:
@@ -111,7 +106,6 @@
                                 jq -r '.integrations[] | select(.name=="{{ acs_integration_name }}") | .id' 2>/dev/null || echo ""
                           register: verify_integration
                           changed_when: false
-                          no_log: true
 
                         - name: Display deletion result
                           ansible.builtin.debug:
@@ -133,7 +127,6 @@
           register: acs_token
           changed_when: false
           failed_when: acs_token.stdout == ""
-          no_log: true
 
         - name: Display service URLs
           ansible.builtin.debug:
@@ -149,7 +142,6 @@
                 jq -r '.integrations[] | select(.name=="{{ acs_integration_name }}") | .id' 2>/dev/null || echo ""
           register: existing_integration
           changed_when: false
-          no_log: true
 
         - name: Delete existing integration if found
           when: existing_integration.stdout != ""
@@ -158,7 +150,6 @@
               curl -k -s -X DELETE "{{ acs_route }}/v1/imageintegrations/{{ existing_integration.stdout }}" \
                 -H "Authorization: Bearer {{ acs_token.stdout }}" > /dev/null 2>&1
           changed_when: true
-          no_log: true
 
         - name: Create ACS-Quay integration
           ansible.builtin.shell:
@@ -179,12 +170,10 @@
                 }' 2>/dev/null
           register: integration_create
           changed_when: true
-          no_log: true
 
         - name: Extract integration ID
           ansible.builtin.set_fact:
             integration_id: "{{ integration_create.stdout | from_json | json_query('id') }}"
-          no_log: true
 
         - name: Verify integration created
           ansible.builtin.fail:
@@ -197,7 +186,6 @@
               curl -k -s -X POST "{{ acs_route }}/v1/imageintegrations/{{ integration_id }}/test" \
                 -H "Authorization: Bearer {{ acs_token.stdout }}" 2>/dev/null
           changed_when: false
-          no_log: true
 
         - name: ACS configuration complete
           ansible.builtin.debug:
@@ -220,7 +208,6 @@
           register: rox_token
           changed_when: false
           failed_when: rox_token.stdout == ""
-          no_log: true
 
         - name: Set scanning variables
           ansible.builtin.set_fact:
@@ -242,7 +229,6 @@
             ROX_ENDPOINT: "{{ rox_endpoint }}"
           changed_when: false
           failed_when: false  # Script uses || true
-          no_log: true
           register: scan_result
 
         - name: Display scan results
@@ -257,7 +243,6 @@
             ROX_ENDPOINT: "{{ rox_endpoint }}"
           changed_when: false
           failed_when: false  # Script uses || true
-          no_log: true
           register: check_result
 
         - name: Display policy check results
