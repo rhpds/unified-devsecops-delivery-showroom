@@ -354,7 +354,7 @@
               ADMIN_TOKEN=$(curl -s -X POST "{{ keycloak_admin_console }}/realms/master/protocol/openid-connect/token" \
                 -H "Content-Type: application/x-www-form-urlencoded" \
                 -d "client_id=admin-cli" \
-                -d "username={{ keycloak_admin_username }}" \
+                -d "username={{ keycloak_admin_user }}" \
                 -d "password={{ keycloak_admin_password }}" \
                 -d "grant_type=password" | jq -r '.access_token')
               echo "$ADMIN_TOKEN"
@@ -609,7 +609,7 @@
               ADMIN_TOKEN=$(curl -s -X POST "{{ keycloak_admin_console }}/realms/master/protocol/openid-connect/token" \
                 -H "Content-Type: application/x-www-form-urlencoded" \
                 -d "client_id=admin-cli" \
-                -d "username={{ keycloak_admin_username }}" \
+                -d "username={{ keycloak_admin_user }}" \
                 -d "password={{ keycloak_admin_password }}" \
                 -d "grant_type=password" | jq -r '.access_token')
               echo "$ADMIN_TOKEN"
