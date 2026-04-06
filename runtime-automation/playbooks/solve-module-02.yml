@@ -310,13 +310,13 @@
 
         - name: Display pod termination result
           ansible.builtin.debug:
-            msg: "{{ '✓ All pods deleted' if pods_termination.stdout_lines[-1] == 'all_deleted' else 'Warning: ' + pods_termination.stdout_lines[-1].split(':')[1] + ' pod(s) still exist after timeout' }}"
-          when: pods_termination.stdout_lines[-1] != 'all_deleted'
+            msg: "{{ 'Warning: ' + pods_termination.stdout.split(':')[-1].strip() + ' pod(s) still exist after timeout' }}"
+          when: "'timeout' in pods_termination.stdout"
 
         - name: Display all pods deleted
           ansible.builtin.debug:
             msg: "✓ All pods deleted"
-          when: pods_termination.stdout_lines[-1] == 'all_deleted'
+          when: "'all_deleted' in pods_termination.stdout"
 
         - name: Delete all PVCs in TAS namespace
           ansible.builtin.debug:
