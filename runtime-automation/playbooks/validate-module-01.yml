@@ -18,12 +18,14 @@
 
   module_defaults:
     kubernetes.core.k8s:
-      host: "{{ openshift_api_url }}"
-      api_key: "{{ openshift_cluster_admin_token }}"
+      host: "{{ openshift_api_server_url }}"
+      username: "{{ openshift_cluster_admin_username }}"
+      password: "{{ openshift_cluster_admin_password }}"
       validate_certs: false
     kubernetes.core.k8s_info:
-      host: "{{ openshift_api_url }}"
-      api_key: "{{ openshift_cluster_admin_token }}"
+      host: "{{ openshift_api_server_url }}"
+      username: "{{ openshift_cluster_admin_username }}"
+      password: "{{ openshift_cluster_admin_password }}"
       validate_certs: false
 
   tasks:
