@@ -7,13 +7,11 @@
 
   vars:
     # Variables from user_data.yml (injected via -e @/user_data/user_data.yml)
-    cluster_domain: "{{ openshift_cluster_ingress_domain }}"
-    quay_token: "{{ quay_admin_token }}"
+    # Available: acs_route, quay_host, quay_admin_token, bastion_*, openshift_*
 
     # Static variables
     acs_namespace: "stackrox"
     app_ci_namespace: "tssc-app-ci"
-    quay_namespace: "quay-enterprise"
     acs_integration_name: "acs_quay"
     quay_org: "tssc"
     quay_repo: "tekton-chains-test"
@@ -80,19 +78,12 @@
             - name: Check if token was retrieved
               when: acs_api_token.stdout != ""
               block:
-                - name: Get ACS Central URL from route
-                  ansible.builtin.shell:
-                    cmd: oc get route central -n {{ acs_namespace }} -o jsonpath='{.spec.host}' 2>/dev/null || echo ""
-                  register: acs_central_route
-                  changed_when: false
-
-                - name: Delete ACS-Quay integration (if ACS Central route exists)
-                  when: acs_central_route.stdout != ""
+                - name: Delete ACS-Quay integration
                   block:
                     - name: Check for existing integration
                       ansible.builtin.shell:
                         cmd: |
-                          curl -k -s -X GET "https://{{ acs_central_route.stdout }}/v1/imageintegrations" \
+                          curl -k -s -X GET "{{ acs_route }}/v1/imageintegrations" \
                             -H "Authorization: Bearer {{ acs_api_token.stdout }}" 2>/dev/null | \
                             jq -r '.integrations[] | select(.name=="{{ acs_integration_name }}") | .id' 2>/dev/null || echo ""
                       register: integration_id
@@ -106,7 +97,7 @@
                           ansible.builtin.shell:
                             cmd: |
                               curl -k -s -o /dev/null -w "%{http_code}" -X DELETE \
-                                "https://{{ acs_central_route.stdout }}/v1/imageintegrations/{{ integration_id.stdout }}" \
+                                "{{ acs_route }}/v1/imageintegrations/{{ integration_id.stdout }}" \
                                 -H "Authorization: Bearer {{ acs_api_token.stdout }}" 2>/dev/null || echo "000"
                           register: delete_response
                           changed_when: delete_response.stdout in ["200", "204"]
@@ -115,7 +106,7 @@
                         - name: Verify integration deletion
                           ansible.builtin.shell:
                             cmd: |
-                              curl -k -s -X GET "https://{{ acs_central_route.stdout }}/v1/imageintegrations" \
+                              curl -k -s -X GET "{{ acs_route }}/v1/imageintegrations" \
                                 -H "Authorization: Bearer {{ acs_api_token.stdout }}" 2>/dev/null | \
                                 jq -r '.integrations[] | select(.name=="{{ acs_integration_name }}") | .id' 2>/dev/null || echo ""
                           register: verify_integration
@@ -144,30 +135,16 @@
           failed_when: acs_token.stdout == ""
           no_log: true
 
-        - name: Get ACS Central URL from route
-          ansible.builtin.shell:
-            cmd: oc get route central -n {{ acs_namespace }} -o jsonpath='{.spec.host}' 2>/dev/null || echo ""
-          register: acs_url
-          changed_when: false
-          failed_when: acs_url.stdout == ""
-
-        - name: Get Quay URL from route
-          ansible.builtin.shell:
-            cmd: oc get route -n {{ quay_namespace }} -l quay-component=quay-app-route -o jsonpath='{.items[0].spec.host}' 2>/dev/null || echo ""
-          register: quay_url
-          changed_when: false
-          failed_when: quay_url.stdout == ""
-
         - name: Display service URLs
           ansible.builtin.debug:
             msg:
-              - "ACS Central URL: https://{{ acs_url.stdout }}"
-              - "Quay URL: https://{{ quay_url.stdout }}"
+              - "ACS Central URL: {{ acs_route }}"
+              - "Quay URL: https://{{ quay_host }}"
 
         - name: Check for existing integration
           ansible.builtin.shell:
             cmd: |
-              curl -k -s -X GET "https://{{ acs_url.stdout }}/v1/imageintegrations" \
+              curl -k -s -X GET "{{ acs_route }}/v1/imageintegrations" \
                 -H "Authorization: Bearer {{ acs_token.stdout }}" 2>/dev/null | \
                 jq -r '.integrations[] | select(.name=="{{ acs_integration_name }}") | .id' 2>/dev/null || echo ""
           register: existing_integration
@@ -178,7 +155,7 @@
           when: existing_integration.stdout != ""
           ansible.builtin.shell:
             cmd: |
-              curl -k -s -X DELETE "https://{{ acs_url.stdout }}/v1/imageintegrations/{{ existing_integration.stdout }}" \
+              curl -k -s -X DELETE "{{ acs_route }}/v1/imageintegrations/{{ existing_integration.stdout }}" \
                 -H "Authorization: Bearer {{ acs_token.stdout }}" > /dev/null 2>&1
           changed_when: true
           no_log: true
@@ -186,7 +163,7 @@
         - name: Create ACS-Quay integration
           ansible.builtin.shell:
             cmd: |
-              curl -k -s -X POST "https://{{ acs_url.stdout }}/v1/imageintegrations" \
+              curl -k -s -X POST "{{ acs_route }}/v1/imageintegrations" \
                 -H "Authorization: Bearer {{ acs_token.stdout }}" \
                 -H "Content-Type: application/json" \
                 -d '{
@@ -194,8 +171,8 @@
                   "type": "quay",
                   "categories": ["REGISTRY", "SCANNER"],
                   "quay": {
-                    "endpoint": "https://{{ quay_url.stdout }}",
-                    "oauthToken": "{{ quay_token }}",
+                    "endpoint": "https://{{ quay_host }}",
+                    "oauthToken": "{{ quay_admin_token }}",
                     "insecure": true
                   },
                   "skipTestIntegration": true
@@ -217,7 +194,7 @@
         - name: Test ACS-Quay integration
           ansible.builtin.shell:
             cmd: |
-              curl -k -s -X POST "https://{{ acs_url.stdout }}/v1/imageintegrations/{{ integration_id }}/test" \
+              curl -k -s -X POST "{{ acs_route }}/v1/imageintegrations/{{ integration_id }}/test" \
                 -H "Authorization: Bearer {{ acs_token.stdout }}" 2>/dev/null
           changed_when: false
           no_log: true
@@ -228,7 +205,7 @@
               - "✓ ACS-Quay integration configured"
               - "Integration name: {{ acs_integration_name }}"
               - "Integration ID: {{ integration_id }}"
-              - "Endpoint: https://{{ quay_url.stdout }}"
+              - "Endpoint: https://{{ quay_host }}"
               - "Type: Registry + Scanner"
 
     ###########################################
@@ -245,24 +222,10 @@
           failed_when: rox_token.stdout == ""
           no_log: true
 
-        - name: Get ACS Central URL for scanning
-          ansible.builtin.shell:
-            cmd: oc get route central -n {{ acs_namespace }} -o jsonpath='{.spec.host}' 2>/dev/null || echo ""
-          register: acs_scan_url
-          changed_when: false
-          failed_when: acs_scan_url.stdout == ""
-
-        - name: Get Quay URL for scanning
-          ansible.builtin.shell:
-            cmd: oc get route -n {{ quay_namespace }} -l quay-component=quay-app-route -o jsonpath='{.items[0].spec.host}' 2>/dev/null || echo ""
-          register: quay_scan_url
-          changed_when: false
-          failed_when: quay_scan_url.stdout == ""
-
         - name: Set scanning variables
           ansible.builtin.set_fact:
-            rox_endpoint: "https://{{ acs_scan_url.stdout }}:443"
-            test_image: "{{ quay_scan_url.stdout }}/{{ quay_org }}/{{ quay_repo }}:{{ image_tag }}"
+            rox_endpoint: "{{ acs_route }}:443"
+            test_image: "{{ quay_host }}/{{ quay_org }}/{{ quay_repo }}:{{ image_tag }}"
 
         - name: Display test configuration
           ansible.builtin.debug:
