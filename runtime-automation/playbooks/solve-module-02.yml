@@ -7,25 +7,59 @@
   gather_facts: false
 
   vars:
-    # Match script variables exactly
-    cluster_domain: "{{ lookup('env', 'GUID') }}.{{ lookup('env', 'BASE_DOMAIN') | default('example.opentlc.com', true) }}"
-    keycloak_url: "https://sso.{{ lookup('env', 'GUID') }}.{{ lookup('env', 'BASE_DOMAIN') | default('example.opentlc.com', true) }}"
+    # Variables from user_data.yml (injected via -e @/user_data/user_data.yml)
+    cluster_domain: "{{ openshift_cluster_ingress_domain }}"
+    guid: "{{ guid }}"
+    bastion_hostname: "{{ bastion_public_hostname }}"
+    quay_token: "{{ quay_admin_token }}"
+
+    # Static variables
+    keycloak_url: "https://sso.{{ cluster_domain }}"
     keycloak_namespace: "tssc-keycloak"
     tas_namespace: "tssc-tas"
     pipelines_namespace: "openshift-pipelines"
-    app_ci_namespace: "app-sample-ci"
+    app_ci_namespace: "tssc-app-ci"
     quay_namespace: "quay-enterprise"
     tas_chains_realm: "tas-chains"
     tas_sso_realm: "sso"
     tas_client_id: "trusted-artifact-signer"
-    quay_token: "{{ lookup('env', 'QUAY_TOKEN') | default('changeme', true) }}"
     quay_org: "tssc"
     quay_repo: "tekton-chains-test"
-    lab_assets_dir: "~/lab-assets"
+    lab_assets_dir: "/home/lab-user/lab-assets"
     test_sa: "chains-signing-image-tester"
     registry_secret: "tssc-image-registry-auth"
 
+  module_defaults:
+    group/kubernetes.core.k8s:
+      host: "{{ openshift_api_server_url }}"
+      api_key: "{{ hostvars['localhost']['openshift_token'] | default('') }}"
+      validate_certs: false
+
   tasks:
+    - name: Add bastion host to inventory
+      ansible.builtin.add_host:
+        name: "bastion"
+        ansible_host: "{{ bastion_hostname }}"
+        ansible_user: "{{ bastion_ssh_user_name }}"
+        ansible_ssh_pass: "{{ bastion_ssh_password }}"
+        ansible_port: "{{ bastion_ssh_port }}"
+        ansible_ssh_common_args: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+
+    - name: Login to OpenShift and get token
+      ansible.builtin.shell:
+        cmd: |
+          oc login {{ openshift_api_server_url }} -u {{ openshift_cluster_admin_username }} -p {{ openshift_cluster_admin_password }} --insecure-skip-tls-verify=true
+          oc whoami -t
+      delegate_to: bastion
+      register: oc_login_result
+      changed_when: false
+      no_log: true
+
+    - name: Set OpenShift token fact
+      ansible.builtin.set_fact:
+        openshift_token: "{{ oc_login_result.stdout_lines[-1] }}"
+      no_log: true
+
     - name: Display module information
       ansible.builtin.debug:
         msg: "Solving Module 02: RHTAS Installation and Image Signing"
@@ -34,7 +68,7 @@
     # STEP 0: Reset Module 2 (reset-module-2.sh)
     ###########################################
     - name: "STEP 0: Reset Module 2"
-      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      delegate_to: bastion
       block:
         - name: "Step 1: Reverting Tekton Chains configuration"
           ansible.builtin.debug:
@@ -592,7 +626,7 @@
     # STEP 1: Install RHTAS (install-rhtas.sh)
     ###########################################
     - name: "STEP 1: Install RHTAS"
-      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      delegate_to: bastion
       block:
         - name: Display RHTAS installation start
           ansible.builtin.debug:
@@ -1097,7 +1131,7 @@
     # STEP 2: Test Image Signing (test-image-signing.sh)
     ###########################################
     - name: "STEP 2: Test Image Signing"
-      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      delegate_to: bastion
       block:
         - name: Display test start
           ansible.builtin.debug:

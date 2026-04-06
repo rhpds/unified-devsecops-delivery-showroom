@@ -6,16 +6,51 @@
   gather_facts: false
 
   vars:
-    # Match script variables exactly
-    cluster_domain: "{{ lookup('env', 'GUID') }}.{{ lookup('env', 'BASE_DOMAIN') | default('example.opentlc.com', true) }}"
+    # Variables from user_data.yml (injected via -e @/user_data/user_data.yml)
+    cluster_domain: "{{ openshift_cluster_ingress_domain }}"
+    guid: "{{ guid }}"
+    bastion_hostname: "{{ bastion_public_hostname }}"
+    quay_token: "{{ quay_admin_token }}"
+
+    # Static variables
     acs_namespace: "stackrox"
-    app_ci_namespace: "app-sample-ci"
+    app_ci_namespace: "tssc-app-ci"
     quay_namespace: "quay-enterprise"
-    acs_integration_name: "acs_quay"  # Hard-coded in script
-    quay_token: "{{ lookup('env', 'QUAY_TOKEN') | default('changeme', true) }}"
-    quay_org: "tssc"  # Hard-coded in script
-    quay_repo: "tekton-chains-test"  # Hard-coded in script
-    image_tag: "latest"  # Hard-coded in script
+    acs_integration_name: "acs_quay"
+    quay_org: "tssc"
+    quay_repo: "tekton-chains-test"
+    image_tag: "latest"
+
+  module_defaults:
+    group/kubernetes.core.k8s:
+      host: "{{ openshift_api_server_url }}"
+      api_key: "{{ hostvars['localhost']['openshift_token'] | default('') }}"
+      validate_certs: false
+
+  tasks:
+    - name: Add bastion host to inventory
+      ansible.builtin.add_host:
+        name: "bastion"
+        ansible_host: "{{ bastion_hostname }}"
+        ansible_user: "{{ bastion_ssh_user_name }}"
+        ansible_ssh_pass: "{{ bastion_ssh_password }}"
+        ansible_port: "{{ bastion_ssh_port }}"
+        ansible_ssh_common_args: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+
+    - name: Login to OpenShift and get token
+      ansible.builtin.shell:
+        cmd: |
+          oc login {{ openshift_api_server_url }} -u {{ openshift_cluster_admin_username }} -p {{ openshift_cluster_admin_password }} --insecure-skip-tls-verify=true
+          oc whoami -t
+      delegate_to: bastion
+      register: oc_login_result
+      changed_when: false
+      no_log: true
+
+    - name: Set OpenShift token fact
+      ansible.builtin.set_fact:
+        openshift_token: "{{ oc_login_result.stdout_lines[-1] }}"
+      no_log: true
 
   tasks:
     - name: Display module information
@@ -26,7 +61,7 @@
     # STEP 0: Reset Module 4 (reset-module-4.sh)
     ###########################################
     - name: "STEP 0: Reset Module 4"
-      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      delegate_to: bastion
       block:
         - name: Check if rox-api-token secret exists
           ansible.builtin.command:
@@ -102,7 +137,7 @@
     # STEP 1: Configure ACS (configure-acs.sh)
     ###########################################
     - name: "STEP 1: Configure ACS-Quay Integration"
-      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      delegate_to: bastion
       block:
         - name: Get ACS API token from rox-api-token secret
           ansible.builtin.shell:
@@ -203,7 +238,7 @@
     # STEP 2: Test Image Scanning (test-image-scanning.sh)
     ###########################################
     - name: "STEP 2: Test Image Scanning"
-      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      delegate_to: bastion
       block:
         - name: Get ROX API token from rox-api-token secret
           ansible.builtin.shell:

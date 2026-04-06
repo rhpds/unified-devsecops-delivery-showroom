@@ -6,26 +6,61 @@
   gather_facts: false
 
   vars:
-    # Match script variables exactly
-    cluster_domain: "{{ lookup('env', 'GUID') }}.{{ lookup('env', 'BASE_DOMAIN') | default('example.opentlc.com', true) }}"
-    keycloak_url: "https://sso.{{ lookup('env', 'GUID') }}.{{ lookup('env', 'BASE_DOMAIN') | default('example.opentlc.com', true) }}"
+    # Variables from user_data.yml (injected via -e @/user_data/user_data.yml)
+    cluster_domain: "{{ openshift_cluster_ingress_domain }}"
+    guid: "{{ guid }}"
+    bastion_hostname: "{{ bastion_public_hostname }}"
+    tpa_cli_client_secret: "{{ tpa_cli_client_secret }}"
+    developer_password: "{{ openshift_cluster_account_password }}"
+    gitlab_root_password: "{{ gitlab_root_password }}"
+
+    # Static variables
+    keycloak_url: "https://sso.{{ cluster_domain }}"
     keycloak_namespace: "tssc-keycloak"
     devspaces_namespace: "openshift-devspaces"
-    app_ci_namespace: "app-sample-ci"
+    app_ci_namespace: "tssc-app-ci"
     tas_namespace: "tssc-tas"
     tpa_namespace: "tssc-tpa"
     gitlab_namespace: "gitlab"
     sso_realm: "sso"
     tas_client_id: "trusted-artifact-signer"
     tpa_realm: "tpa"
-    tpa_cli_client_secret: "{{ lookup('env', 'TPA_CLI_CLIENT_SECRET') | default('changeme', true) }}"
     developer_username: "user1"
     developer_email: "user1@example.com"
     developer_firstname: "User"
     developer_lastname: "One"
-    developer_password: "{{ lookup('env', 'DEVELOPER_PASSWORD') | default('openshift', true) }}"
-    gitlab_root_password: "{{ lookup('env', 'GITLAB_ROOT_PASSWORD') | default('changeme', true) }}"
-    lab_assets_dir: "~/lab-assets"
+    lab_assets_dir: "/home/lab-user/lab-assets"
+
+  module_defaults:
+    group/kubernetes.core.k8s:
+      host: "{{ openshift_api_server_url }}"
+      api_key: "{{ hostvars['localhost']['openshift_token'] | default('') }}"
+      validate_certs: false
+
+  tasks:
+    - name: Add bastion host to inventory
+      ansible.builtin.add_host:
+        name: "bastion"
+        ansible_host: "{{ bastion_hostname }}"
+        ansible_user: "{{ bastion_ssh_user_name }}"
+        ansible_ssh_pass: "{{ bastion_ssh_password }}"
+        ansible_port: "{{ bastion_ssh_port }}"
+        ansible_ssh_common_args: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+
+    - name: Login to OpenShift and get token
+      ansible.builtin.shell:
+        cmd: |
+          oc login {{ openshift_api_server_url }} -u {{ openshift_cluster_admin_username }} -p {{ openshift_cluster_admin_password }} --insecure-skip-tls-verify=true
+          oc whoami -t
+      delegate_to: bastion
+      register: oc_login_result
+      changed_when: false
+      no_log: true
+
+    - name: Set OpenShift token fact
+      ansible.builtin.set_fact:
+        openshift_token: "{{ oc_login_result.stdout_lines[-1] }}"
+      no_log: true
 
   tasks:
     - name: Display module information
@@ -36,7 +71,7 @@
     # STEP 0: Reset Module 3 (reset-module-3.sh)
     ###########################################
     - name: "STEP 0: Reset Module 3"
-      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      delegate_to: bastion
       block:
         - name: Check if tpa-secret exists
           ansible.builtin.shell:
@@ -155,7 +190,7 @@
     # STEP 1: Create Developer User (create-developer-user.sh)
     ###########################################
     - name: "STEP 1: Create Developer User"
-      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      delegate_to: bastion
       block:
         - name: Get Keycloak admin credentials for user creation
           ansible.builtin.shell:
@@ -311,7 +346,7 @@
     # STEP 2: Update GitOps Backstage Config (update-gitops-backstage-config.sh)
     ###########################################
     - name: "STEP 2: Update GitOps Backstage Configuration"
-      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      delegate_to: bastion
       block:
         - name: Update GitOps Backstage configuration
           ansible.builtin.shell:
@@ -326,7 +361,7 @@
     # STEP 3: Update RHDH Devfile Config (update-rhdh-devfile-config.sh)
     ###########################################
     - name: "STEP 3: Update RHDH Devfile Configuration"
-      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      delegate_to: bastion
       block:
         - name: Update RHDH Devfile configuration
           ansible.builtin.shell:
@@ -341,7 +376,7 @@
     # STEP 4: Create Dev Spaces ConfigMap (create-devspaces-configmap.sh)
     ###########################################
     - name: "STEP 4: Create Dev Spaces ConfigMap"
-      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      delegate_to: bastion
       block:
         - name: Set TAS service URLs
           ansible.builtin.set_fact:
@@ -378,7 +413,7 @@
     # STEP 5: Create Pipeline Secrets (create-pipeline-secrets.sh)
     ###########################################
     - name: "STEP 5: Create Pipeline Secrets"
-      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      delegate_to: bastion
       block:
         - name: Get TPA server URL from route
           ansible.builtin.shell:
