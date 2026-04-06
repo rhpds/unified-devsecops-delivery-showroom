@@ -209,6 +209,9 @@
           ansible.builtin.shell:
             cmd: |
               envsubst < {{ lab_assets_dir }}/tpa-instance.yml | oc apply -n {{ tpa_namespace }} -f -
+          environment:
+            KEYCLOAK_URL: "{{ keycloak_url }}"
+            TPA_REALM: "{{ tpa_realm }}"
           changed_when: true
 
         - name: Wait for RHTPA server to be ready
