@@ -77,24 +77,28 @@ def run_playbook(playbook_name, output_queue):
                 # Check for Ansible PLAY RECAP marker
                 if 'PLAY RECAP' in line and '*' in line:
                     playbook_complete = True
+                    # Immediately terminate tail to avoid blocking
+                    tail_process.terminate()
             else:
                 # If no output and process ended, break
                 if playbook_process.poll() is not None:
                     break
 
-        # Give tail a moment to catch any final lines
-        time.sleep(0.3)
+        # Give ansible a moment to write final lines
+        time.sleep(0.2)
 
-        # Read any remaining lines
-        for _ in range(10):  # Read up to 10 more lines
-            line = tail_process.stdout.readline()
-            if not line:
-                break
-            output_queue.put(line)
+        # Read final lines directly from the log file (not from tail)
+        with open(log_file, 'r') as final_read:
+            lines = final_read.readlines()
+            # Send the last 5 lines (to catch the stats line after PLAY RECAP)
+            for line in lines[-5:]:
+                output_queue.put(line)
 
-        # Kill tail process
-        tail_process.terminate()
-        tail_process.wait(timeout=1)
+        # Wait for tail to finish terminating
+        try:
+            tail_process.wait(timeout=1)
+        except:
+            pass
 
         # Wait for playbook to complete
         playbook_process.wait()
