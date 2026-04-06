@@ -19,9 +19,9 @@
     keycloak_namespace: "tssc-keycloak"
     tpa_namespace: "tssc-tpa"
     keycloak_url: "https://sso.{{ cluster_domain }}"
-    sbom_file: "~/lab-assets/example-sbom.json"
+    sbom_file: "/home/lab-user/lab-assets/example-sbom.json"
     sbom_id: "test-sbom"
-    lab_assets_dir: "~/lab-assets"
+    lab_assets_dir: "/home/lab-user/lab-assets"
 
   tasks:
     - name: Display module information
