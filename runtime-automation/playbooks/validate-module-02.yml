@@ -596,66 +596,49 @@
         msg: ""
 
   #######################################
-  # Check 7: TaskRuns and PipelineRuns Cleanup
+  # Check 7: Image Signing Test PipelineRun
   #######################################
-  - name: "Check 7: TaskRuns and PipelineRuns Cleanup"
+  - name: "Check 7: Image Signing Test PipelineRun"
     block:
     - name: Display check header
       ansible.builtin.debug:
         msg:
-          - "Check 7: TaskRuns and PipelineRuns Cleanup"
-          - "-------------------------------------------"
+          - "Check 7: Image Signing Test PipelineRun"
+          - "----------------------------------------"
 
-    - name: Check TaskRun count
+    - name: Check for chains-signing-image-test PipelineRun
       ansible.builtin.command:
-        cmd: "oc get taskrun -n {{ app_ci_namespace }} --no-headers"
-      register: taskrun_check
+        cmd: "oc get pipelinerun -n {{ app_ci_namespace }} -l test.workload.security.redhat.com/test=image-signing -o jsonpath='{.items[0].metadata.name}'"
+      register: test_pipelinerun_check
       delegate_to: bastion
       changed_when: false
       failed_when: false
 
-    - name: Count TaskRuns
-      ansible.builtin.set_fact:
-        taskrun_count: "{{ taskrun_check.stdout_lines | length }}"
-
-    - name: Validate no TaskRuns exist
-      ansible.builtin.set_fact:
-        validation_failed: "{{ validation_failed | int + 1 }}"
-      when: taskrun_count | int > 0
-
-    - name: Display TaskRun cleanup result
-      ansible.builtin.debug:
-        msg: >-
-          {% if taskrun_count | int == 0 %}
-          ✓ PASS: All TaskRuns cleaned up
-          {% else %}
-          ✗ FAIL: {{ taskrun_count }} TaskRun(s) still exist
-          {% endif %}
-
-    - name: Check PipelineRun count
+    - name: Get PipelineRun status if exists
       ansible.builtin.command:
-        cmd: "oc get pipelinerun -n {{ app_ci_namespace }} --no-headers"
-      register: pipelinerun_check
+        cmd: "oc get pipelinerun {{ test_pipelinerun_check.stdout }} -n {{ app_ci_namespace }} -o jsonpath='{.status.conditions[?(@.type==\"Succeeded\")].status}'"
+      register: pipelinerun_status
       delegate_to: bastion
       changed_when: false
       failed_when: false
+      when: test_pipelinerun_check.stdout != ""
 
-    - name: Count PipelineRuns
-      ansible.builtin.set_fact:
-        pipelinerun_count: "{{ pipelinerun_check.stdout_lines | length }}"
-
-    - name: Validate no PipelineRuns exist
+    - name: Validate PipelineRun completed successfully
       ansible.builtin.set_fact:
         validation_failed: "{{ validation_failed | int + 1 }}"
-      when: pipelinerun_count | int > 0
+      when: >
+        test_pipelinerun_check.stdout == "" or
+        (pipelinerun_status.stdout | default('')) != 'True'
 
-    - name: Display PipelineRun cleanup result
+    - name: Display PipelineRun test result
       ansible.builtin.debug:
         msg: >-
-          {% if pipelinerun_count | int == 0 %}
-          ✓ PASS: All PipelineRuns cleaned up
+          {% if test_pipelinerun_check.stdout != "" and pipelinerun_status.stdout == 'True' %}
+          ✓ PASS: Image signing test PipelineRun completed successfully ({{ test_pipelinerun_check.stdout }})
+          {% elif test_pipelinerun_check.stdout == "" %}
+          ✗ FAIL: No image signing test PipelineRun found
           {% else %}
-          ✗ FAIL: {{ pipelinerun_count }} PipelineRun(s) still exist
+          ✗ FAIL: Image signing test PipelineRun did not complete successfully
           {% endif %}
 
     - name: Display blank line
@@ -687,7 +670,7 @@
           - "  ✓ RHTAS instance deployed (Fulcio, Rekor, TUF)"
           - "  ✓ OIDC token refresher running"
           - "  ✓ Tekton Chains configured for keyless signing"
-          - "  ✓ TaskRuns and PipelineRuns cleaned up"
+          - "  ✓ Image signing test PipelineRun completed successfully"
           - ""
       when: validation_failed | int == 0
 
