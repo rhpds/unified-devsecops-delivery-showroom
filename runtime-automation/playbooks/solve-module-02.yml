@@ -327,7 +327,7 @@
 
         - name: Get PVC count
           ansible.builtin.shell: |
-            cmd: oc get pvc -n {{ tas_namespace }} --no-headers 2>/dev/null | wc -l || echo 0
+            oc get pvc -n {{ tas_namespace }} --no-headers 2>/dev/null | wc -l || echo 0
           register: pvc_count
           changed_when: false
 
@@ -466,7 +466,7 @@
 
         - name: Get TaskRun count with test label
           ansible.builtin.shell: |
-            cmd: oc get taskrun -n {{ app_ci_namespace }} -l test.workload.security.redhat.com/test=image-signing --no-headers 2>/dev/null | wc -l || echo 0
+            oc get taskrun -n {{ app_ci_namespace }} -l test.workload.security.redhat.com/test=image-signing --no-headers 2>/dev/null | wc -l || echo 0
           register: taskrun_count
           changed_when: false
 
@@ -489,7 +489,7 @@
 
         - name: Get orphaned TaskRun count
           ansible.builtin.shell: |
-            cmd: oc get taskrun -n {{ app_ci_namespace }} -l tekton.dev/task=build-and-push --no-headers 2>/dev/null | wc -l || echo 0
+            oc get taskrun -n {{ app_ci_namespace }} -l tekton.dev/task=build-and-push --no-headers 2>/dev/null | wc -l || echo 0
           register: orphaned_count
           changed_when: false
 
@@ -945,7 +945,7 @@
 
         - name: Deploy OIDC refresher app
           ansible.builtin.shell: |
-            cmd: oc apply -f $(eval echo "{{ lab_assets_dir }}/oidc-refresher-app.yml") -n {{ pipelines_namespace }}
+            oc apply -f $(eval echo "{{ lab_assets_dir }}/oidc-refresher-app.yml") -n {{ pipelines_namespace }}
           changed_when: true
 
         - name: Display OIDC refresher app deployed
@@ -1019,7 +1019,7 @@
 
         - name: Get current Tekton Chains controller pod name
           ansible.builtin.shell: |
-            cmd: oc get pods -n {{ pipelines_namespace }} -l app=tekton-chains-controller -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "NotFound"
+            oc get pods -n {{ pipelines_namespace }} -l app=tekton-chains-controller -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "NotFound"
           register: old_chains_pod
           changed_when: false
 
@@ -1033,7 +1033,7 @@
 
         - name: Patch Tekton Chains configuration
           ansible.builtin.shell: |
-            cmd: oc patch tektonconfig config -n {{ pipelines_namespace }} --type=merge --patch "$(cat $(eval echo "{{ lab_assets_dir }}/tekton-chains-patch.yml"))"
+            oc patch tektonconfig config -n {{ pipelines_namespace }} --type=merge --patch "$(cat $(eval echo "{{ lab_assets_dir }}/tekton-chains-patch.yml"))"
           changed_when: true
 
         - name: Display Tekton Chains patch applied
@@ -1118,7 +1118,7 @@
 
         - name: Create test service account
           ansible.builtin.shell: |
-            cmd: oc create sa {{ test_sa }} -n {{ app_ci_namespace }} 2>/dev/null || echo "✓ Service account already exists"
+            oc create sa {{ test_sa }} -n {{ app_ci_namespace }} 2>/dev/null || echo "✓ Service account already exists"
           changed_when: false
 
         - name: Grant anyuid SCC
@@ -1145,7 +1145,7 @@
 
         - name: Link registry secret to service account
           ansible.builtin.shell: |
-            cmd: oc secret link {{ test_sa }} {{ registry_secret }} -n {{ app_ci_namespace }} --for=mount 2>/dev/null || echo "✓ Secret already linked"
+            oc secret link {{ test_sa }} {{ registry_secret }} -n {{ app_ci_namespace }} --for=mount 2>/dev/null || echo "✓ Secret already linked"
           changed_when: false
 
         - name: Display test permissions configured
@@ -1164,7 +1164,7 @@
 
         - name: Create Tekton task
           ansible.builtin.shell: |
-            cmd: oc create -f $(eval echo "{{ lab_assets_dir }}/example-image-sign.yml") -n {{ app_ci_namespace }}
+            oc create -f $(eval echo "{{ lab_assets_dir }}/example-image-sign.yml") -n {{ app_ci_namespace }}
           changed_when: true
 
         - name: Display Tekton task created
@@ -1181,7 +1181,7 @@
 
         - name: Get TaskRun name
           ansible.builtin.shell: |
-            cmd: oc get taskrun -n {{ app_ci_namespace }} --sort-by=.metadata.creationTimestamp -o jsonpath='{.items[-1].metadata.name}'
+            oc get taskrun -n {{ app_ci_namespace }} --sort-by=.metadata.creationTimestamp -o jsonpath='{.items[-1].metadata.name}'
           register: taskrun_name
           changed_when: false
           failed_when: taskrun_name.stdout == ""
