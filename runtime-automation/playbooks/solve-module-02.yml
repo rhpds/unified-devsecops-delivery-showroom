@@ -808,7 +808,7 @@
 
         - name: Apply RHTAS Instance CR
           ansible.builtin.shell: |
-              envsubst < $(eval echo "{{ lab_assets_dir }}/tas-instance.yml") | oc apply -n {{ tas_namespace }} -f -
+              envsubst < {{ lab_assets_dir }}/tas-instance.yml | oc apply -n {{ tas_namespace }} -f -
           environment:
             TAS_CHAINS_CLIENT_ID: "{{ tas_client_id }}"
             TAS_CHAINS_REALM: "{{ tas_chains_realm }}"
@@ -896,7 +896,7 @@
 
         - name: Create OIDC info secret
           ansible.builtin.shell: |
-              envsubst < $(eval echo "{{ lab_assets_dir }}/oidc-info-secret.yml") | oc apply -n {{ pipelines_namespace }} -f -
+              envsubst < {{ lab_assets_dir }}/oidc-info-secret.yml | oc apply -n {{ pipelines_namespace }} -f -
           environment:
             TAS_CHAINS_CLIENT_SECRET: "{{ tas_client_secret.stdout }}"
           changed_when: true
