@@ -12,9 +12,15 @@
     guid: "{{ guid }}"
     bastion_hostname: "{{ bastion_public_hostname }}"
     quay_token: "{{ quay_admin_token }}"
+    quay_url: "{{ quay_url }}"
+    quay_host: "{{ quay_host }}"
+    keycloak_admin_username: "{{ keycloak_admin_username }}"
+    keycloak_admin_password: "{{ keycloak_admin_password }}"
+    keycloak_url: "{{ keycloak_url }}"
 
     # Static variables
-    keycloak_url: "https://sso.{{ cluster_domain }}"
+    # quay_url has https://, quay_host does not
+    # keycloak_url is from user_data
     keycloak_namespace: "tssc-keycloak"
     tas_namespace: "tssc-tas"
     pipelines_namespace: "openshift-pipelines"
@@ -352,24 +358,13 @@
           ansible.builtin.debug:
             msg: "Step 4: Deleting Keycloak clients and realm..."
 
-        - name: Get Keycloak admin credentials
-          ansible.builtin.shell: |
-              ADMIN_USER=$(oc get secret keycloak-initial-admin -n {{ keycloak_namespace }} -o jsonpath='{.data.username}' | base64 -d)
-              ADMIN_PASS=$(oc get secret keycloak-initial-admin -n {{ keycloak_namespace }} -o jsonpath='{.data.password}' | base64 -d)
-              echo "${ADMIN_USER}:${ADMIN_PASS}"
-          register: keycloak_admin_creds
-          changed_when: false
-          no_log: true
-
         - name: Get Keycloak admin token
           ansible.builtin.shell: |
-              ADMIN_USER=$(echo "{{ keycloak_admin_creds.stdout }}" | cut -d: -f1)
-              ADMIN_PASS=$(echo "{{ keycloak_admin_creds.stdout }}" | cut -d: -f2)
               ADMIN_TOKEN=$(curl -s -X POST "{{ keycloak_url }}/realms/master/protocol/openid-connect/token" \
                 -H "Content-Type: application/x-www-form-urlencoded" \
                 -d "client_id=admin-cli" \
-                -d "username=${ADMIN_USER}" \
-                -d "password=${ADMIN_PASS}" \
+                -d "username={{ keycloak_admin_username }}" \
+                -d "password={{ keycloak_admin_password }}" \
                 -d "grant_type=password" | jq -r '.access_token')
               echo "$ADMIN_TOKEN"
           register: admin_token
@@ -509,19 +504,13 @@
           ansible.builtin.debug:
             msg: "Step 6: Deleting Quay test repository..."
 
-        - name: Get Quay route
-          ansible.builtin.shell: |
-            oc get route -n {{ quay_namespace }} -l quay-component=quay-app-route -o jsonpath='{.items[0].spec.host}' 2>/dev/null || echo ""
-          register: quay_url
-          changed_when: false
-
         - name: Process Quay repository deletion
-          when: quay_url.stdout != ""
+          when: quay_host is defined and quay_host != ""
           block:
             - name: Display Quay URL
               ansible.builtin.debug:
                 msg:
-                  - "Quay URL: https://{{ quay_url.stdout }}"
+                  - "Quay URL: https://{{ quay_host }}"
                   - "Checking repository: {{ quay_org }}/{{ quay_repo }}"
 
             - name: Check Quay token
@@ -531,7 +520,7 @@
                   ansible.builtin.shell: |
                       CHECK_CODE=$(curl -k -s -o /dev/null -w "%{http_code}" \
                         -H "Authorization: Bearer {{ quay_token }}" \
-                        "https://{{ quay_url.stdout }}/api/v1/repository/{{ quay_org }}/{{ quay_repo }}" || true)
+                        "https://{{ quay_host }}/api/v1/repository/{{ quay_org }}/{{ quay_repo }}" || true)
                       echo "$CHECK_CODE"
                   register: repo_check
                   changed_when: false
@@ -553,7 +542,7 @@
                       ansible.builtin.shell: |
                           HTTP_CODE=$(curl -k -s -o /dev/null -w "%{http_code}" -X DELETE \
                             -H "Authorization: Bearer {{ quay_token }}" \
-                            "https://{{ quay_url.stdout }}/api/v1/repository/{{ quay_org }}/{{ quay_repo }}" || true)
+                            "https://{{ quay_host }}/api/v1/repository/{{ quay_org }}/{{ quay_repo }}" || true)
                           echo "$HTTP_CODE"
                       register: delete_result
                       changed_when: delete_result.stdout in ["204", "200"]
@@ -585,10 +574,10 @@
                   - "Warning: QUAY_TOKEN not set, skipping repository deletion"
                   - "  Set QUAY_TOKEN environment variable before running this script"
 
-        - name: Display Quay route not found
-          when: quay_url.stdout == ""
+        - name: Display Quay host not provided
+          when: quay_host is not defined or quay_host == ""
           ansible.builtin.debug:
-            msg: "Warning: Could not find Quay route, skipping repository deletion"
+            msg: "Warning: Quay host not provided, skipping repository deletion"
 
         - name: Reset Module 2 complete
           ansible.builtin.debug:
@@ -620,32 +609,17 @@
               - "Installing RHTAS"
               - "========================================="
 
-        - name: Retrieve Keycloak admin credentials
-          ansible.builtin.debug:
-            msg: "Retrieving Keycloak admin credentials..."
-
-        - name: Get Keycloak admin credentials
-          ansible.builtin.shell: |
-              KEYCLOAK_ADMIN_USER=$(oc get secret keycloak-initial-admin -n {{ keycloak_namespace }} -o jsonpath='{.data.username}' | base64 -d)
-              KEYCLOAK_ADMIN_PASSWORD=$(oc get secret keycloak-initial-admin -n {{ keycloak_namespace }} -o jsonpath='{.data.password}' | base64 -d)
-              echo "${KEYCLOAK_ADMIN_USER}:${KEYCLOAK_ADMIN_PASSWORD}"
-          register: kc_admin_creds
-          changed_when: false
-          no_log: true
-
         - name: Authenticate with Keycloak
           ansible.builtin.debug:
             msg: "Authenticating with Keycloak..."
 
         - name: Get Keycloak admin access token
           ansible.builtin.shell: |
-              ADMIN_USER=$(echo "{{ kc_admin_creds.stdout }}" | cut -d: -f1)
-              ADMIN_PASS=$(echo "{{ kc_admin_creds.stdout }}" | cut -d: -f2)
               ADMIN_TOKEN=$(curl -s -X POST "{{ keycloak_url }}/realms/master/protocol/openid-connect/token" \
                 -H "Content-Type: application/x-www-form-urlencoded" \
                 -d "client_id=admin-cli" \
-                -d "username=${ADMIN_USER}" \
-                -d "password=${ADMIN_PASS}" \
+                -d "username={{ keycloak_admin_username }}" \
+                -d "password={{ keycloak_admin_password }}" \
                 -d "grant_type=password" | jq -r '.access_token')
               echo "$ADMIN_TOKEN"
           register: kc_admin_token
