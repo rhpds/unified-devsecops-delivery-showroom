@@ -9,8 +9,6 @@
     tpa_realm: "{{ tpa_realm }}"
     tpa_cli_client_secret: "{{ tpa_cli_client_secret }}"
     bastion_hostname: "{{ bastion_public_hostname }}"
-    openshift_api_url: "{{ openshift_api_url }}"
-    openshift_cluster_admin_token: "{{ openshift_cluster_admin_token }}"
 
     # Static variables
     keycloak_namespace: "tssc-keycloak"

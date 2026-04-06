@@ -14,8 +14,6 @@
     tpa_admin_username: "{{ tpa_admin_username }}"
     tpa_admin_password: "{{ tpa_admin_password }}"
     bastion_hostname: "{{ bastion_public_hostname }}"
-    openshift_api_url: "{{ openshift_api_url }}"
-    openshift_cluster_admin_token: "{{ openshift_cluster_admin_token }}"
 
     # Static variables (not in user_data)
     keycloak_namespace: "tssc-keycloak"
