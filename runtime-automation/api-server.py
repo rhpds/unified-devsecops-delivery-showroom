@@ -38,7 +38,6 @@ def run_playbook(playbook_name, output_queue):
         env = os.environ.copy()
         env['PYTHONUNBUFFERED'] = '1'
         env['ANSIBLE_FORCE_COLOR'] = '1'
-        env['ANSIBLE_STDOUT_CALLBACK'] = 'yaml'
 
         # Run ansible-playbook with line-buffered output
         process = subprocess.Popen(
