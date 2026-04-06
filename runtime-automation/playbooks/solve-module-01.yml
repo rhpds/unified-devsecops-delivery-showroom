@@ -296,8 +296,11 @@
           client_secret: "{{ tpa_cli_client_secret }}"
         return_content: true
         validate_certs: false
-        status_code: 200
+        status_code: [200, 201]
       register: oauth_response
+      until: oauth_response.status in [200, 201] and oauth_response.json.access_token is defined
+      retries: 12
+      delay: 5
       changed_when: false
       no_log: false
       delegate_to: localhost
