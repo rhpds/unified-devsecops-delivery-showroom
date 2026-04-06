@@ -1,6 +1,8 @@
 = Module 1: Establish Software Composition Trust with SBOMs
 
 include::common/send-to.adoc[]
+include::common/solve-button.adoc[]
+include::common/validate-button.adoc[]
 
 == Before you begin
 
@@ -607,6 +609,22 @@ image::rhtpa_importers.png[rhtpa_importers,align="center",link=self,window=blank
 * Once imports are finished, you would see identified vulnerabilities, similar to the example below:
 
 image::rhtpa_vulnerabilities_complete.png[rhtpa_vulnerabilities_complete,align="center",link=self,window=blank]
+
+---
+
+== Module 1: Automation
+
+=== Solve Module 1
+
+If you would like to skip the manual steps above and automatically complete this module, click the button below:
+
+solve-button::module-01[]
+
+=== Validate Module 1
+
+To verify that Module 1 has been completed successfully (either manually or via the solve button), click the button below:
+
+validate-button::module-01[]
 
 ---
 
