@@ -136,6 +136,7 @@ def solve_module(module_name):
             try:
                 line = output_queue.get(timeout=0.1)
                 if line == "__DONE__":
+                    yield f"data: __DONE__\n\n"
                     break
                 # Send as SSE format
                 yield f"data: {json.dumps(line)}\n\n"
@@ -167,6 +168,7 @@ def validate_module(module_name):
             try:
                 line = output_queue.get(timeout=0.1)
                 if line == "__DONE__":
+                    yield f"data: __DONE__\n\n"
                     break
                 # Send as SSE format
                 yield f"data: {json.dumps(line)}\n\n"
