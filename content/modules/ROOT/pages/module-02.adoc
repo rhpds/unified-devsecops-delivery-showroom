@@ -797,6 +797,15 @@ oc adm policy remove-scc-from-user privileged -z chains-signing-image-tester -n 
 oc delete sa chains-signing-image-tester -n tssc-app-ci
 ----
 
+===  Module 2: Summary
+
+* In this module, you addressed the second customer challenge: “We cannot trust that our code and images were really produced by us, or that they haven’t been modified along the way.”
+* As a consultant, you learned how to deploy *Red Hat Trusted Artifact Signer (RHTAS)* and implement keyless signing for both code commits and container images, ensuring artifacts are cryptographically verifiable and protected from tampering.
+* For customers, this means build integrity is no longer assumed — it is provable. They can verify who authored the code, which system built the image and whether the artifact has been altered since it was produced.
+* For technical sellers, this is the moment where the story resonates with customers: “This is how we prove your software really came from you and was not tampered with.”
+* With identity and integrity established, the next challenge becomes: “How do we keep developers fast without compromising security?”
+* In Module 3, you will focus on developer workflows and show how *Red Hat Advanced Developer Suite (RHADS)* security guardrails are built into developer flows without slowing developers down.
+
 ---
 
 == Module 2: Automation
@@ -806,16 +815,5 @@ solve-button::module-02[]
 
 === Validate Module 2
 validate-button::module-02[]
-
----
-
-===  Module 2: Summary
-
-* In this module, you addressed the second customer challenge: “We cannot trust that our code and images were really produced by us, or that they haven’t been modified along the way.”
-* As a consultant, you learned how to deploy *Red Hat Trusted Artifact Signer (RHTAS)* and implement keyless signing for both code commits and container images, ensuring artifacts are cryptographically verifiable and protected from tampering.
-* For customers, this means build integrity is no longer assumed — it is provable. They can verify who authored the code, which system built the image and whether the artifact has been altered since it was produced.
-* For technical sellers, this is the moment where the story resonates with customers: “This is how we prove your software really came from you and was not tampered with.”
-* With identity and integrity established, the next challenge becomes: “How do we keep developers fast without compromising security?”
-* In Module 3, you will focus on developer workflows and show how *Red Hat Advanced Developer Suite (RHADS)* security guardrails are built into developer flows without slowing developers down.
 
 ---
