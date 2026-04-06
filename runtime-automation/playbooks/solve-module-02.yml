@@ -46,8 +46,7 @@
         ansible_ssh_common_args: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
 
     - name: Login to OpenShift and get token
-      ansible.builtin.shell:
-        cmd: |
+      ansible.builtin.shell: |
           oc login {{ openshift_api_server_url }} -u {{ openshift_cluster_admin_username }} -p {{ openshift_cluster_admin_password }} --insecure-skip-tls-verify=true
           oc whoami -t
       register: oc_login_result
@@ -74,8 +73,7 @@
             msg: "Step 1: Reverting Tekton Chains configuration..."
 
         - name: Reset Tekton Chains to default configuration - remove all fields
-          ansible.builtin.shell:
-            cmd: |
+          ansible.builtin.shell: |
               CHAIN_FIELDS=(
                 "artifacts.oci.format"
                 "artifacts.oci.signer"
@@ -109,8 +107,8 @@
             msg: "Step 2: Deleting OIDC refresher app..."
 
         - name: Check if OIDC refresher deployment exists
-          ansible.builtin.command:
-            cmd: oc get deployment oidc-token-refresher -n {{ pipelines_namespace }}
+          ansible.builtin.shell: |
+            oc get deployment oidc-token-refresher -n {{ pipelines_namespace }}
           register: oidc_deployment_check
           changed_when: false
           failed_when: false
@@ -119,13 +117,13 @@
           when: oidc_deployment_check.rc == 0
           block:
             - name: Delete deployment
-              ansible.builtin.command:
-                cmd: oc delete deployment oidc-token-refresher -n {{ pipelines_namespace }}
+              ansible.builtin.shell: |
+                oc delete deployment oidc-token-refresher -n {{ pipelines_namespace }}
               changed_when: true
 
             - name: Verify deployment deletion
-              ansible.builtin.command:
-                cmd: oc get deployment oidc-token-refresher -n {{ pipelines_namespace }}
+              ansible.builtin.shell: |
+                oc get deployment oidc-token-refresher -n {{ pipelines_namespace }}
               register: verify_deployment
               changed_when: false
               failed_when: false
@@ -140,8 +138,8 @@
             msg: "✓ OIDC refresher deployment not found (already clean)"
 
         - name: Check if OIDC refresher service exists
-          ansible.builtin.command:
-            cmd: oc get service oidc-token-refresher -n {{ pipelines_namespace }}
+          ansible.builtin.shell: |
+            oc get service oidc-token-refresher -n {{ pipelines_namespace }}
           register: oidc_service_check
           changed_when: false
           failed_when: false
@@ -150,13 +148,13 @@
           when: oidc_service_check.rc == 0
           block:
             - name: Delete service
-              ansible.builtin.command:
-                cmd: oc delete service oidc-token-refresher -n {{ pipelines_namespace }}
+              ansible.builtin.shell: |
+                oc delete service oidc-token-refresher -n {{ pipelines_namespace }}
               changed_when: true
 
             - name: Verify service deletion
-              ansible.builtin.command:
-                cmd: oc get service oidc-token-refresher -n {{ pipelines_namespace }}
+              ansible.builtin.shell: |
+                oc get service oidc-token-refresher -n {{ pipelines_namespace }}
               register: verify_service
               changed_when: false
               failed_when: false
@@ -171,8 +169,8 @@
             msg: "✓ OIDC refresher service not found (already clean)"
 
         - name: Check if oidc-info secret exists
-          ansible.builtin.command:
-            cmd: oc get secret oidc-info -n {{ pipelines_namespace }}
+          ansible.builtin.shell: |
+            oc get secret oidc-info -n {{ pipelines_namespace }}
           register: oidc_info_check
           changed_when: false
           failed_when: false
@@ -181,13 +179,13 @@
           when: oidc_info_check.rc == 0
           block:
             - name: Delete oidc-info secret
-              ansible.builtin.command:
-                cmd: oc delete secret oidc-info -n {{ pipelines_namespace }}
+              ansible.builtin.shell: |
+                oc delete secret oidc-info -n {{ pipelines_namespace }}
               changed_when: true
 
             - name: Verify oidc-info deletion
-              ansible.builtin.command:
-                cmd: oc get secret oidc-info -n {{ pipelines_namespace }}
+              ansible.builtin.shell: |
+                oc get secret oidc-info -n {{ pipelines_namespace }}
               register: verify_oidc_info
               changed_when: false
               failed_when: false
@@ -202,8 +200,8 @@
             msg: "✓ OIDC info secret not found (already clean)"
 
         - name: Check if oidc-token secret exists
-          ansible.builtin.command:
-            cmd: oc get secret oidc-token -n {{ pipelines_namespace }}
+          ansible.builtin.shell: |
+            oc get secret oidc-token -n {{ pipelines_namespace }}
           register: oidc_token_check
           changed_when: false
           failed_when: false
@@ -212,13 +210,13 @@
           when: oidc_token_check.rc == 0
           block:
             - name: Delete oidc-token secret
-              ansible.builtin.command:
-                cmd: oc delete secret oidc-token -n {{ pipelines_namespace }}
+              ansible.builtin.shell: |
+                oc delete secret oidc-token -n {{ pipelines_namespace }}
               changed_when: true
 
             - name: Verify oidc-token deletion
-              ansible.builtin.command:
-                cmd: oc get secret oidc-token -n {{ pipelines_namespace }}
+              ansible.builtin.shell: |
+                oc get secret oidc-token -n {{ pipelines_namespace }}
               register: verify_oidc_token
               changed_when: false
               failed_when: false
@@ -241,8 +239,8 @@
             msg: "Step 3: Deleting RHTAS instance..."
 
         - name: Check if SecureSign instance exists
-          ansible.builtin.command:
-            cmd: oc get securesign trusted-artifact-signer -n {{ tas_namespace }}
+          ansible.builtin.shell: |
+            oc get securesign trusted-artifact-signer -n {{ tas_namespace }}
           register: securesign_check
           changed_when: false
           failed_when: false
@@ -251,8 +249,8 @@
           when: securesign_check.rc == 0
           block:
             - name: Delete RHTAS SecureSign instance
-              ansible.builtin.command:
-                cmd: oc delete securesign trusted-artifact-signer -n {{ tas_namespace }}
+              ansible.builtin.shell: |
+                oc delete securesign trusted-artifact-signer -n {{ tas_namespace }}
               changed_when: true
 
             - name: Wait for RHTAS instance to be fully deleted
@@ -260,14 +258,13 @@
                 msg: "Waiting for RHTAS instance to be fully deleted..."
 
             - name: Wait for SecureSign deletion
-              ansible.builtin.command:
-                cmd: oc wait --for=delete securesign/trusted-artifact-signer -n {{ tas_namespace }} --timeout=300s
+              ansible.builtin.shell: |
+                oc wait --for=delete securesign/trusted-artifact-signer -n {{ tas_namespace }} --timeout=300s
               changed_when: false
               failed_when: false
 
             - name: Verify SecureSign deletion with timeout
-              ansible.builtin.shell:
-                cmd: |
+              ansible.builtin.shell: |
                   TIMEOUT=60
                   ELAPSED=0
                   while [ $ELAPSED -lt $TIMEOUT ]; do
@@ -296,8 +293,7 @@
             msg: "Checking for remaining pods in {{ tas_namespace }}..."
 
         - name: Check and wait for pods to terminate
-          ansible.builtin.shell:
-            cmd: |
+          ansible.builtin.shell: |
               TIMEOUT=120
               ELAPSED=0
               while [ $ELAPSED -lt $TIMEOUT ]; do
@@ -330,7 +326,7 @@
             msg: "Deleting PVCs in {{ tas_namespace }}..."
 
         - name: Get PVC count
-          ansible.builtin.shell:
+          ansible.builtin.shell: |
             cmd: oc get pvc -n {{ tas_namespace }} --no-headers 2>/dev/null | wc -l || echo 0
           register: pvc_count
           changed_when: false
@@ -339,8 +335,8 @@
           when: pvc_count.stdout | int > 0
           block:
             - name: Delete all PVCs
-              ansible.builtin.command:
-                cmd: oc delete pvc --all -n {{ tas_namespace }}
+              ansible.builtin.shell: |
+                oc delete pvc --all -n {{ tas_namespace }}
               changed_when: true
 
             - name: Display PVC deletion result
@@ -357,8 +353,7 @@
             msg: "Step 4: Deleting Keycloak clients and realm..."
 
         - name: Get Keycloak admin credentials
-          ansible.builtin.shell:
-            cmd: |
+          ansible.builtin.shell: |
               ADMIN_USER=$(oc get secret keycloak-initial-admin -n {{ keycloak_namespace }} -o jsonpath='{.data.username}' | base64 -d)
               ADMIN_PASS=$(oc get secret keycloak-initial-admin -n {{ keycloak_namespace }} -o jsonpath='{.data.password}' | base64 -d)
               echo "${ADMIN_USER}:${ADMIN_PASS}"
@@ -367,8 +362,7 @@
           no_log: true
 
         - name: Get Keycloak admin token
-          ansible.builtin.shell:
-            cmd: |
+          ansible.builtin.shell: |
               ADMIN_USER=$(echo "{{ keycloak_admin_creds.stdout }}" | cut -d: -f1)
               ADMIN_PASS=$(echo "{{ keycloak_admin_creds.stdout }}" | cut -d: -f2)
               ADMIN_TOKEN=$(curl -s -X POST "{{ keycloak_url }}/realms/master/protocol/openid-connect/token" \
@@ -386,8 +380,7 @@
           when: admin_token.stdout != "" and admin_token.stdout != "null"
           block:
             - name: Get trusted-artifact-signer client ID from sso realm
-              ansible.builtin.shell:
-                cmd: |
+              ansible.builtin.shell: |
                   SSO_CLIENT_ID=$(curl -s -H "Authorization: Bearer {{ admin_token.stdout }}" \
                     "{{ keycloak_url }}/admin/realms/{{ tas_sso_realm }}/clients?clientId={{ tas_client_id }}" | jq -r '.[0].id // empty')
                   echo "$SSO_CLIENT_ID"
@@ -399,16 +392,14 @@
               when: sso_client_id.stdout != ""
               block:
                 - name: Delete client from sso realm
-                  ansible.builtin.shell:
-                    cmd: |
+                  ansible.builtin.shell: |
                       curl -s -X DELETE "{{ keycloak_url }}/admin/realms/{{ tas_sso_realm }}/clients/{{ sso_client_id.stdout }}" \
                         -H "Authorization: Bearer {{ admin_token.stdout }}"
                   changed_when: true
                   no_log: true
 
                 - name: Verify client deletion from sso realm
-                  ansible.builtin.shell:
-                    cmd: |
+                  ansible.builtin.shell: |
                       VERIFY_CLIENT=$(curl -s -H "Authorization: Bearer {{ admin_token.stdout }}" \
                         "{{ keycloak_url }}/admin/realms/{{ tas_sso_realm }}/clients?clientId={{ tas_client_id }}" | jq -r '.[0].id // empty')
                       echo "$VERIFY_CLIENT"
@@ -426,8 +417,7 @@
                 msg: "✓ {{ tas_client_id }} client not found in {{ tas_sso_realm }} realm"
 
             - name: Check if tas-chains realm exists
-              ansible.builtin.shell:
-                cmd: |
+              ansible.builtin.shell: |
                   REALM_EXISTS=$(curl -s -o /dev/null -w "%{http_code}" \
                     -H "Authorization: Bearer {{ admin_token.stdout }}" \
                     "{{ keycloak_url }}/admin/realms/{{ tas_chains_realm }}")
@@ -440,16 +430,14 @@
               when: realm_exists.stdout == "200"
               block:
                 - name: Delete realm
-                  ansible.builtin.shell:
-                    cmd: |
+                  ansible.builtin.shell: |
                       curl -s -X DELETE "{{ keycloak_url }}/admin/realms/{{ tas_chains_realm }}" \
                         -H "Authorization: Bearer {{ admin_token.stdout }}"
                   changed_when: true
                   no_log: true
 
                 - name: Verify realm deletion
-                  ansible.builtin.shell:
-                    cmd: |
+                  ansible.builtin.shell: |
                       VERIFY_REALM=$(curl -s -o /dev/null -w "%{http_code}" \
                         -H "Authorization: Bearer {{ admin_token.stdout }}" \
                         "{{ keycloak_url }}/admin/realms/{{ tas_chains_realm }}")
@@ -477,7 +465,7 @@
             msg: "Step 5: Cleaning up test TaskRuns..."
 
         - name: Get TaskRun count with test label
-          ansible.builtin.shell:
+          ansible.builtin.shell: |
             cmd: oc get taskrun -n {{ app_ci_namespace }} -l test.workload.security.redhat.com/test=image-signing --no-headers 2>/dev/null | wc -l || echo 0
           register: taskrun_count
           changed_when: false
@@ -486,8 +474,8 @@
           when: taskrun_count.stdout | int > 0
           block:
             - name: Delete TaskRuns with test label
-              ansible.builtin.command:
-                cmd: oc delete taskrun -n {{ app_ci_namespace }} -l test.workload.security.redhat.com/test=image-signing
+              ansible.builtin.shell: |
+                oc delete taskrun -n {{ app_ci_namespace }} -l test.workload.security.redhat.com/test=image-signing
               changed_when: true
 
             - name: Display TaskRun deletion result
@@ -500,7 +488,7 @@
             msg: "✓ No test TaskRuns found"
 
         - name: Get orphaned TaskRun count
-          ansible.builtin.shell:
+          ansible.builtin.shell: |
             cmd: oc get taskrun -n {{ app_ci_namespace }} -l tekton.dev/task=build-and-push --no-headers 2>/dev/null | wc -l || echo 0
           register: orphaned_count
           changed_when: false
@@ -509,8 +497,8 @@
           when: orphaned_count.stdout | int > 0
           block:
             - name: Delete orphaned TaskRuns
-              ansible.builtin.command:
-                cmd: oc delete taskrun -n {{ app_ci_namespace }} -l tekton.dev/task=build-and-push
+              ansible.builtin.shell: |
+                oc delete taskrun -n {{ app_ci_namespace }} -l tekton.dev/task=build-and-push
               changed_when: true
 
             - name: Display orphaned TaskRun deletion result
@@ -522,8 +510,8 @@
             msg: "Step 6: Deleting Quay test repository..."
 
         - name: Get Quay route
-          ansible.builtin.shell:
-            cmd: oc get route -n {{ quay_namespace }} -l quay-component=quay-app-route -o jsonpath='{.items[0].spec.host}' 2>/dev/null || echo ""
+          ansible.builtin.shell: |
+            oc get route -n {{ quay_namespace }} -l quay-component=quay-app-route -o jsonpath='{.items[0].spec.host}' 2>/dev/null || echo ""
           register: quay_url
           changed_when: false
 
@@ -540,8 +528,7 @@
               when: quay_token != "changeme" and quay_token != ""
               block:
                 - name: Check if Quay repository exists
-                  ansible.builtin.shell:
-                    cmd: |
+                  ansible.builtin.shell: |
                       CHECK_CODE=$(curl -k -s -o /dev/null -w "%{http_code}" \
                         -H "Authorization: Bearer {{ quay_token }}" \
                         "https://{{ quay_url.stdout }}/api/v1/repository/{{ quay_org }}/{{ quay_repo }}" || true)
@@ -563,8 +550,7 @@
                         msg: "Repository exists, deleting..."
 
                     - name: Delete Quay repository
-                      ansible.builtin.shell:
-                        cmd: |
+                      ansible.builtin.shell: |
                           HTTP_CODE=$(curl -k -s -o /dev/null -w "%{http_code}" -X DELETE \
                             -H "Authorization: Bearer {{ quay_token }}" \
                             "https://{{ quay_url.stdout }}/api/v1/repository/{{ quay_org }}/{{ quay_repo }}" || true)
@@ -639,8 +625,7 @@
             msg: "Retrieving Keycloak admin credentials..."
 
         - name: Get Keycloak admin credentials
-          ansible.builtin.shell:
-            cmd: |
+          ansible.builtin.shell: |
               KEYCLOAK_ADMIN_USER=$(oc get secret keycloak-initial-admin -n {{ keycloak_namespace }} -o jsonpath='{.data.username}' | base64 -d)
               KEYCLOAK_ADMIN_PASSWORD=$(oc get secret keycloak-initial-admin -n {{ keycloak_namespace }} -o jsonpath='{.data.password}' | base64 -d)
               echo "${KEYCLOAK_ADMIN_USER}:${KEYCLOAK_ADMIN_PASSWORD}"
@@ -653,8 +638,7 @@
             msg: "Authenticating with Keycloak..."
 
         - name: Get Keycloak admin access token
-          ansible.builtin.shell:
-            cmd: |
+          ansible.builtin.shell: |
               ADMIN_USER=$(echo "{{ kc_admin_creds.stdout }}" | cut -d: -f1)
               ADMIN_PASS=$(echo "{{ kc_admin_creds.stdout }}" | cut -d: -f2)
               ADMIN_TOKEN=$(curl -s -X POST "{{ keycloak_url }}/realms/master/protocol/openid-connect/token" \
@@ -684,8 +668,7 @@
             msg: "Step 1.2: Creating tas-chains realm..."
 
         - name: Check if tas-chains realm exists
-          ansible.builtin.shell:
-            cmd: |
+          ansible.builtin.shell: |
               REALM_EXISTS=$(curl -s -o /dev/null -w "%{http_code}" \
                 -H "Authorization: Bearer {{ kc_admin_token.stdout }}" \
                 "{{ keycloak_url }}/admin/realms/{{ tas_chains_realm }}")
@@ -698,8 +681,7 @@
           when: check_realm.stdout == "404"
           block:
             - name: Create realm
-              ansible.builtin.shell:
-                cmd: |
+              ansible.builtin.shell: |
                   curl -s -X POST "{{ keycloak_url }}/admin/realms" \
                     -H "Authorization: Bearer {{ kc_admin_token.stdout }}" \
                     -H "Content-Type: application/json" \
@@ -724,8 +706,7 @@
             msg: "Step 1.3: Creating {{ tas_client_id }} client in {{ tas_chains_realm }} realm..."
 
         - name: Check if client exists in tas-chains realm
-          ansible.builtin.shell:
-            cmd: |
+          ansible.builtin.shell: |
               CLIENT_EXISTS=$(curl -s -H "Authorization: Bearer {{ kc_admin_token.stdout }}" \
                 "{{ keycloak_url }}/admin/realms/{{ tas_chains_realm }}/clients?clientId={{ tas_client_id }}" | jq -r '.[0].id // empty')
               echo "$CLIENT_EXISTS"
@@ -737,8 +718,7 @@
           when: check_client.stdout == ""
           block:
             - name: Create client
-              ansible.builtin.shell:
-                cmd: |
+              ansible.builtin.shell: |
                   curl -s -X POST "{{ keycloak_url }}/admin/realms/{{ tas_chains_realm }}/clients" \
                     -H "Authorization: Bearer {{ kc_admin_token.stdout }}" \
                     -H "Content-Type: application/json" \
@@ -764,8 +744,7 @@
             msg: "✓ {{ tas_client_id }} client already exists"
 
         - name: Get client ID for service account configuration
-          ansible.builtin.shell:
-            cmd: |
+          ansible.builtin.shell: |
               CLIENT_ID=$(curl -s -H "Authorization: Bearer {{ kc_admin_token.stdout }}" \
                 "{{ keycloak_url }}/admin/realms/{{ tas_chains_realm }}/clients?clientId={{ tas_client_id }}" | jq -r '.[0].id')
               echo "$CLIENT_ID"
@@ -778,8 +757,7 @@
             msg: "Configuring service account user..."
 
         - name: Get service account user ID
-          ansible.builtin.shell:
-            cmd: |
+          ansible.builtin.shell: |
               SERVICE_ACCOUNT_USER=$(curl -s -H "Authorization: Bearer {{ kc_admin_token.stdout }}" \
                 "{{ keycloak_url }}/admin/realms/{{ tas_chains_realm }}/clients/{{ tas_client_uuid.stdout }}/service-account-user" | jq -r '.id')
               echo "$SERVICE_ACCOUNT_USER"
@@ -788,8 +766,7 @@
           no_log: true
 
         - name: Update service account with email verification
-          ansible.builtin.shell:
-            cmd: |
+          ansible.builtin.shell: |
               curl -s -X PUT "{{ keycloak_url }}/admin/realms/{{ tas_chains_realm }}/users/{{ service_account_user_id.stdout }}" \
                 -H "Authorization: Bearer {{ kc_admin_token.stdout }}" \
                 -H "Content-Type: application/json" \
@@ -817,8 +794,7 @@
             msg: "Step 2.1: Creating {{ tas_client_id }} client in {{ tas_sso_realm }} realm..."
 
         - name: Check if client exists in sso realm
-          ansible.builtin.shell:
-            cmd: |
+          ansible.builtin.shell: |
               SSO_CLIENT_EXISTS=$(curl -s -H "Authorization: Bearer {{ kc_admin_token.stdout }}" \
                 "{{ keycloak_url }}/admin/realms/{{ tas_sso_realm }}/clients?clientId={{ tas_client_id }}" | jq -r '.[0].id // empty')
               echo "$SSO_CLIENT_EXISTS"
@@ -830,8 +806,7 @@
           when: check_sso_client.stdout == ""
           block:
             - name: Create client in sso realm
-              ansible.builtin.shell:
-                cmd: |
+              ansible.builtin.shell: |
                   curl -s -X POST "{{ keycloak_url }}/admin/realms/{{ tas_sso_realm }}/clients" \
                     -H "Authorization: Bearer {{ kc_admin_token.stdout }}" \
                     -H "Content-Type: application/json" \
@@ -867,8 +842,7 @@
             msg: "Step 3.1: Applying RHTAS Instance CR..."
 
         - name: Apply RHTAS Instance CR
-          ansible.builtin.shell:
-            cmd: |
+          ansible.builtin.shell: |
               export TAS_CHAINS_CLIENT_ID="{{ tas_client_id }}"
               export TAS_CHAINS_REALM="{{ tas_chains_realm }}"
               export TAS_SSO_REALM="{{ tas_sso_realm }}"
@@ -884,8 +858,7 @@
             msg: "Step 3.2: Waiting for RHTAS instance status to be populated..."
 
         - name: Wait for RHTAS instance status URLs
-          ansible.builtin.shell:
-            cmd: |
+          ansible.builtin.shell: |
               TIMEOUT=600
               ELAPSED=0
               while [ $ELAPSED -lt $TIMEOUT ]; do
@@ -929,8 +902,7 @@
             msg: "Step 4.1: Retrieving client secret..."
 
         - name: Get TAS client UUID
-          ansible.builtin.shell:
-            cmd: |
+          ansible.builtin.shell: |
               TAS_CHAINS_CLIENT_ID_UUID=$(curl -s -H "Authorization: Bearer {{ kc_admin_token.stdout }}" \
                 "{{ keycloak_url }}/admin/realms/{{ tas_chains_realm }}/clients?clientId={{ tas_client_id }}" | jq -r '.[0].id')
               echo "$TAS_CHAINS_CLIENT_ID_UUID"
@@ -939,8 +911,7 @@
           no_log: true
 
         - name: Get TAS client secret
-          ansible.builtin.shell:
-            cmd: |
+          ansible.builtin.shell: |
               TAS_CHAINS_CLIENT_SECRET=$(curl -s -H "Authorization: Bearer {{ kc_admin_token.stdout }}" \
                 "{{ keycloak_url }}/admin/realms/{{ tas_chains_realm }}/clients/{{ tas_chains_client_uuid.stdout }}/client-secret" | jq -r '.value')
               echo "$TAS_CHAINS_CLIENT_SECRET"
@@ -958,8 +929,7 @@
             msg: "Step 4.2: Creating OIDC info secret..."
 
         - name: Create OIDC info secret
-          ansible.builtin.shell:
-            cmd: |
+          ansible.builtin.shell: |
               export TAS_CHAINS_CLIENT_SECRET="{{ tas_client_secret.stdout }}"
               envsubst < $(eval echo "{{ lab_assets_dir }}/oidc-info-secret.yml") | oc apply -n {{ pipelines_namespace }} -f -
           changed_when: true
@@ -974,7 +944,7 @@
             msg: "Step 4.3: Deploying OIDC refresher app..."
 
         - name: Deploy OIDC refresher app
-          ansible.builtin.shell:
+          ansible.builtin.shell: |
             cmd: oc apply -f $(eval echo "{{ lab_assets_dir }}/oidc-refresher-app.yml") -n {{ pipelines_namespace }}
           changed_when: true
 
@@ -987,8 +957,7 @@
             msg: "Step 4.4: Waiting for OIDC refresher pod to be Running..."
 
         - name: Wait for OIDC refresher pod to be Running
-          ansible.builtin.shell:
-            cmd: |
+          ansible.builtin.shell: |
               TIMEOUT=300
               ELAPSED=0
               while [ $ELAPSED -lt $TIMEOUT ]; do
@@ -1015,8 +984,7 @@
             msg: "Step 4.5: Waiting for oidc-token secret to have valid id-token..."
 
         - name: Wait for oidc-token secret to have valid id-token
-          ansible.builtin.shell:
-            cmd: |
+          ansible.builtin.shell: |
               TIMEOUT=120
               ELAPSED=0
               while [ $ELAPSED -lt $TIMEOUT ]; do
@@ -1050,7 +1018,7 @@
             msg: "Step 5.1: Getting current tekton-chains-controller pod..."
 
         - name: Get current Tekton Chains controller pod name
-          ansible.builtin.shell:
+          ansible.builtin.shell: |
             cmd: oc get pods -n {{ pipelines_namespace }} -l app=tekton-chains-controller -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "NotFound"
           register: old_chains_pod
           changed_when: false
@@ -1064,7 +1032,7 @@
             msg: "Step 5.2: Patching Tekton configuration..."
 
         - name: Patch Tekton Chains configuration
-          ansible.builtin.shell:
+          ansible.builtin.shell: |
             cmd: oc patch tektonconfig config -n {{ pipelines_namespace }} --type=merge --patch "$(cat $(eval echo "{{ lab_assets_dir }}/tekton-chains-patch.yml"))"
           changed_when: true
 
@@ -1077,8 +1045,7 @@
             msg: "Step 5.3: Waiting for tekton-chains-controller pod to be recreated..."
 
         - name: Wait for tekton-chains-controller pod to be recreated and ready
-          ansible.builtin.shell:
-            cmd: |
+          ansible.builtin.shell: |
               TIMEOUT=180
               ELAPSED=0
               OLD_CHAINS_POD="{{ old_chains_pod.stdout }}"
@@ -1150,7 +1117,7 @@
             msg: "Creating service account: {{ test_sa }}..."
 
         - name: Create test service account
-          ansible.builtin.shell:
+          ansible.builtin.shell: |
             cmd: oc create sa {{ test_sa }} -n {{ app_ci_namespace }} 2>/dev/null || echo "✓ Service account already exists"
           changed_when: false
 
@@ -1159,8 +1126,8 @@
             msg: "Granting anyuid SCC..."
 
         - name: Add anyuid SCC to service account
-          ansible.builtin.command:
-            cmd: oc adm policy add-scc-to-user anyuid -z {{ test_sa }} -n {{ app_ci_namespace }}
+          ansible.builtin.shell: |
+            oc adm policy add-scc-to-user anyuid -z {{ test_sa }} -n {{ app_ci_namespace }}
           changed_when: true
 
         - name: Grant privileged SCC
@@ -1168,8 +1135,8 @@
             msg: "Granting privileged SCC..."
 
         - name: Add privileged SCC to service account
-          ansible.builtin.command:
-            cmd: oc adm policy add-scc-to-user privileged -z {{ test_sa }} -n {{ app_ci_namespace }}
+          ansible.builtin.shell: |
+            oc adm policy add-scc-to-user privileged -z {{ test_sa }} -n {{ app_ci_namespace }}
           changed_when: true
 
         - name: Link registry secret
@@ -1177,7 +1144,7 @@
             msg: "Linking registry secret..."
 
         - name: Link registry secret to service account
-          ansible.builtin.shell:
+          ansible.builtin.shell: |
             cmd: oc secret link {{ test_sa }} {{ registry_secret }} -n {{ app_ci_namespace }} --for=mount 2>/dev/null || echo "✓ Secret already linked"
           changed_when: false
 
@@ -1196,7 +1163,7 @@
             msg: "Applying Tekton task..."
 
         - name: Create Tekton task
-          ansible.builtin.shell:
+          ansible.builtin.shell: |
             cmd: oc create -f $(eval echo "{{ lab_assets_dir }}/example-image-sign.yml") -n {{ app_ci_namespace }}
           changed_when: true
 
@@ -1213,7 +1180,7 @@
             seconds: 5
 
         - name: Get TaskRun name
-          ansible.builtin.shell:
+          ansible.builtin.shell: |
             cmd: oc get taskrun -n {{ app_ci_namespace }} --sort-by=.metadata.creationTimestamp -o jsonpath='{.items[-1].metadata.name}'
           register: taskrun_name
           changed_when: false
@@ -1230,8 +1197,7 @@
             msg: "Waiting for TaskRun to complete (this may take a few minutes)..."
 
         - name: Monitor TaskRun completion
-          ansible.builtin.shell:
-            cmd: |
+          ansible.builtin.shell: |
               TIMEOUT=600
               ELAPSED=0
               while [ $ELAPSED -lt $TIMEOUT ]; do
@@ -1275,7 +1241,7 @@
                   - "TaskRun logs:"
 
             - name: Get TaskRun logs
-              ansible.builtin.shell:
+              ansible.builtin.shell: |
                 cmd: oc logs -n {{ app_ci_namespace }} --selector=tekton.dev/taskRun={{ taskrun_name.stdout }} --tail=50
               register: taskrun_logs
               changed_when: false
@@ -1321,8 +1287,8 @@
             msg: "Removing anyuid SCC..."
 
         - name: Remove anyuid SCC from service account
-          ansible.builtin.command:
-            cmd: oc adm policy remove-scc-from-user anyuid -z {{ test_sa }} -n {{ app_ci_namespace }}
+          ansible.builtin.shell: |
+            oc adm policy remove-scc-from-user anyuid -z {{ test_sa }} -n {{ app_ci_namespace }}
           changed_when: true
 
         - name: Remove privileged SCC
@@ -1330,8 +1296,8 @@
             msg: "Removing privileged SCC..."
 
         - name: Remove privileged SCC from service account
-          ansible.builtin.command:
-            cmd: oc adm policy remove-scc-from-user privileged -z {{ test_sa }} -n {{ app_ci_namespace }}
+          ansible.builtin.shell: |
+            oc adm policy remove-scc-from-user privileged -z {{ test_sa }} -n {{ app_ci_namespace }}
           changed_when: true
 
         - name: Delete service account
@@ -1339,8 +1305,8 @@
             msg: "Deleting service account..."
 
         - name: Delete test service account
-          ansible.builtin.command:
-            cmd: oc delete sa {{ test_sa }} -n {{ app_ci_namespace }}
+          ansible.builtin.shell: |
+            oc delete sa {{ test_sa }} -n {{ app_ci_namespace }}
           changed_when: true
 
         - name: Display cleanup complete
