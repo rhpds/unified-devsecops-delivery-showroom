@@ -273,46 +273,44 @@
       ansible.builtin.debug:
         msg: "✓ TPA endpoint is ready"
 
-    - name: Get Keycloak token endpoint
-      ansible.builtin.shell:
-        cmd: |
-          TIMEOUT=120
-          ELAPSED=0
-          TOKEN_EP=""
-          while [ $ELAPSED -lt $TIMEOUT ]; do
-            TOKEN_EP=$(curl -s "{{ keycloak_url }}/realms/{{ tpa_realm }}/.well-known/openid-configuration" 2>/dev/null | jq -r .token_endpoint 2>/dev/null || true)
-            if [ -n "$TOKEN_EP" ] && [ "$TOKEN_EP" != "null" ]; then
-              echo "$TOKEN_EP"
-              exit 0
-            fi
-            sleep 5
-            ELAPSED=$((ELAPSED + 5))
-          done
-          echo "error"
-          exit 1
+    - name: Get Keycloak OIDC configuration
+      ansible.builtin.uri:
+        url: "{{ keycloak_url }}/realms/{{ tpa_realm }}/.well-known/openid-configuration"
+        method: GET
+        return_content: true
+        validate_certs: false
+        status_code: 200
+      register: oidc_config
+      until: oidc_config.status == 200 and oidc_config.json.token_endpoint is defined
+      retries: 24
+      delay: 5
       changed_when: false
-      register: token_endpoint
-      failed_when: token_endpoint.stdout == "error"
+      delegate_to: localhost
 
     - name: Display token endpoint status
       ansible.builtin.debug:
         msg: "✓ Token endpoint available"
 
     - name: Get OAuth access token
-      ansible.builtin.shell:
-        cmd: |
-          TOKEN=$(curl -s -X POST "{{ token_endpoint.stdout }}" \
-            -d grant_type=client_credentials \
-            -d client_id="cli" \
-            -d client_secret="{{ tpa_cli_client_secret }}" 2>/dev/null | jq -r .access_token 2>/dev/null || true)
-          if [ -z "$TOKEN" ] || [ "$TOKEN" == "null" ]; then
-            echo "error"
-            exit 1
-          fi
-          echo "$TOKEN"
+      ansible.builtin.uri:
+        url: "{{ oidc_config.json.token_endpoint }}"
+        method: POST
+        body_format: form-urlencoded
+        body:
+          grant_type: client_credentials
+          client_id: cli
+          client_secret: "{{ tpa_cli_client_secret }}"
+        return_content: true
+        validate_certs: false
+        status_code: 200
+      register: oauth_response
       changed_when: false
-      register: oauth_token
-      failed_when: oauth_token.stdout == "error"
+      no_log: false
+      delegate_to: localhost
+
+    - name: Set OAuth token fact
+      ansible.builtin.set_fact:
+        oauth_token: "{{ oauth_response.json.access_token }}"
       no_log: false
 
     - name: Display OAuth token status
@@ -331,7 +329,7 @@
         method: POST
         body: "{{ sbom_content.content | b64decode }}"
         headers:
-          Authorization: "Bearer {{ oauth_token.stdout }}"
+          Authorization: "Bearer {{ oauth_token }}"
           Content-Type: "application/json"
         validate_certs: false
         status_code: [200, 201]
