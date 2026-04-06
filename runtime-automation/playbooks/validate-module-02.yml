@@ -179,12 +179,6 @@
         tas_chains_client_check.json is defined and
         tas_chains_client_check.json | length > 0
 
-    - name: DEBUG - Display client UUID extracted from API
-      ansible.builtin.debug:
-        msg: "Client UUID from API: {{ (tas_chains_client_check.json | default([{}]))[0].id | default('NOT_FOUND') }}"
-      when: >
-        tas_chains_client_check.json is defined
-
     - name: Get service account user email verification
       ansible.builtin.uri:
         url: "{{ keycloak_admin_console }}/admin/realms/{{ tas_chains_realm }}/clients/{{ (tas_chains_client_check.json | default([{}]))[0].id }}/service-account-user"
@@ -203,20 +197,6 @@
         admin_token != 'null' and
         tas_chains_client_check.json is defined and
         tas_chains_client_check.json | length > 0
-
-    - name: DEBUG - Display service account API response
-      ansible.builtin.debug:
-        msg:
-          - "Service Account API Response:"
-          - "  Status Code: {{ service_account_check.status | default('N/A') }}"
-          - "  emailVerified: {{ service_account_check.json.emailVerified | default('NOT_SET') }}"
-          - "  email: {{ service_account_check.json.email | default('NOT_SET') }}"
-          - "  firstName: {{ service_account_check.json.firstName | default('NOT_SET') }}"
-          - "  lastName: {{ service_account_check.json.lastName | default('NOT_SET') }}"
-          - "  Full Response: {{ service_account_check.json | default('NO_JSON') }}"
-      when: >
-        service_account_check is defined and
-        service_account_check.json is defined
 
     - name: Validate tas-chains client and service account
       ansible.builtin.set_fact:
