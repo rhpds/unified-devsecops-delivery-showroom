@@ -1,0 +1,339 @@
+---
+# Module 1: Install RHTPA and Upload SBOM
+# Translates: solve-module-1.sh -> reset-module-1.sh + install-rhtpa.sh + upload-sbom.sh
+- name: Solve Module 01 - RHTPA Installation
+  hosts: localhost
+  gather_facts: false
+
+  vars:
+    # Match script variables exactly
+    cluster_domain: "{{ lookup('env', 'GUID') }}.{{ lookup('env', 'BASE_DOMAIN') | default('example.opentlc.com', true) }}"
+    keycloak_namespace: "tssc-keycloak"
+    tpa_namespace: "tssc-tpa"
+    tpa_realm: "tpa"
+    tpa_cli_client_secret: "{{ lookup('env', 'TPA_CLI_CLIENT_SECRET') | default('changeme', true) }}"
+    tpa_admin_username: "tpaadmin"
+    tpa_admin_password: "{{ lookup('env', 'TPA_ADMIN_PASSWORD') | default('changeme', true) }}"
+    keycloak_url: "https://sso.{{ cluster_domain }}"
+    sbom_file: "~/lab-assets/example-sbom.json"
+    sbom_id: "test-sbom"
+    lab_assets_dir: "~/lab-assets"
+
+  tasks:
+    - name: Display module information
+      ansible.builtin.debug:
+        msg: "Solving Module 01: RHTPA Installation and SBOM Upload"
+
+    ###########################################
+    # STEP 0: Reset Module 1 (reset-module-1.sh)
+    ###########################################
+    - name: "STEP 0: Reset Module 1"
+      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      block:
+        - name: Check if RHTPA instance exists
+          ansible.builtin.command:
+            cmd: oc get tpa instance -n {{ tpa_namespace }}
+          register: tpa_check
+          changed_when: false
+          failed_when: false
+
+        - name: Delete RHTPA instance (if exists)
+          when: tpa_check.rc == 0
+          block:
+            - name: Delete RHTPA instance
+              ansible.builtin.command:
+                cmd: oc delete tpa instance -n {{ tpa_namespace }}
+              changed_when: true
+
+            - name: Wait for RHTPA instance deletion
+              ansible.builtin.command:
+                cmd: oc wait --for=delete tpa/instance -n {{ tpa_namespace }} --timeout=300s
+              changed_when: false
+              failed_when: false
+
+            - name: Verify RHTPA instance deletion
+              ansible.builtin.shell:
+                cmd: |
+                  TIMEOUT=60
+                  ELAPSED=0
+                  while [ $ELAPSED -lt $TIMEOUT ]; do
+                    if ! oc get tpa instance -n {{ tpa_namespace }} &>/dev/null; then
+                      echo "deleted"
+                      exit 0
+                    fi
+                    sleep 5
+                    ELAPSED=$((ELAPSED + 5))
+                  done
+                  echo "timeout"
+                  exit 1
+              register: tpa_verify
+              changed_when: false
+              failed_when: false
+
+            - name: Display RHTPA deletion result
+              ansible.builtin.debug:
+                msg: "{{ '✓ RHTPA instance deleted' if tpa_verify.stdout == 'deleted' else 'Warning: RHTPA instance still exists after timeout' }}"
+
+        - name: RHTPA instance not found
+          when: tpa_check.rc != 0
+          ansible.builtin.debug:
+            msg: "✓ RHTPA instance not found (already clean)"
+
+        - name: Check if TPA CLI credentials secret exists
+          ansible.builtin.command:
+            cmd: oc get secret tpa-cli-credentials -n {{ tpa_namespace }}
+          register: tpa_secret_check
+          changed_when: false
+          failed_when: false
+
+        - name: Delete TPA CLI credentials secret (if exists)
+          when: tpa_secret_check.rc == 0
+          block:
+            - name: Delete TPA CLI credentials secret
+              ansible.builtin.command:
+                cmd: oc delete secret tpa-cli-credentials -n {{ tpa_namespace }}
+              changed_when: true
+
+            - name: Verify TPA CLI credentials secret deletion
+              ansible.builtin.command:
+                cmd: oc get secret tpa-cli-credentials -n {{ tpa_namespace }}
+              register: secret_verify
+              changed_when: false
+              failed_when: false
+
+            - name: Display secret deletion result
+              ansible.builtin.debug:
+                msg: "{{ '✓ TPA CLI credentials secret deleted' if secret_verify.rc != 0 else 'Warning: TPA CLI credentials secret still exists' }}"
+
+        - name: TPA CLI credentials secret not found
+          when: tpa_secret_check.rc != 0
+          ansible.builtin.debug:
+            msg: "✓ TPA CLI credentials secret not found (already clean)"
+
+        - name: Check if TPA Realm import exists
+          ansible.builtin.command:
+            cmd: oc get keycloakrealmimport {{ tpa_realm }} -n {{ keycloak_namespace }}
+          register: realm_check
+          changed_when: false
+          failed_when: false
+
+        - name: Delete TPA Realm import (if exists)
+          when: realm_check.rc == 0
+          block:
+            - name: Delete TPA Realm import
+              ansible.builtin.command:
+                cmd: oc delete keycloakrealmimport {{ tpa_realm }} -n {{ keycloak_namespace }}
+              changed_when: true
+
+            - name: Wait for TPA Realm deletion
+              ansible.builtin.command:
+                cmd: oc wait --for=delete keycloakrealmimport/{{ tpa_realm }} -n {{ keycloak_namespace }} --timeout=60s
+              changed_when: false
+              failed_when: false
+
+            - name: Verify TPA Realm deletion
+              ansible.builtin.command:
+                cmd: oc get keycloakrealmimport {{ tpa_realm }} -n {{ keycloak_namespace }}
+              register: realm_verify
+              changed_when: false
+              failed_when: false
+
+            - name: Display realm deletion result
+              ansible.builtin.debug:
+                msg: "{{ '✓ TPA Realm import deleted' if realm_verify.rc != 0 else 'Warning: TPA Realm import still exists' }}"
+
+        - name: TPA Realm import not found
+          when: realm_check.rc != 0
+          ansible.builtin.debug:
+            msg: "✓ TPA Realm import not found (already clean)"
+
+        - name: Reset complete
+          ansible.builtin.debug:
+            msg: "✓ Module 1 reset complete"
+
+    ###########################################
+    # STEP 1: Install RHTPA (install-rhtpa.sh)
+    ###########################################
+    - name: "STEP 1: Install RHTPA"
+      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      block:
+        - name: Import TPA Realm to Keycloak
+          ansible.builtin.shell:
+            cmd: |
+              envsubst '${TPA_REALM} ${TPA_CLI_CLIENT_SECRET} ${TPA_ADMIN_USERNAME} ${TPA_ADMIN_PASSWORD}' \
+                < {{ lab_assets_dir }}/keycloak-tpa-realm.yml | oc apply -n {{ keycloak_namespace }} -f -
+          environment:
+            TPA_REALM: "{{ tpa_realm }}"
+            TPA_CLI_CLIENT_SECRET: "{{ tpa_cli_client_secret }}"
+            TPA_ADMIN_USERNAME: "{{ tpa_admin_username }}"
+            TPA_ADMIN_PASSWORD: "{{ tpa_admin_password }}"
+          changed_when: true
+          no_log: true
+
+        - name: Wait for TPA Realm import completion
+          ansible.builtin.command:
+            cmd: oc wait --for=condition=Done keycloakrealmimport/{{ tpa_realm }} -n {{ keycloak_namespace }} --timeout=300s
+          changed_when: false
+
+        - name: Display TPA Realm import result
+          ansible.builtin.debug:
+            msg: "✓ TPA Realm imported successfully"
+
+        - name: Configure TPA Client Secret
+          ansible.builtin.shell:
+            cmd: |
+              envsubst < {{ lab_assets_dir }}/tpa-cli-credentials.yml | oc apply -n {{ tpa_namespace }} -f -
+          environment:
+            TPA_CLI_CLIENT_SECRET: "{{ tpa_cli_client_secret }}"
+          changed_when: true
+          no_log: true
+
+        - name: Display client secret configuration result
+          ansible.builtin.debug:
+            msg: "✓ Client secret configured"
+
+        - name: Deploy RHTPA Instance
+          ansible.builtin.shell:
+            cmd: |
+              envsubst < {{ lab_assets_dir }}/tpa-instance.yml | oc apply -n {{ tpa_namespace }} -f -
+          changed_when: true
+
+        - name: Wait for RHTPA server to be ready
+          ansible.builtin.shell:
+            cmd: |
+              TPA_SERVER_URL="https://server-{{ tpa_namespace }}.{{ cluster_domain }}"
+              TIMEOUT=600
+              ELAPSED=0
+              while [ $ELAPSED -lt $TIMEOUT ]; do
+                HTTP_CODE=$(curl -k -s -o /dev/null -w "%{http_code}" ${TPA_SERVER_URL} || echo "000")
+                if echo "${HTTP_CODE}" | grep -qE "200|302|401"; then
+                  echo "ready"
+                  exit 0
+                fi
+                sleep 10
+                ELAPSED=$((ELAPSED + 10))
+              done
+              echo "timeout"
+              exit 1
+          changed_when: false
+          register: rhtpa_ready
+          failed_when: rhtpa_ready.stdout == "timeout"
+
+        - name: Display RHTPA installation result
+          ansible.builtin.debug:
+            msg:
+              - "✓ RHTPA installed successfully"
+              - "Console: https://server-{{ tpa_namespace }}.{{ cluster_domain }}"
+              - "Username: {{ tpa_admin_username }}"
+
+    ###########################################
+    # STEP 2: Upload SBOM (upload-sbom.sh)
+    ###########################################
+    - name: "STEP 2: Upload SBOM"
+      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      block:
+        - name: Check TPA endpoint availability
+          ansible.builtin.shell:
+            cmd: |
+              TPA_SERVER_URL="https://server-{{ tpa_namespace }}.{{ cluster_domain }}"
+              TIMEOUT=300
+              ELAPSED=0
+              while [ $ELAPSED -lt $TIMEOUT ]; do
+                HTTP_CODE=$(curl -k -s -o /dev/null -w "%{http_code}" ${TPA_SERVER_URL} || echo "000")
+                if echo "${HTTP_CODE}" | grep -qE "200|302|401"; then
+                  echo "ready"
+                  exit 0
+                fi
+                sleep 10
+                ELAPSED=$((ELAPSED + 10))
+              done
+              echo "timeout"
+              exit 1
+          changed_when: false
+          register: tpa_endpoint_check
+          failed_when: tpa_endpoint_check.stdout == "timeout"
+
+        - name: Display TPA endpoint status
+          ansible.builtin.debug:
+            msg: "✓ TPA endpoint is ready"
+
+        - name: Get Keycloak token endpoint
+          ansible.builtin.shell:
+            cmd: |
+              TIMEOUT=120
+              ELAPSED=0
+              TOKEN_EP=""
+              while [ $ELAPSED -lt $TIMEOUT ]; do
+                TOKEN_EP=$(curl -s "{{ keycloak_url }}/realms/{{ tpa_realm }}/.well-known/openid-configuration" 2>/dev/null | jq -r .token_endpoint 2>/dev/null || true)
+                if [ -n "$TOKEN_EP" ] && [ "$TOKEN_EP" != "null" ]; then
+                  echo "$TOKEN_EP"
+                  exit 0
+                fi
+                sleep 5
+                ELAPSED=$((ELAPSED + 5))
+              done
+              echo "error"
+              exit 1
+          changed_when: false
+          register: token_endpoint
+          failed_when: token_endpoint.stdout == "error"
+
+        - name: Display token endpoint status
+          ansible.builtin.debug:
+            msg: "✓ Token endpoint available"
+
+        - name: Get OAuth access token
+          ansible.builtin.shell:
+            cmd: |
+              TOKEN=$(curl -s -X POST "{{ token_endpoint.stdout }}" \
+                -d grant_type=client_credentials \
+                -d client_id="cli" \
+                -d client_secret="{{ tpa_cli_client_secret }}" 2>/dev/null | jq -r .access_token 2>/dev/null || true)
+              if [ -z "$TOKEN" ] || [ "$TOKEN" == "null" ]; then
+                echo "error"
+                exit 1
+              fi
+              echo "$TOKEN"
+          changed_when: false
+          register: oauth_token
+          failed_when: oauth_token.stdout == "error"
+          no_log: true
+
+        - name: Display OAuth token status
+          ansible.builtin.debug:
+            msg: "✓ OAuth access token obtained"
+
+        - name: Upload SBOM to RHTPA
+          ansible.builtin.shell:
+            cmd: |
+              TPA_SERVER_URL="https://server-{{ tpa_namespace }}.{{ cluster_domain }}"
+              curl -X POST ${TPA_SERVER_URL}/api/v2/sbom?id={{ sbom_id }} \
+                -H "Authorization: Bearer {{ oauth_token.stdout }}" \
+                -H "Content-Type: application/json" \
+                --data-binary @{{ sbom_file }}
+          changed_when: true
+          no_log: true
+
+        - name: SBOM upload complete
+          ansible.builtin.debug:
+            msg:
+              - "✓ SBOM uploaded successfully"
+              - "SBOM ID: {{ sbom_id }}"
+              - "Console: https://server-{{ tpa_namespace }}.{{ cluster_domain }}"
+
+    ###########################################
+    # Module Summary
+    ###########################################
+    - name: Module 1 completion summary
+      ansible.builtin.debug:
+        msg:
+          - "========================================="
+          - "Module 1 Complete!"
+          - "========================================="
+          - ""
+          - "Summary:"
+          - "  ✓ RHTPA installed and configured"
+          - "  ✓ TPA Realm imported in Keycloak"
+          - "  ✓ RHTPA instance deployed"
+          - "  ✓ Example SBOM uploaded to RHTPA"
+          - ""

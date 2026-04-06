@@ -1,0 +1,639 @@
+---
+- name: Validate Module 02 - RHTAS Installation
+  hosts: localhost
+  gather_facts: false
+  vars:
+    # Environment variables matching shell script
+    cluster_domain: "{{ openshift_cluster_ingress_domain }}"
+    keycloak_url: "https://sso.{{ openshift_cluster_ingress_domain }}"
+    keycloak_namespace: "{{ rhpds_build_secured_dev_workflows_lab_scripts_keycloak_namespace }}"
+    tas_namespace: "{{ rhpds_build_secured_dev_workflows_lab_scripts_tas_namespace }}"
+    pipelines_namespace: "{{ rhpds_build_secured_dev_workflows_lab_scripts_pipelines_namespace }}"
+    tas_chains_realm: "{{ rhpds_build_secured_dev_workflows_lab_scripts_tas_chains_realm }}"
+    tas_sso_realm: "{{ rhpds_build_secured_dev_workflows_lab_scripts_tas_sso_realm }}"
+    tas_client_id: "{{ rhpds_build_secured_dev_workflows_lab_scripts_tas_client_id }}"
+
+  tasks:
+  - name: Initialize validation tracking
+    ansible.builtin.set_fact:
+      validation_failed: 0
+
+  - name: Display validation header
+    ansible.builtin.debug:
+      msg:
+        - "========================================="
+        - "Validating Module 2: RHTAS Installation"
+        - "========================================="
+        - ""
+
+  #######################################
+  # Get Keycloak admin credentials and token
+  #######################################
+  - name: Get Keycloak admin credentials and token
+    block:
+    - name: Get Keycloak admin username
+      ansible.builtin.command:
+        cmd: "oc get secret keycloak-initial-admin -n {{ keycloak_namespace }} -o jsonpath='{.data.username}'"
+      register: keycloak_admin_user_b64
+      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      changed_when: false
+      failed_when: false
+      no_log: true
+
+    - name: Get Keycloak admin password
+      ansible.builtin.command:
+        cmd: "oc get secret keycloak-initial-admin -n {{ keycloak_namespace }} -o jsonpath='{.data.password}'"
+      register: keycloak_admin_password_b64
+      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      changed_when: false
+      failed_when: false
+      no_log: true
+
+    - name: Decode Keycloak admin credentials
+      ansible.builtin.set_fact:
+        keycloak_admin_user: "{{ keycloak_admin_user_b64.stdout | b64decode }}"
+        keycloak_admin_password: "{{ keycloak_admin_password_b64.stdout | b64decode }}"
+      no_log: true
+      when: >
+        keycloak_admin_user_b64.rc == 0 and
+        keycloak_admin_password_b64.rc == 0 and
+        keycloak_admin_user_b64.stdout != '' and
+        keycloak_admin_password_b64.stdout != ''
+
+    - name: Get admin access token
+      ansible.builtin.uri:
+        url: "{{ keycloak_url }}/realms/master/protocol/openid-connect/token"
+        method: POST
+        validate_certs: false
+        body_format: form-urlencoded
+        body:
+          client_id: admin-cli
+          username: "{{ keycloak_admin_user }}"
+          password: "{{ keycloak_admin_password }}"
+          grant_type: password
+        return_content: true
+      register: admin_token_result
+      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      changed_when: false
+      failed_when: false
+      no_log: true
+      when: >
+        keycloak_admin_user is defined and
+        keycloak_admin_password is defined and
+        keycloak_admin_user != '' and
+        keycloak_admin_password != ''
+
+    - name: Set admin token
+      ansible.builtin.set_fact:
+        admin_token: "{{ admin_token_result.json.access_token }}"
+      no_log: true
+      when: >
+        admin_token_result.json is defined and
+        (admin_token_result.json.access_token | default('')) != '' and
+        admin_token_result.json.access_token != 'null'
+
+  #######################################
+  # Check 1: tas-chains Realm
+  #######################################
+  - name: "Check 1: tas-chains Realm"
+    block:
+    - name: Display check header
+      ansible.builtin.debug:
+        msg:
+          - "Check 1: tas-chains Realm"
+          - "-------------------------"
+
+    - name: Check if tas-chains realm exists
+      ansible.builtin.uri:
+        url: "{{ keycloak_url }}/admin/realms/{{ tas_chains_realm }}"
+        method: GET
+        validate_certs: false
+        headers:
+          Authorization: "Bearer {{ admin_token }}"
+        status_code: [200, 404]
+      register: realm_exists_check
+      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      changed_when: false
+      failed_when: false
+      no_log: true
+      when: >
+        admin_token is defined and
+        admin_token != '' and
+        admin_token != 'null'
+
+    - name: Validate tas-chains realm
+      ansible.builtin.set_fact:
+        validation_failed: "{{ validation_failed | int + 1 }}"
+      when: >
+        admin_token is not defined or
+        admin_token == '' or
+        admin_token == 'null' or
+        realm_exists_check.status != 200
+
+    - name: Display tas-chains realm result
+      ansible.builtin.debug:
+        msg: >-
+          {% if admin_token is not defined or admin_token == '' or admin_token == 'null' %}
+          ✗ FAIL: Could not authenticate with Keycloak
+          {% elif realm_exists_check.status == 200 %}
+          ✓ PASS: tas-chains realm exists
+          {% else %}
+          ✗ FAIL: tas-chains realm not found
+          {% endif %}
+
+    - name: Display blank line
+      ansible.builtin.debug:
+        msg: ""
+
+  #######################################
+  # Check 2: trusted-artifact-signer Client in tas-chains
+  #######################################
+  - name: "Check 2: {{ tas_client_id }} Client in tas-chains Realm"
+    block:
+    - name: Display check header
+      ansible.builtin.debug:
+        msg:
+          - "Check 2: {{ tas_client_id }} Client in tas-chains Realm"
+          - "-----------------------------------------------------"
+
+    - name: Get trusted-artifact-signer client in tas-chains realm
+      ansible.builtin.uri:
+        url: "{{ keycloak_url }}/admin/realms/{{ tas_chains_realm }}/clients?clientId={{ tas_client_id }}"
+        method: GET
+        validate_certs: false
+        headers:
+          Authorization: "Bearer {{ admin_token }}"
+        return_content: true
+      register: tas_chains_client_check
+      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      changed_when: false
+      failed_when: false
+      no_log: true
+      when: >
+        admin_token is defined and
+        admin_token != '' and
+        admin_token != 'null'
+
+    - name: Set client ID from response
+      ansible.builtin.set_fact:
+        tas_chains_client_id: "{{ (tas_chains_client_check.json | default([{}]))[0].id | default('') }}"
+      no_log: true
+      when: >
+        tas_chains_client_check.json is defined and
+        tas_chains_client_check.json | length > 0
+
+    - name: Display client existence result
+      ansible.builtin.debug:
+        msg: "✓ PASS: {{ tas_client_id }} client exists in tas-chains realm"
+      when: >
+        tas_chains_client_id is defined and
+        tas_chains_client_id != ''
+
+    - name: Get service account user email verification
+      ansible.builtin.uri:
+        url: "{{ keycloak_url }}/admin/realms/{{ tas_chains_realm }}/clients/{{ tas_chains_client_id }}/service-account-user"
+        method: GET
+        validate_certs: false
+        headers:
+          Authorization: "Bearer {{ admin_token }}"
+        return_content: true
+      register: service_account_check
+      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      changed_when: false
+      failed_when: false
+      no_log: true
+      when: >
+        admin_token is defined and
+        admin_token != '' and
+        admin_token != 'null' and
+        tas_chains_client_id is defined and
+        tas_chains_client_id != ''
+
+    - name: Validate tas-chains client and service account
+      ansible.builtin.set_fact:
+        validation_failed: "{{ validation_failed | int + 1 }}"
+      when: >
+        tas_chains_client_id is not defined or
+        tas_chains_client_id == '' or
+        (service_account_check.json is defined and
+         service_account_check.json.emailVerified | default(false) != true)
+
+    - name: Display service account email verification result
+      ansible.builtin.debug:
+        msg: >-
+          {% if tas_chains_client_id is not defined or tas_chains_client_id == '' %}
+          ✗ FAIL: {{ tas_client_id }} client not found in tas-chains realm
+          {% elif service_account_check.json is defined and service_account_check.json.emailVerified | default(false) == true %}
+          ✓ PASS: Service account email is verified
+          {% else %}
+          ✗ FAIL: Service account email is not verified
+          {% endif %}
+      when: >
+        admin_token is defined and
+        admin_token != '' and
+        admin_token != 'null'
+
+    - name: Display authentication warning for client check
+      ansible.builtin.debug:
+        msg: "⚠ WARNING: Could not verify client (authentication issue)"
+      when: >
+        admin_token is not defined or
+        admin_token == '' or
+        admin_token == 'null'
+
+    - name: Display blank line
+      ansible.builtin.debug:
+        msg: ""
+
+  #######################################
+  # Check 3: trusted-artifact-signer Client in sso Realm
+  #######################################
+  - name: "Check 3: {{ tas_client_id }} Client in sso Realm"
+    block:
+    - name: Display check header
+      ansible.builtin.debug:
+        msg:
+          - "Check 3: {{ tas_client_id }} Client in sso Realm"
+          - "----------------------------------------------"
+
+    - name: Get trusted-artifact-signer client in sso realm
+      ansible.builtin.uri:
+        url: "{{ keycloak_url }}/admin/realms/{{ tas_sso_realm }}/clients?clientId={{ tas_client_id }}"
+        method: GET
+        validate_certs: false
+        headers:
+          Authorization: "Bearer {{ admin_token }}"
+        return_content: true
+      register: sso_client_check
+      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      changed_when: false
+      failed_when: false
+      no_log: true
+      when: >
+        admin_token is defined and
+        admin_token != '' and
+        admin_token != 'null'
+
+    - name: Set SSO client ID from response
+      ansible.builtin.set_fact:
+        sso_client_id: "{{ (sso_client_check.json | default([{}]))[0].id | default('') }}"
+      no_log: true
+      when: >
+        sso_client_check.json is defined and
+        sso_client_check.json | length > 0
+
+    - name: Validate sso client
+      ansible.builtin.set_fact:
+        validation_failed: "{{ validation_failed | int + 1 }}"
+      when: >
+        sso_client_id is not defined or
+        sso_client_id == ''
+
+    - name: Display sso client result
+      ansible.builtin.debug:
+        msg: >-
+          {% if sso_client_id is defined and sso_client_id != '' %}
+          ✓ PASS: {{ tas_client_id }} client exists in sso realm
+          {% else %}
+          ✗ FAIL: {{ tas_client_id }} client not found in sso realm
+          {% endif %}
+      when: >
+        admin_token is defined and
+        admin_token != '' and
+        admin_token != 'null'
+
+    - name: Display authentication warning for sso client check
+      ansible.builtin.debug:
+        msg: "⚠ WARNING: Could not verify client (authentication issue)"
+      when: >
+        admin_token is not defined or
+        admin_token == '' or
+        admin_token == 'null'
+
+    - name: Display blank line
+      ansible.builtin.debug:
+        msg: ""
+
+  #######################################
+  # Check 4: RHTAS Instance
+  #######################################
+  - name: "Check 4: RHTAS Instance Deployment"
+    block:
+    - name: Display check header
+      ansible.builtin.debug:
+        msg:
+          - "Check 4: RHTAS Instance Deployment"
+          - "-----------------------------------"
+
+    - name: Check if RHTAS instance exists
+      ansible.builtin.command:
+        cmd: "oc get securesign trusted-artifact-signer -n {{ tas_namespace }}"
+      register: rhtas_instance_check
+      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      changed_when: false
+      failed_when: false
+      no_log: true
+
+    - name: Display RHTAS instance existence result
+      ansible.builtin.debug:
+        msg: "✓ PASS: RHTAS instance exists"
+      when: rhtas_instance_check.rc == 0
+
+    - name: Get TUF pod status
+      ansible.builtin.command:
+        cmd: "oc get pods -n {{ tas_namespace }} -l app.kubernetes.io/component=tuf -o jsonpath='{.items[0].status.phase}'"
+      register: tuf_status_check
+      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      changed_when: false
+      failed_when: false
+      no_log: true
+      when: rhtas_instance_check.rc == 0
+
+    - name: Set TUF status
+      ansible.builtin.set_fact:
+        tuf_status: "{{ tuf_status_check.stdout | default('NotFound') }}"
+      when: rhtas_instance_check.rc == 0
+
+    - name: Validate RHTAS instance and TUF pod
+      ansible.builtin.set_fact:
+        validation_failed: "{{ validation_failed | int + 1 }}"
+      when: >
+        rhtas_instance_check.rc != 0 or
+        (tuf_status is defined and tuf_status != 'Running')
+
+    - name: Display TUF pod status result
+      ansible.builtin.debug:
+        msg: >-
+          {% if tuf_status is defined and tuf_status == 'Running' %}
+          ✓ PASS: TUF pod is Running
+          {% elif tuf_status is defined %}
+          ✗ FAIL: TUF pod status is: {{ tuf_status }}
+          {% endif %}
+      when: rhtas_instance_check.rc == 0
+
+    - name: Display RHTAS instance not found
+      ansible.builtin.debug:
+        msg: "✗ FAIL: RHTAS instance not found"
+      when: rhtas_instance_check.rc != 0
+
+    - name: Display blank line
+      ansible.builtin.debug:
+        msg: ""
+
+  #######################################
+  # Check 5: OIDC Refresher App
+  #######################################
+  - name: "Check 5: OIDC Token Refresher"
+    block:
+    - name: Display check header
+      ansible.builtin.debug:
+        msg:
+          - "Check 5: OIDC Token Refresher"
+          - "------------------------------"
+
+    - name: Check if oidc-info secret exists
+      ansible.builtin.command:
+        cmd: "oc get secret oidc-info -n {{ pipelines_namespace }}"
+      register: oidc_secret_check
+      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      changed_when: false
+      failed_when: false
+      no_log: true
+
+    - name: Validate oidc-info secret
+      ansible.builtin.set_fact:
+        validation_failed: "{{ validation_failed | int + 1 }}"
+      when: oidc_secret_check.rc != 0
+
+    - name: Display oidc-info secret result
+      ansible.builtin.debug:
+        msg: >-
+          {% if oidc_secret_check.rc == 0 %}
+          ✓ PASS: oidc-info secret exists
+          {% else %}
+          ✗ FAIL: oidc-info secret not found
+          {% endif %}
+
+    - name: Check if OIDC refresher deployment exists
+      ansible.builtin.command:
+        cmd: "oc get deployment oidc-token-refresher -n {{ pipelines_namespace }}"
+      register: oidc_deployment_check
+      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      changed_when: false
+      failed_when: false
+      no_log: true
+
+    - name: Display OIDC refresher deployment existence result
+      ansible.builtin.debug:
+        msg: "✓ PASS: OIDC refresher deployment exists"
+      when: oidc_deployment_check.rc == 0
+
+    - name: Get OIDC refresher pod status
+      ansible.builtin.command:
+        cmd: "oc get pods -n {{ pipelines_namespace }} -l app=oidc-token-refresher -o jsonpath='{.items[0].status.phase}'"
+      register: refresher_status_check
+      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      changed_when: false
+      failed_when: false
+      no_log: true
+      when: oidc_deployment_check.rc == 0
+
+    - name: Set OIDC refresher status
+      ansible.builtin.set_fact:
+        refresher_status: "{{ refresher_status_check.stdout | default('NotFound') }}"
+      when: oidc_deployment_check.rc == 0
+
+    - name: Validate OIDC refresher deployment and pod
+      ansible.builtin.set_fact:
+        validation_failed: "{{ validation_failed | int + 1 }}"
+      when: >
+        oidc_deployment_check.rc != 0 or
+        (refresher_status is defined and refresher_status != 'Running')
+
+    - name: Display OIDC refresher pod status result
+      ansible.builtin.debug:
+        msg: >-
+          {% if refresher_status is defined and refresher_status == 'Running' %}
+          ✓ PASS: OIDC refresher pod is Running
+          {% elif refresher_status is defined %}
+          ✗ FAIL: OIDC refresher pod status is: {{ refresher_status }}
+          {% endif %}
+      when: oidc_deployment_check.rc == 0
+
+    - name: Display OIDC refresher deployment not found
+      ansible.builtin.debug:
+        msg: "✗ FAIL: OIDC refresher deployment not found"
+      when: oidc_deployment_check.rc != 0
+
+    - name: Display blank line
+      ansible.builtin.debug:
+        msg: ""
+
+  #######################################
+  # Check 6: Tekton Chains Configuration
+  #######################################
+  - name: "Check 6: Tekton Chains Configuration"
+    block:
+    - name: Display check header
+      ansible.builtin.debug:
+        msg:
+          - "Check 6: Tekton Chains Configuration"
+          - "-------------------------------------"
+
+    - name: Get Tekton Chains OCI storage configuration
+      ansible.builtin.command:
+        cmd: "oc get tektonconfig config -n {{ pipelines_namespace }} -o jsonpath='{.spec.chain.artifacts\\.oci\\.storage}'"
+      register: oci_storage_check
+      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      changed_when: false
+      failed_when: false
+      no_log: true
+
+    - name: Set OCI storage value
+      ansible.builtin.set_fact:
+        oci_storage: "{{ oci_storage_check.stdout | default('') }}"
+
+    - name: Validate OCI storage configuration
+      ansible.builtin.set_fact:
+        validation_failed: "{{ validation_failed | int + 1 }}"
+      when: oci_storage != 'oci'
+
+    - name: Display OCI storage result
+      ansible.builtin.debug:
+        msg: >-
+          {% if oci_storage == 'oci' %}
+          ✓ PASS: Tekton Chains OCI storage is configured
+          {% else %}
+          ✗ FAIL: Tekton Chains OCI storage is not configured (value: {{ oci_storage }})
+          {% endif %}
+
+    - name: Get Tekton Chains TaskRun format configuration
+      ansible.builtin.command:
+        cmd: "oc get tektonconfig config -n {{ pipelines_namespace }} -o jsonpath='{.spec.chain.artifacts\\.taskrun\\.format}'"
+      register: taskrun_format_check
+      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      changed_when: false
+      failed_when: false
+      no_log: true
+
+    - name: Set TaskRun format value
+      ansible.builtin.set_fact:
+        taskrun_format: "{{ taskrun_format_check.stdout | default('') }}"
+
+    - name: Validate TaskRun format configuration
+      ansible.builtin.set_fact:
+        validation_failed: "{{ validation_failed | int + 1 }}"
+      when: taskrun_format != 'in-toto'
+
+    - name: Display TaskRun format result
+      ansible.builtin.debug:
+        msg: >-
+          {% if taskrun_format == 'in-toto' %}
+          ✓ PASS: Tekton Chains TaskRun format is in-toto
+          {% else %}
+          ✗ FAIL: Tekton Chains TaskRun format is not in-toto (value: {{ taskrun_format }})
+          {% endif %}
+
+    - name: Get Tekton Chains TaskRun storage configuration
+      ansible.builtin.command:
+        cmd: "oc get tektonconfig config -n {{ pipelines_namespace }} -o jsonpath='{.spec.chain.artifacts\\.taskrun\\.storage}'"
+      register: taskrun_storage_check
+      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      changed_when: false
+      failed_when: false
+      no_log: true
+
+    - name: Set TaskRun storage value
+      ansible.builtin.set_fact:
+        taskrun_storage: "{{ taskrun_storage_check.stdout | default('') }}"
+
+    - name: Validate TaskRun storage configuration
+      ansible.builtin.set_fact:
+        validation_failed: "{{ validation_failed | int + 1 }}"
+      when: taskrun_storage != 'oci'
+
+    - name: Display TaskRun storage result
+      ansible.builtin.debug:
+        msg: >-
+          {% if taskrun_storage == 'oci' %}
+          ✓ PASS: Tekton Chains TaskRun storage is OCI
+          {% else %}
+          ✗ FAIL: Tekton Chains TaskRun storage is not OCI (value: {{ taskrun_storage }})
+          {% endif %}
+
+    - name: Get Tekton Chains transparency configuration
+      ansible.builtin.command:
+        cmd: "oc get tektonconfig config -n {{ pipelines_namespace }} -o jsonpath='{.spec.chain.transparency\\.enabled}'"
+      register: transparency_check
+      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      changed_when: false
+      failed_when: false
+      no_log: true
+
+    - name: Set transparency value
+      ansible.builtin.set_fact:
+        transparency: "{{ transparency_check.stdout | default('') }}"
+
+    - name: Validate transparency configuration
+      ansible.builtin.set_fact:
+        validation_failed: "{{ validation_failed | int + 1 }}"
+      when: transparency != 'true'
+
+    - name: Display transparency result
+      ansible.builtin.debug:
+        msg: >-
+          {% if transparency == 'true' %}
+          ✓ PASS: Tekton Chains transparency is enabled
+          {% else %}
+          ✗ FAIL: Tekton Chains transparency is not enabled (value: {{ transparency }})
+          {% endif %}
+
+    - name: Display blank line
+      ansible.builtin.debug:
+        msg: ""
+
+  #######################################
+  # Summary
+  #######################################
+  - name: Display validation summary
+    block:
+    - name: Display summary header
+      ansible.builtin.debug:
+        msg:
+          - "========================================="
+          - "Validation Summary"
+          - "========================================="
+          - ""
+
+    - name: Display successful validation summary
+      ansible.builtin.debug:
+        msg:
+          - "✓ ALL CHECKS PASSED"
+          - ""
+          - "Module 2 is complete:"
+          - "  ✓ tas-chains realm created in Keycloak"
+          - "  ✓ Machine identity configured (service account)"
+          - "  ✓ Developer identity configured (sso realm client)"
+          - "  ✓ RHTAS instance deployed (Fulcio, Rekor, TUF)"
+          - "  ✓ OIDC token refresher running"
+          - "  ✓ Tekton Chains configured for keyless signing"
+          - ""
+          - "Note: To verify image signing works, check that a"
+          - "TaskRun has been executed and the image is signed."
+          - ""
+      when: validation_failed | int == 0
+
+    - name: Display failed validation summary
+      ansible.builtin.debug:
+        msg:
+          - "✗ VALIDATION FAILED"
+          - ""
+          - "Some checks did not pass. Please review the output above."
+          - "Run solve-module-2.sh to complete missing steps."
+          - ""
+      when: validation_failed | int > 0
+
+    - name: Fail playbook if validation failed
+      ansible.builtin.fail:
+        msg: "Validation failed with {{ validation_failed }} error(s)"
+      when: validation_failed | int > 0

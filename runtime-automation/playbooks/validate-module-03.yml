@@ -1,0 +1,682 @@
+---
+- name: Validate Module 03 - Developer Setup
+  hosts: localhost
+  gather_facts: false
+  vars:
+    # Environment variables matching shell script
+    cluster_domain: "{{ openshift_cluster_ingress_domain }}"
+    keycloak_url: "https://sso.{{ openshift_cluster_ingress_domain }}"
+    keycloak_namespace: "{{ rhpds_build_secured_dev_workflows_lab_scripts_keycloak_namespace }}"
+    devspaces_namespace: "{{ rhpds_build_secured_dev_workflows_lab_scripts_devspaces_namespace }}"
+    app_ci_namespace: "{{ rhpds_build_secured_dev_workflows_lab_scripts_app_ci_namespace }}"
+    sso_realm: "{{ rhpds_build_secured_dev_workflows_lab_scripts_tas_sso_realm }}"
+    developer_username: "{{ rhpds_build_secured_dev_workflows_lab_scripts_developer_username }}"
+
+  tasks:
+  - name: Initialize validation tracking
+    ansible.builtin.set_fact:
+      validation_failed: 0
+
+  - name: Display validation header
+    ansible.builtin.debug:
+      msg:
+        - "========================================="
+        - "Validating Module 3: Developer Setup"
+        - "========================================="
+        - ""
+
+  #######################################
+  # Get Keycloak admin credentials and token
+  #######################################
+  - name: Get Keycloak admin credentials and token
+    block:
+    - name: Get Keycloak admin username
+      ansible.builtin.command:
+        cmd: "oc get secret keycloak-initial-admin -n {{ keycloak_namespace }} -o jsonpath='{.data.username}'"
+      register: keycloak_admin_user_b64
+      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      changed_when: false
+      failed_when: false
+      no_log: true
+
+    - name: Get Keycloak admin password
+      ansible.builtin.command:
+        cmd: "oc get secret keycloak-initial-admin -n {{ keycloak_namespace }} -o jsonpath='{.data.password}'"
+      register: keycloak_admin_password_b64
+      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      changed_when: false
+      failed_when: false
+      no_log: true
+
+    - name: Decode Keycloak admin credentials
+      ansible.builtin.set_fact:
+        keycloak_admin_user: "{{ keycloak_admin_user_b64.stdout | b64decode }}"
+        keycloak_admin_password: "{{ keycloak_admin_password_b64.stdout | b64decode }}"
+      no_log: true
+      when: >
+        keycloak_admin_user_b64.rc == 0 and
+        keycloak_admin_password_b64.rc == 0 and
+        keycloak_admin_user_b64.stdout != '' and
+        keycloak_admin_password_b64.stdout != ''
+
+    - name: Get admin access token
+      ansible.builtin.uri:
+        url: "{{ keycloak_url }}/realms/master/protocol/openid-connect/token"
+        method: POST
+        validate_certs: false
+        body_format: form-urlencoded
+        body:
+          client_id: admin-cli
+          username: "{{ keycloak_admin_user }}"
+          password: "{{ keycloak_admin_password }}"
+          grant_type: password
+        return_content: true
+      register: admin_token_result
+      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      changed_when: false
+      failed_when: false
+      no_log: true
+      when: >
+        keycloak_admin_user is defined and
+        keycloak_admin_password is defined and
+        keycloak_admin_user != '' and
+        keycloak_admin_password != ''
+
+    - name: Set admin token
+      ansible.builtin.set_fact:
+        admin_token: "{{ admin_token_result.json.access_token }}"
+      no_log: true
+      when: >
+        admin_token_result.json is defined and
+        (admin_token_result.json.access_token | default('')) != '' and
+        admin_token_result.json.access_token != 'null'
+
+  #######################################
+  # Check 1: Developer User Exists
+  #######################################
+  - name: "Check 1: Developer User ({{ developer_username }})"
+    block:
+    - name: Display check header
+      ansible.builtin.debug:
+        msg:
+          - "Check 1: Developer User ({{ developer_username }})"
+          - "------------------------------------------------"
+
+    - name: Get developer user from Keycloak
+      ansible.builtin.uri:
+        url: "{{ keycloak_url }}/admin/realms/{{ sso_realm }}/users?username={{ developer_username }}"
+        method: GET
+        validate_certs: false
+        headers:
+          Authorization: "Bearer {{ admin_token }}"
+        return_content: true
+      register: user_exists_check
+      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      changed_when: false
+      failed_when: false
+      no_log: true
+      when: >
+        admin_token is defined and
+        admin_token != '' and
+        admin_token != 'null'
+
+    - name: Set user ID from response
+      ansible.builtin.set_fact:
+        user_exists: "{{ (user_exists_check.json | default([{}]))[0].id | default('') }}"
+      no_log: true
+      when: >
+        user_exists_check.json is defined and
+        user_exists_check.json | length > 0
+
+    - name: Display user existence result
+      ansible.builtin.debug:
+        msg: "✓ PASS: Developer user exists"
+      when: >
+        user_exists is defined and
+        user_exists != ''
+
+    - name: Get developer user details
+      ansible.builtin.uri:
+        url: "{{ keycloak_url }}/admin/realms/{{ sso_realm }}/users/{{ user_exists }}"
+        method: GET
+        validate_certs: false
+        headers:
+          Authorization: "Bearer {{ admin_token }}"
+        return_content: true
+      register: user_data_check
+      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      changed_when: false
+      failed_when: false
+      no_log: true
+      when: >
+        admin_token is defined and
+        admin_token != '' and
+        admin_token != 'null' and
+        user_exists is defined and
+        user_exists != ''
+
+    - name: Check if user is enabled
+      ansible.builtin.set_fact:
+        user_enabled: "{{ user_data_check.json.enabled | default(false) }}"
+      no_log: true
+      when: >
+        user_data_check.json is defined
+
+    - name: Validate user enabled status
+      ansible.builtin.set_fact:
+        validation_failed: "{{ validation_failed | int + 1 }}"
+      when: >
+        user_exists is not defined or
+        user_exists == '' or
+        (user_enabled is defined and user_enabled != true)
+
+    - name: Display user enabled result
+      ansible.builtin.debug:
+        msg: >-
+          {% if user_enabled is defined and user_enabled == true %}
+          ✓ PASS: User is enabled
+          {% elif user_enabled is defined %}
+          ✗ FAIL: User is not enabled
+          {% endif %}
+      when: >
+        user_data_check.json is defined
+
+    - name: Check if email is verified
+      ansible.builtin.set_fact:
+        email_verified: "{{ user_data_check.json.emailVerified | default(false) }}"
+      no_log: true
+      when: >
+        user_data_check.json is defined
+
+    - name: Validate email verified status
+      ansible.builtin.set_fact:
+        validation_failed: "{{ validation_failed | int + 1 }}"
+      when: >
+        email_verified is defined and email_verified != true
+
+    - name: Display email verified result
+      ansible.builtin.debug:
+        msg: >-
+          {% if email_verified is defined and email_verified == true %}
+          ✓ PASS: Email is verified
+          {% elif email_verified is defined %}
+          ✗ FAIL: Email is not verified
+          {% endif %}
+      when: >
+        user_data_check.json is defined
+
+    - name: Display authentication failure for user check
+      ansible.builtin.debug:
+        msg: "✗ FAIL: Could not authenticate with Keycloak"
+      when: >
+        admin_token is not defined or
+        admin_token == '' or
+        admin_token == 'null'
+
+    - name: Mark validation failed if authentication failed
+      ansible.builtin.set_fact:
+        validation_failed: "{{ validation_failed | int + 1 }}"
+      when: >
+        admin_token is not defined or
+        admin_token == '' or
+        admin_token == 'null'
+
+    - name: Display user not found
+      ansible.builtin.debug:
+        msg: "✗ FAIL: Developer user not found"
+      when: >
+        (admin_token is defined and admin_token != '' and admin_token != 'null') and
+        (user_exists is not defined or user_exists == '')
+
+    - name: Display blank line
+      ansible.builtin.debug:
+        msg: ""
+
+  #######################################
+  # Check 2: Group Memberships
+  #######################################
+  - name: "Check 2: Group Memberships"
+    block:
+    - name: Display check header
+      ansible.builtin.debug:
+        msg:
+          - "Check 2: Group Memberships"
+          - "--------------------------"
+
+    - name: Get user group memberships
+      ansible.builtin.uri:
+        url: "{{ keycloak_url }}/admin/realms/{{ sso_realm }}/users/{{ user_exists }}/groups"
+        method: GET
+        validate_certs: false
+        headers:
+          Authorization: "Bearer {{ admin_token }}"
+        return_content: true
+      register: user_groups_check
+      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      changed_when: false
+      failed_when: false
+      no_log: true
+      when: >
+        admin_token is defined and
+        admin_token != '' and
+        admin_token != 'null' and
+        user_exists is defined and
+        user_exists != ''
+
+    - name: Extract group names
+      ansible.builtin.set_fact:
+        user_groups: "{{ user_groups_check.json | default([]) | map(attribute='name') | list }}"
+      no_log: true
+      when: >
+        user_groups_check.json is defined
+
+    - name: Check for tssc group membership
+      ansible.builtin.set_fact:
+        in_tssc_group: "{{ 'tssc' in user_groups }}"
+      when: >
+        user_groups is defined
+
+    - name: Validate tssc group membership
+      ansible.builtin.set_fact:
+        validation_failed: "{{ validation_failed | int + 1 }}"
+      when: >
+        in_tssc_group is not defined or
+        in_tssc_group != true
+
+    - name: Display tssc group membership result
+      ansible.builtin.debug:
+        msg: >-
+          {% if in_tssc_group is defined and in_tssc_group == true %}
+          ✓ PASS: User is member of 'tssc' group
+          {% elif in_tssc_group is defined %}
+          ✗ FAIL: User is not member of 'tssc' group
+          {% endif %}
+      when: >
+        user_groups is defined
+
+    - name: Check for users group membership
+      ansible.builtin.set_fact:
+        in_users_group: "{{ 'users' in user_groups }}"
+      when: >
+        user_groups is defined
+
+    - name: Validate users group membership
+      ansible.builtin.set_fact:
+        validation_failed: "{{ validation_failed | int + 1 }}"
+      when: >
+        in_users_group is not defined or
+        in_users_group != true
+
+    - name: Display users group membership result
+      ansible.builtin.debug:
+        msg: >-
+          {% if in_users_group is defined and in_users_group == true %}
+          ✓ PASS: User is member of 'users' group
+          {% elif in_users_group is defined %}
+          ✗ FAIL: User is not member of 'users' group
+          {% endif %}
+      when: >
+        user_groups is defined
+
+    - name: Display warning for group verification
+      ansible.builtin.debug:
+        msg: "⚠ WARNING: Could not verify group memberships"
+      when: >
+        user_groups is not defined
+
+    - name: Display blank line
+      ansible.builtin.debug:
+        msg: ""
+
+  #######################################
+  # Check 3: Dev Spaces ConfigMap
+  #######################################
+  - name: "Check 3: Dev Spaces ConfigMap"
+    block:
+    - name: Display check header
+      ansible.builtin.debug:
+        msg:
+          - "Check 3: Dev Spaces ConfigMap"
+          - "------------------------------"
+
+    - name: Check if tas-git-config ConfigMap exists
+      ansible.builtin.command:
+        cmd: "oc get configmap tas-git-config -n {{ devspaces_namespace }}"
+      register: configmap_check
+      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      changed_when: false
+      failed_when: false
+      no_log: true
+
+    - name: Display ConfigMap existence result
+      ansible.builtin.debug:
+        msg: "✓ PASS: tas-git-config ConfigMap exists"
+      when: configmap_check.rc == 0
+
+    - name: Get TAS_FULCIO_URL from ConfigMap
+      ansible.builtin.command:
+        cmd: "oc get configmap tas-git-config -n {{ devspaces_namespace }} -o jsonpath='{.data.TAS_FULCIO_URL}'"
+      register: tas_fulcio_url_check
+      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      changed_when: false
+      failed_when: false
+      no_log: true
+      when: configmap_check.rc == 0
+
+    - name: Set TAS_FULCIO_URL
+      ansible.builtin.set_fact:
+        tas_fulcio_url: "{{ tas_fulcio_url_check.stdout | default('') }}"
+      when: configmap_check.rc == 0
+
+    - name: Validate TAS_FULCIO_URL
+      ansible.builtin.set_fact:
+        validation_failed: "{{ validation_failed | int + 1 }}"
+      when: >
+        configmap_check.rc != 0 or
+        (tas_fulcio_url is defined and tas_fulcio_url == '')
+
+    - name: Display TAS_FULCIO_URL result
+      ansible.builtin.debug:
+        msg: >-
+          {% if tas_fulcio_url is defined and tas_fulcio_url != '' %}
+          ✓ PASS: TAS_FULCIO_URL is set
+          {% elif tas_fulcio_url is defined %}
+          ✗ FAIL: TAS_FULCIO_URL is not set
+          {% endif %}
+      when: configmap_check.rc == 0
+
+    - name: Get TAS_REKOR_URL from ConfigMap
+      ansible.builtin.command:
+        cmd: "oc get configmap tas-git-config -n {{ devspaces_namespace }} -o jsonpath='{.data.TAS_REKOR_URL}'"
+      register: tas_rekor_url_check
+      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      changed_when: false
+      failed_when: false
+      no_log: true
+      when: configmap_check.rc == 0
+
+    - name: Set TAS_REKOR_URL
+      ansible.builtin.set_fact:
+        tas_rekor_url: "{{ tas_rekor_url_check.stdout | default('') }}"
+      when: configmap_check.rc == 0
+
+    - name: Validate TAS_REKOR_URL
+      ansible.builtin.set_fact:
+        validation_failed: "{{ validation_failed | int + 1 }}"
+      when: >
+        tas_rekor_url is defined and tas_rekor_url == ''
+
+    - name: Display TAS_REKOR_URL result
+      ansible.builtin.debug:
+        msg: >-
+          {% if tas_rekor_url is defined and tas_rekor_url != '' %}
+          ✓ PASS: TAS_REKOR_URL is set
+          {% elif tas_rekor_url is defined %}
+          ✗ FAIL: TAS_REKOR_URL is not set
+          {% endif %}
+      when: configmap_check.rc == 0
+
+    - name: Get TAS_ISSUER_URL from ConfigMap
+      ansible.builtin.command:
+        cmd: "oc get configmap tas-git-config -n {{ devspaces_namespace }} -o jsonpath='{.data.TAS_ISSUER_URL}'"
+      register: tas_issuer_url_check
+      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      changed_when: false
+      failed_when: false
+      no_log: true
+      when: configmap_check.rc == 0
+
+    - name: Set TAS_ISSUER_URL
+      ansible.builtin.set_fact:
+        tas_issuer_url: "{{ tas_issuer_url_check.stdout | default('') }}"
+      when: configmap_check.rc == 0
+
+    - name: Validate TAS_ISSUER_URL
+      ansible.builtin.set_fact:
+        validation_failed: "{{ validation_failed | int + 1 }}"
+      when: >
+        tas_issuer_url is defined and tas_issuer_url == ''
+
+    - name: Display TAS_ISSUER_URL result
+      ansible.builtin.debug:
+        msg: >-
+          {% if tas_issuer_url is defined and tas_issuer_url != '' %}
+          ✓ PASS: TAS_ISSUER_URL is set
+          {% elif tas_issuer_url is defined %}
+          ✗ FAIL: TAS_ISSUER_URL is not set
+          {% endif %}
+      when: configmap_check.rc == 0
+
+    - name: Get TAS_CLIENT_ID from ConfigMap
+      ansible.builtin.command:
+        cmd: "oc get configmap tas-git-config -n {{ devspaces_namespace }} -o jsonpath='{.data.TAS_CLIENT_ID}'"
+      register: tas_client_id_check
+      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      changed_when: false
+      failed_when: false
+      no_log: true
+      when: configmap_check.rc == 0
+
+    - name: Set TAS_CLIENT_ID
+      ansible.builtin.set_fact:
+        tas_client_id: "{{ tas_client_id_check.stdout | default('') }}"
+      when: configmap_check.rc == 0
+
+    - name: Validate TAS_CLIENT_ID
+      ansible.builtin.set_fact:
+        validation_failed: "{{ validation_failed | int + 1 }}"
+      when: >
+        tas_client_id is defined and tas_client_id == ''
+
+    - name: Display TAS_CLIENT_ID result
+      ansible.builtin.debug:
+        msg: >-
+          {% if tas_client_id is defined and tas_client_id != '' %}
+          ✓ PASS: TAS_CLIENT_ID is set
+          {% elif tas_client_id is defined %}
+          ✗ FAIL: TAS_CLIENT_ID is not set
+          {% endif %}
+      when: configmap_check.rc == 0
+
+    - name: Get ConfigMap mount annotation
+      ansible.builtin.command:
+        cmd: "oc get configmap tas-git-config -n {{ devspaces_namespace }} -o jsonpath='{.metadata.annotations.controller\\.devfile\\.io/mount-as}'"
+      register: cm_annotation_check
+      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      changed_when: false
+      failed_when: false
+      no_log: true
+      when: configmap_check.rc == 0
+
+    - name: Set ConfigMap annotation
+      ansible.builtin.set_fact:
+        cm_annotation: "{{ cm_annotation_check.stdout | default('') }}"
+      when: configmap_check.rc == 0
+
+    - name: Validate ConfigMap annotation
+      ansible.builtin.set_fact:
+        validation_failed: "{{ validation_failed | int + 1 }}"
+      when: >
+        cm_annotation is defined and cm_annotation != 'env'
+
+    - name: Display ConfigMap annotation result
+      ansible.builtin.debug:
+        msg: >-
+          {% if cm_annotation is defined and cm_annotation == 'env' %}
+          ✓ PASS: ConfigMap has correct mount annotation
+          {% elif cm_annotation is defined %}
+          ✗ FAIL: ConfigMap mount annotation is incorrect (value: {{ cm_annotation }})
+          {% endif %}
+      when: configmap_check.rc == 0
+
+    - name: Display ConfigMap not found
+      ansible.builtin.debug:
+        msg: "✗ FAIL: tas-git-config ConfigMap not found"
+      when: configmap_check.rc != 0
+
+    - name: Display blank line
+      ansible.builtin.debug:
+        msg: ""
+
+  #######################################
+  # Check 4: Pipeline Secrets
+  #######################################
+  - name: "Check 4: Pipeline Secrets"
+    block:
+    - name: Display check header
+      ansible.builtin.debug:
+        msg:
+          - "Check 4: Pipeline Secrets"
+          - "-------------------------"
+
+    - name: Check if tpa-secret exists
+      ansible.builtin.command:
+        cmd: "oc get secret tpa-secret -n {{ app_ci_namespace }}"
+      register: tpa_secret_check
+      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      changed_when: false
+      failed_when: false
+      no_log: true
+
+    - name: Display tpa-secret existence result
+      ansible.builtin.debug:
+        msg: "✓ PASS: tpa-secret exists"
+      when: tpa_secret_check.rc == 0
+
+    - name: Get tpa-secret data
+      ansible.builtin.command:
+        cmd: "oc get secret tpa-secret -n {{ app_ci_namespace }} -o jsonpath='{.data}'"
+      register: tpa_secret_data_check
+      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      changed_when: false
+      failed_when: false
+      no_log: true
+      when: tpa_secret_check.rc == 0
+
+    - name: Check if tpa-secret contains bombastic_api_url
+      ansible.builtin.set_fact:
+        has_bombastic_url: "{{ 'bombastic_api_url' in tpa_secret_data_check.stdout }}"
+      when: tpa_secret_check.rc == 0
+
+    - name: Validate tpa-secret existence and data
+      ansible.builtin.set_fact:
+        validation_failed: "{{ validation_failed | int + 1 }}"
+      when: >
+        tpa_secret_check.rc != 0 or
+        (has_bombastic_url is defined and has_bombastic_url != true)
+
+    - name: Display tpa-secret bombastic_api_url result
+      ansible.builtin.debug:
+        msg: >-
+          {% if has_bombastic_url is defined and has_bombastic_url == true %}
+          ✓ PASS: tpa-secret contains bombastic_api_url
+          {% elif has_bombastic_url is defined %}
+          ✗ FAIL: tpa-secret does not contain bombastic_api_url
+          {% endif %}
+      when: tpa_secret_check.rc == 0
+
+    - name: Display tpa-secret not found
+      ansible.builtin.debug:
+        msg: "✗ FAIL: tpa-secret not found"
+      when: tpa_secret_check.rc != 0
+
+    - name: Check if gitlab-auth-secret exists
+      ansible.builtin.command:
+        cmd: "oc get secret gitlab-auth-secret -n {{ app_ci_namespace }}"
+      register: gitlab_secret_check
+      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      changed_when: false
+      failed_when: false
+      no_log: true
+
+    - name: Display gitlab-auth-secret existence result
+      ansible.builtin.debug:
+        msg: "✓ PASS: gitlab-auth-secret exists"
+      when: gitlab_secret_check.rc == 0
+
+    - name: Get gitlab-auth-secret data
+      ansible.builtin.command:
+        cmd: "oc get secret gitlab-auth-secret -n {{ app_ci_namespace }} -o jsonpath='{.data}'"
+      register: gitlab_secret_data_check
+      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      changed_when: false
+      failed_when: false
+      no_log: true
+      when: gitlab_secret_check.rc == 0
+
+    - name: Check if gitlab-auth-secret contains password
+      ansible.builtin.set_fact:
+        has_password: "{{ 'password' in gitlab_secret_data_check.stdout }}"
+      when: gitlab_secret_check.rc == 0
+
+    - name: Validate gitlab-auth-secret existence and data
+      ansible.builtin.set_fact:
+        validation_failed: "{{ validation_failed | int + 1 }}"
+      when: >
+        gitlab_secret_check.rc != 0 or
+        (has_password is defined and has_password != true)
+
+    - name: Display gitlab-auth-secret password result
+      ansible.builtin.debug:
+        msg: >-
+          {% if has_password is defined and has_password == true %}
+          ✓ PASS: gitlab-auth-secret contains password
+          {% elif has_password is defined %}
+          ✗ FAIL: gitlab-auth-secret does not contain password
+          {% endif %}
+      when: gitlab_secret_check.rc == 0
+
+    - name: Display gitlab-auth-secret not found
+      ansible.builtin.debug:
+        msg: "✗ FAIL: gitlab-auth-secret not found"
+      when: gitlab_secret_check.rc != 0
+
+    - name: Display blank line
+      ansible.builtin.debug:
+        msg: ""
+
+  #######################################
+  # Summary
+  #######################################
+  - name: Display validation summary
+    block:
+    - name: Display summary header
+      ansible.builtin.debug:
+        msg:
+          - "========================================="
+          - "Validation Summary"
+          - "========================================="
+          - ""
+
+    - name: Display successful validation summary
+      ansible.builtin.debug:
+        msg:
+          - "✓ ALL CHECKS PASSED"
+          - ""
+          - "Module 3 is complete:"
+          - "  ✓ Developer user ({{ developer_username }}) created and enabled"
+          - "  ✓ User email verified"
+          - "  ✓ User assigned to tssc and users groups"
+          - "  ✓ Dev Spaces ConfigMap created with TAS URLs"
+          - "  ✓ Pipeline secrets created:"
+          - "    - tpa-secret (RHTPA authentication)"
+          - "    - gitlab-auth-secret (GitLab authentication)"
+          - ""
+          - "The developer environment is fully configured!"
+          - ""
+      when: validation_failed | int == 0
+
+    - name: Display failed validation summary
+      ansible.builtin.debug:
+        msg:
+          - "✗ VALIDATION FAILED"
+          - ""
+          - "Some checks did not pass. Please review the output above."
+          - "Run solve-module-3.sh to complete missing steps."
+          - ""
+      when: validation_failed | int > 0
+
+    - name: Fail playbook if validation failed
+      ansible.builtin.fail:
+        msg: "Validation failed with {{ validation_failed }} error(s)"
+      when: validation_failed | int > 0

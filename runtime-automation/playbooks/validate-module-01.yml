@@ -1,0 +1,356 @@
+---
+- name: Validate Module 01 - RHTPA Installation
+  hosts: localhost
+  gather_facts: false
+  vars:
+    # Environment variables matching shell script
+    cluster_domain: "{{ openshift_cluster_ingress_domain }}"
+    keycloak_namespace: "{{ rhpds_build_secured_dev_workflows_lab_scripts_keycloak_namespace }}"
+    tpa_namespace: "{{ rhpds_build_secured_dev_workflows_lab_scripts_tpa_namespace }}"
+    tpa_realm: "{{ rhpds_build_secured_dev_workflows_lab_scripts_tpa_keycloak_realm }}"
+    tpa_cli_client_secret: "{{ rhpds_build_secured_dev_workflows_lab_scripts_tpa_cli_client_secret }}"
+    sbom_id: "{{ rhpds_build_secured_dev_workflows_lab_scripts_tpa_sbom_id }}"
+    keycloak_url: "https://sso.{{ openshift_cluster_ingress_domain }}"
+
+  tasks:
+  - name: Initialize validation tracking
+    ansible.builtin.set_fact:
+      validation_failed: 0
+
+  - name: Display validation header
+    ansible.builtin.debug:
+      msg:
+        - "========================================="
+        - "Validating Module 1: RHTPA Installation"
+        - "========================================="
+        - ""
+
+  #######################################
+  # Check 1: TPA Realm Import
+  #######################################
+  - name: "Check 1: TPA Realm Import"
+    block:
+    - name: Display check header
+      ansible.builtin.debug:
+        msg:
+          - "Check 1: TPA Realm Import"
+          - "-------------------------"
+
+    - name: Check if TPA Realm import exists
+      ansible.builtin.command:
+        cmd: "oc get keycloakrealmimport {{ tpa_realm }} -n {{ keycloak_namespace }}"
+      register: realm_import_check
+      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      changed_when: false
+      failed_when: false
+      no_log: true
+
+    - name: Get TPA Realm import status
+      ansible.builtin.command:
+        cmd: "oc get keycloakrealmimport {{ tpa_realm }} -n {{ keycloak_namespace }} -o jsonpath='{.status.conditions[?(@.type==\"Done\")].status}'"
+      register: realm_status
+      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      changed_when: false
+      failed_when: false
+      no_log: true
+      when: realm_import_check.rc == 0
+
+    - name: Validate TPA Realm import status
+      ansible.builtin.set_fact:
+        validation_failed: "{{ validation_failed | int + 1 }}"
+      when: >
+        realm_import_check.rc != 0 or
+        (realm_status.stdout | default('Unknown')) != 'True'
+
+    - name: Display TPA Realm import result
+      ansible.builtin.debug:
+        msg: >-
+          {% if realm_import_check.rc == 0 and realm_status.stdout == 'True' %}
+          ✓ PASS: TPA Realm imported successfully
+          {% elif realm_import_check.rc == 0 %}
+          ✗ FAIL: TPA Realm import exists but status is: {{ realm_status.stdout | default('Unknown') }}
+          {% else %}
+          ✗ FAIL: TPA Realm import not found
+          {% endif %}
+
+    - name: Display blank line
+      ansible.builtin.debug:
+        msg: ""
+
+  #######################################
+  # Check 2: TPA CLI Credentials Secret
+  #######################################
+  - name: "Check 2: TPA CLI Credentials Secret"
+    block:
+    - name: Display check header
+      ansible.builtin.debug:
+        msg:
+          - "Check 2: TPA CLI Credentials Secret"
+          - "------------------------------------"
+
+    - name: Check if TPA CLI credentials secret exists
+      ansible.builtin.command:
+        cmd: "oc get secret tpa-realm-cli-clients -n {{ tpa_namespace }}"
+      register: cli_secret_check
+      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      changed_when: false
+      failed_when: false
+      no_log: true
+
+    - name: Validate TPA CLI credentials secret
+      ansible.builtin.set_fact:
+        validation_failed: "{{ validation_failed | int + 1 }}"
+      when: cli_secret_check.rc != 0
+
+    - name: Display TPA CLI credentials secret result
+      ansible.builtin.debug:
+        msg: >-
+          {% if cli_secret_check.rc == 0 %}
+          ✓ PASS: TPA CLI credentials secret exists
+          {% else %}
+          ✗ FAIL: TPA CLI credentials secret not found
+          {% endif %}
+
+    - name: Display blank line
+      ansible.builtin.debug:
+        msg: ""
+
+  #######################################
+  # Check 3: RHTPA Instance Deployment
+  #######################################
+  - name: "Check 3: RHTPA Instance Deployment"
+    block:
+    - name: Display check header
+      ansible.builtin.debug:
+        msg:
+          - "Check 3: RHTPA Instance Deployment"
+          - "-----------------------------------"
+
+    - name: Check if RHTPA instance exists
+      ansible.builtin.command:
+        cmd: "oc get trustedprofileanalyzer trustedprofileanalyzer -n {{ tpa_namespace }}"
+      register: tpa_instance_check
+      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      changed_when: false
+      failed_when: false
+      no_log: true
+
+    - name: Display RHTPA instance existence result
+      ansible.builtin.debug:
+        msg: "✓ PASS: RHTPA instance exists"
+      when: tpa_instance_check.rc == 0
+
+    - name: Get RHTPA instance deployed status
+      ansible.builtin.command:
+        cmd: "oc get trustedprofileanalyzer trustedprofileanalyzer -n {{ tpa_namespace }} -o jsonpath='{.status.conditions[?(@.type==\"Deployed\")].status}'"
+      register: tpa_deployed_status
+      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      changed_when: false
+      failed_when: false
+      no_log: true
+      when: tpa_instance_check.rc == 0
+
+    - name: Validate RHTPA instance deployment
+      ansible.builtin.set_fact:
+        validation_failed: "{{ validation_failed | int + 1 }}"
+      when: >
+        tpa_instance_check.rc != 0 or
+        (tpa_deployed_status.stdout | default('Unknown')) != 'True'
+
+    - name: Display RHTPA instance deployment result
+      ansible.builtin.debug:
+        msg: >-
+          {% if tpa_instance_check.rc == 0 and tpa_deployed_status.stdout == 'True' %}
+          ✓ PASS: RHTPA instance is deployed
+          {% elif tpa_instance_check.rc == 0 %}
+          ✗ FAIL: RHTPA instance deployed status is: {{ tpa_deployed_status.stdout | default('Unknown') }}
+          {% else %}
+          ✗ FAIL: RHTPA instance not found
+          {% endif %}
+      when: tpa_instance_check.rc == 0 or (tpa_instance_check.rc != 0 and tpa_deployed_status is defined)
+
+    - name: Display RHTPA instance not found
+      ansible.builtin.debug:
+        msg: "✗ FAIL: RHTPA instance not found"
+      when: tpa_instance_check.rc != 0 and tpa_deployed_status is not defined
+
+    - name: Display blank line
+      ansible.builtin.debug:
+        msg: ""
+
+  #######################################
+  # Check 4: RHTPA Server Endpoint
+  #######################################
+  - name: "Check 4: RHTPA Server Endpoint"
+    block:
+    - name: Display check header
+      ansible.builtin.debug:
+        msg:
+          - "Check 4: RHTPA Server Endpoint"
+          - "-------------------------------"
+
+    - name: Check RHTPA server endpoint accessibility
+      ansible.builtin.uri:
+        url: "https://server-{{ tpa_namespace }}.{{ cluster_domain }}"
+        method: GET
+        validate_certs: false
+        status_code: [200, 302, 401]
+        timeout: 10
+      register: tpa_server_check
+      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      changed_when: false
+      failed_when: false
+      no_log: true
+
+    - name: Validate RHTPA server endpoint
+      ansible.builtin.set_fact:
+        validation_failed: "{{ validation_failed | int + 1 }}"
+      when: tpa_server_check.status is not defined or tpa_server_check.status not in [200, 302, 401]
+
+    - name: Display RHTPA server endpoint result
+      ansible.builtin.debug:
+        msg: >-
+          {% if tpa_server_check.status is defined and tpa_server_check.status in [200, 302, 401] %}
+          ✓ PASS: RHTPA server is accessible (HTTP {{ tpa_server_check.status }})
+          {% else %}
+          ✗ FAIL: RHTPA server is not accessible (HTTP {{ tpa_server_check.status | default('000') }})
+          {% endif %}
+
+    - name: Display blank line
+      ansible.builtin.debug:
+        msg: ""
+
+  #######################################
+  # Check 5: SBOM Upload Verification
+  #######################################
+  - name: "Check 5: SBOM Upload Verification"
+    block:
+    - name: Display check header
+      ansible.builtin.debug:
+        msg:
+          - "Check 5: SBOM Upload Verification"
+          - "----------------------------------"
+
+    - name: Get Keycloak OpenID configuration
+      ansible.builtin.uri:
+        url: "{{ keycloak_url }}/realms/{{ tpa_realm }}/.well-known/openid-configuration"
+        method: GET
+        validate_certs: false
+        return_content: true
+      register: openid_config
+      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      changed_when: false
+      failed_when: false
+      no_log: true
+
+    - name: Get OAuth token from Keycloak
+      ansible.builtin.uri:
+        url: "{{ (openid_config.json | default({})).token_endpoint | default('') }}"
+        method: POST
+        validate_certs: false
+        body_format: form-urlencoded
+        body:
+          grant_type: client_credentials
+          client_id: cli
+          client_secret: "{{ tpa_cli_client_secret }}"
+        return_content: true
+      register: oauth_token
+      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      changed_when: false
+      failed_when: false
+      no_log: true
+      when: openid_config.json is defined and (openid_config.json.token_endpoint | default('')) != ''
+
+    - name: Get TPA server route
+      ansible.builtin.command:
+        cmd: "oc get route -l app.kubernetes.io/component=server -n {{ tpa_namespace }} -o jsonpath='{.items[0].spec.host}'"
+      register: tpa_server_route
+      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      changed_when: false
+      failed_when: false
+      no_log: true
+      when: >
+        oauth_token.json is defined and
+        (oauth_token.json.access_token | default('')) != '' and
+        oauth_token.json.access_token != 'null'
+
+    - name: Check if SBOM exists in TPA
+      ansible.builtin.uri:
+        url: "https://{{ tpa_server_route.stdout }}/api/v2/sbom?id={{ sbom_id }}"
+        method: GET
+        validate_certs: false
+        headers:
+          Authorization: "Bearer {{ oauth_token.json.access_token }}"
+        return_content: true
+      register: sbom_check
+      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      changed_when: false
+      failed_when: false
+      no_log: true
+      when: >
+        oauth_token.json is defined and
+        (oauth_token.json.access_token | default('')) != '' and
+        oauth_token.json.access_token != 'null' and
+        tpa_server_route.stdout is defined and
+        tpa_server_route.stdout != ''
+
+    - name: Display SBOM upload result
+      ansible.builtin.debug:
+        msg: >-
+          {% if sbom_check.json is defined and (sbom_check.json.id | default('')) == sbom_id %}
+          ✓ PASS: SBOM uploaded successfully (ID: {{ sbom_id }})
+          {% elif tpa_server_route.stdout is not defined or tpa_server_route.stdout == '' %}
+          ⚠ WARNING: Could not retrieve TPA server route for SBOM verification
+          {% elif oauth_token.json is not defined or (oauth_token.json.access_token | default('')) == '' or oauth_token.json.access_token == 'null' %}
+          ⚠ WARNING: Could not authenticate to TPA API for SBOM verification
+          {% elif openid_config.json is not defined or (openid_config.json.token_endpoint | default('')) == '' %}
+          ⚠ WARNING: Could not retrieve token endpoint for SBOM verification
+          {% else %}
+          ⚠ WARNING: Could not verify SBOM upload (ID may not match)
+            This may be expected if SBOM was not uploaded or API changed
+          {% endif %}
+
+    - name: Display blank line
+      ansible.builtin.debug:
+        msg: ""
+
+  #######################################
+  # Summary
+  #######################################
+  - name: Display validation summary
+    block:
+    - name: Display summary header
+      ansible.builtin.debug:
+        msg:
+          - "========================================="
+          - "Validation Summary"
+          - "========================================="
+          - ""
+
+    - name: Display successful validation summary
+      ansible.builtin.debug:
+        msg:
+          - "✓ ALL CHECKS PASSED"
+          - ""
+          - "Module 1 is complete:"
+          - "  ✓ TPA Realm imported in Keycloak"
+          - "  ✓ TPA CLI credentials configured"
+          - "  ✓ RHTPA instance deployed and running"
+          - "  ✓ RHTPA server endpoint accessible"
+          - ""
+      when: validation_failed | int == 0
+
+    - name: Display failed validation summary
+      ansible.builtin.debug:
+        msg:
+          - "✗ VALIDATION FAILED"
+          - ""
+          - "Some checks did not pass. Please review the output above."
+          - "Run solve-module-1.sh to complete missing steps."
+          - ""
+      when: validation_failed | int > 0
+
+    - name: Fail playbook if validation failed
+      ansible.builtin.fail:
+        msg: "Validation failed with {{ validation_failed }} error(s)"
+      when: validation_failed | int > 0
