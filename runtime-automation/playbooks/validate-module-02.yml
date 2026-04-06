@@ -39,12 +39,10 @@
     delegate_to: bastion
     register: oc_login_result
     changed_when: false
-    no_log: true
 
   - name: Set OpenShift token fact
     ansible.builtin.set_fact:
       openshift_token: "{{ oc_login_result.stdout_lines[-1] }}"
-    no_log: true
 
   - name: Initialize validation tracking
     ansible.builtin.set_fact:
@@ -79,7 +77,6 @@
       delegate_to: bastion
       changed_when: false
       failed_when: false
-      no_log: true
       when: >
         keycloak_admin_user is defined and
         keycloak_admin_password is defined and
@@ -89,7 +86,6 @@
     - name: Set admin token
       ansible.builtin.set_fact:
         admin_token: "{{ admin_token_result.json.access_token }}"
-      no_log: true
       when: >
         admin_token_result.json is defined and
         (admin_token_result.json.access_token | default('')) != '' and
@@ -118,7 +114,6 @@
       delegate_to: bastion
       changed_when: false
       failed_when: false
-      no_log: true
       when: >
         admin_token is defined and
         admin_token != '' and
@@ -171,7 +166,6 @@
       delegate_to: bastion
       changed_when: false
       failed_when: false
-      no_log: true
       when: >
         admin_token is defined and
         admin_token != '' and
@@ -180,7 +174,6 @@
     - name: Set client ID from response
       ansible.builtin.set_fact:
         tas_chains_client_id: "{{ (tas_chains_client_check.json | default([{}]))[0].id | default('') }}"
-      no_log: true
       when: >
         tas_chains_client_check.json is defined and
         tas_chains_client_check.json | length > 0
@@ -204,7 +197,6 @@
       delegate_to: bastion
       changed_when: false
       failed_when: false
-      no_log: true
       when: >
         admin_token is defined and
         admin_token != '' and
@@ -285,7 +277,6 @@
       delegate_to: bastion
       changed_when: false
       failed_when: false
-      no_log: true
       when: >
         admin_token is defined and
         admin_token != '' and
@@ -294,7 +285,6 @@
     - name: Set SSO client ID from response
       ansible.builtin.set_fact:
         sso_client_id: "{{ (sso_client_check.json | default([{}]))[0].id | default('') }}"
-      no_log: true
       when: >
         sso_client_check.json is defined and
         sso_client_check.json | length > 0
@@ -349,7 +339,6 @@
       delegate_to: bastion
       changed_when: false
       failed_when: false
-      no_log: true
 
     - name: Display RHTAS instance existence result
       ansible.builtin.debug:
@@ -363,7 +352,6 @@
       delegate_to: bastion
       changed_when: false
       failed_when: false
-      no_log: true
       when: rhtas_instance_check.rc == 0
 
     - name: Set TUF status
@@ -415,7 +403,6 @@
       delegate_to: bastion
       changed_when: false
       failed_when: false
-      no_log: true
 
     - name: Validate oidc-info secret
       ansible.builtin.set_fact:
@@ -438,7 +425,6 @@
       delegate_to: bastion
       changed_when: false
       failed_when: false
-      no_log: true
 
     - name: Display OIDC refresher deployment existence result
       ansible.builtin.debug:
@@ -452,7 +438,6 @@
       delegate_to: bastion
       changed_when: false
       failed_when: false
-      no_log: true
       when: oidc_deployment_check.rc == 0
 
     - name: Set OIDC refresher status
@@ -504,7 +489,6 @@
       delegate_to: bastion
       changed_when: false
       failed_when: false
-      no_log: true
 
     - name: Set OCI storage value
       ansible.builtin.set_fact:
@@ -531,7 +515,6 @@
       delegate_to: bastion
       changed_when: false
       failed_when: false
-      no_log: true
 
     - name: Set TaskRun format value
       ansible.builtin.set_fact:
@@ -558,7 +541,6 @@
       delegate_to: bastion
       changed_when: false
       failed_when: false
-      no_log: true
 
     - name: Set TaskRun storage value
       ansible.builtin.set_fact:
@@ -585,7 +567,6 @@
       delegate_to: bastion
       changed_when: false
       failed_when: false
-      no_log: true
 
     - name: Set transparency value
       ansible.builtin.set_fact:
