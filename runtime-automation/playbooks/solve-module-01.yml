@@ -12,7 +12,6 @@
     # Static variables (not in user_data)
     keycloak_namespace: "tssc-keycloak"
     tpa_namespace: "tssc-tpa"
-    keycloak_url: "https://sso.{{ cluster_domain }}"
     sbom_file: "/home/lab-user/lab-assets/example-sbom.json"
     sbom_id: "test-sbom"
     lab_assets_dir: "/home/lab-user/lab-assets"
@@ -183,7 +182,7 @@
         cmd: |
           envsubst < {{ lab_assets_dir }}/tpa-instance.yml | oc apply -n {{ tpa_namespace }} -f -
       environment:
-        KEYCLOAK_URL: "{{ keycloak_url }}"
+        KEYCLOAK_URL: "{{ keycloak_admin_console }}"
         TPA_REALM: "{{ tpa_realm }}"
       changed_when: true
       delegate_to: bastion
@@ -234,7 +233,7 @@
 
     - name: Get Keycloak OIDC configuration
       ansible.builtin.uri:
-        url: "{{ keycloak_url }}/realms/{{ tpa_realm }}/.well-known/openid-configuration"
+        url: "{{ keycloak_admin_console }}/realms/{{ tpa_realm }}/.well-known/openid-configuration"
         method: GET
         return_content: true
         validate_certs: false

@@ -11,7 +11,6 @@
     developer_password: "{{ password }}"
 
     # Static variables
-    keycloak_url: "https://sso.{{ cluster_domain }}"
     keycloak_namespace: "tssc-keycloak"
     devspaces_namespace: "openshift-devspaces"
     app_ci_namespace: "tssc-app-ci"
@@ -123,7 +122,7 @@
             cmd: |
               ADMIN_USER=$(echo "{{ kc_reset_creds.stdout }}" | cut -d: -f1)
               ADMIN_PASS=$(echo "{{ kc_reset_creds.stdout }}" | cut -d: -f2)
-              curl -s -X POST "{{ keycloak_url }}/realms/master/protocol/openid-connect/token" \
+              curl -s -X POST "{{ keycloak_admin_console }}/realms/master/protocol/openid-connect/token" \
                 -H "Content-Type: application/x-www-form-urlencoded" \
                 -d "client_id=admin-cli" \
                 -d "username=${ADMIN_USER}" \
@@ -144,7 +143,7 @@
               ansible.builtin.shell:
                 cmd: |
                   curl -s -H "Authorization: Bearer {{ reset_admin_token.stdout }}" \
-                    "{{ keycloak_url }}/admin/realms/{{ sso_realm }}/users?username={{ developer_username }}" | jq -r '.[0].id // empty'
+                    "{{ keycloak_admin_console }}/admin/realms/{{ sso_realm }}/users?username={{ developer_username }}" | jq -r '.[0].id // empty'
               register: reset_user_id
               changed_when: false
               no_log: true
@@ -153,7 +152,7 @@
               when: reset_user_id.stdout != ""
               ansible.builtin.shell:
                 cmd: |
-                  curl -s -X DELETE "{{ keycloak_url }}/admin/realms/{{ sso_realm }}/users/{{ reset_user_id.stdout }}" \
+                  curl -s -X DELETE "{{ keycloak_admin_console }}/admin/realms/{{ sso_realm }}/users/{{ reset_user_id.stdout }}" \
                     -H "Authorization: Bearer {{ reset_admin_token.stdout }}"
               changed_when: true
               no_log: true
@@ -163,7 +162,7 @@
               ansible.builtin.shell:
                 cmd: |
                   curl -s -H "Authorization: Bearer {{ reset_admin_token.stdout }}" \
-                    "{{ keycloak_url }}/admin/realms/{{ sso_realm }}/users?username={{ developer_username }}" | jq -r '.[0].id // empty'
+                    "{{ keycloak_admin_console }}/admin/realms/{{ sso_realm }}/users?username={{ developer_username }}" | jq -r '.[0].id // empty'
               register: verify_user_delete
               changed_when: false
               no_log: true
@@ -203,7 +202,7 @@
             cmd: |
               ADMIN_USER=$(echo "{{ kc_create_creds.stdout }}" | cut -d: -f1)
               ADMIN_PASS=$(echo "{{ kc_create_creds.stdout }}" | cut -d: -f2)
-              curl -s -X POST "{{ keycloak_url }}/realms/master/protocol/openid-connect/token" \
+              curl -s -X POST "{{ keycloak_admin_console }}/realms/master/protocol/openid-connect/token" \
                 -H "Content-Type: application/x-www-form-urlencoded" \
                 -d "client_id=admin-cli" \
                 -d "username=${ADMIN_USER}" \
@@ -222,7 +221,7 @@
           ansible.builtin.shell:
             cmd: |
               curl -s -H "Authorization: Bearer {{ create_admin_token.stdout }}" \
-                "{{ keycloak_url }}/admin/realms/{{ sso_realm }}/users?username={{ developer_username }}" | jq -r '.[0].id // empty'
+                "{{ keycloak_admin_console }}/admin/realms/{{ sso_realm }}/users?username={{ developer_username }}" | jq -r '.[0].id // empty'
           changed_when: false
           register: existing_user_id
           no_log: true
@@ -231,7 +230,7 @@
           when: existing_user_id.stdout == ""
           ansible.builtin.shell:
             cmd: |
-              curl -s -X POST "{{ keycloak_url }}/admin/realms/{{ sso_realm }}/users" \
+              curl -s -X POST "{{ keycloak_admin_console }}/admin/realms/{{ sso_realm }}/users" \
                 -H "Authorization: Bearer {{ create_admin_token.stdout }}" \
                 -H "Content-Type: application/json" \
                 -d "{
@@ -254,7 +253,7 @@
           ansible.builtin.shell:
             cmd: |
               curl -s -H "Authorization: Bearer {{ create_admin_token.stdout }}" \
-                "{{ keycloak_url }}/admin/realms/{{ sso_realm }}/users?username={{ developer_username }}" | jq -r '.[0].id'
+                "{{ keycloak_admin_console }}/admin/realms/{{ sso_realm }}/users?username={{ developer_username }}" | jq -r '.[0].id'
           changed_when: false
           register: user_id
           no_log: true
@@ -268,7 +267,7 @@
           ansible.builtin.shell:
             cmd: |
               curl -s -H "Authorization: Bearer {{ create_admin_token.stdout }}" \
-                "{{ keycloak_url }}/admin/realms/{{ sso_realm }}/groups?search=tssc" | jq -r '.[0].id // empty'
+                "{{ keycloak_admin_console }}/admin/realms/{{ sso_realm }}/groups?search=tssc" | jq -r '.[0].id // empty'
           changed_when: false
           register: tssc_group_id
           no_log: true
@@ -277,7 +276,7 @@
           ansible.builtin.shell:
             cmd: |
               curl -s -H "Authorization: Bearer {{ create_admin_token.stdout }}" \
-                "{{ keycloak_url }}/admin/realms/{{ sso_realm }}/groups?search=users" | jq -r '.[0].id // empty'
+                "{{ keycloak_admin_console }}/admin/realms/{{ sso_realm }}/groups?search=users" | jq -r '.[0].id // empty'
           changed_when: false
           register: users_group_id
           no_log: true
@@ -287,7 +286,7 @@
           ansible.builtin.shell:
             cmd: |
               curl -s -H "Authorization: Bearer {{ create_admin_token.stdout }}" \
-                "{{ keycloak_url }}/admin/realms/{{ sso_realm }}/users/{{ user_id.stdout }}/groups" | jq -r ".[] | select(.id==\"{{ tssc_group_id.stdout }}\") | .id"
+                "{{ keycloak_admin_console }}/admin/realms/{{ sso_realm }}/users/{{ user_id.stdout }}/groups" | jq -r ".[] | select(.id==\"{{ tssc_group_id.stdout }}\") | .id"
           register: tssc_member_check
           changed_when: false
           no_log: true
@@ -296,7 +295,7 @@
           when: tssc_group_id.stdout != "" and tssc_member_check.stdout == ""
           ansible.builtin.shell:
             cmd: |
-              curl -s -X PUT "{{ keycloak_url }}/admin/realms/{{ sso_realm }}/users/{{ user_id.stdout }}/groups/{{ tssc_group_id.stdout }}" \
+              curl -s -X PUT "{{ keycloak_admin_console }}/admin/realms/{{ sso_realm }}/users/{{ user_id.stdout }}/groups/{{ tssc_group_id.stdout }}" \
                 -H "Authorization: Bearer {{ create_admin_token.stdout }}"
           changed_when: true
           no_log: true
@@ -306,7 +305,7 @@
           ansible.builtin.shell:
             cmd: |
               curl -s -H "Authorization: Bearer {{ create_admin_token.stdout }}" \
-                "{{ keycloak_url }}/admin/realms/{{ sso_realm }}/users/{{ user_id.stdout }}/groups" | jq -r ".[] | select(.id==\"{{ users_group_id.stdout }}\") | .id"
+                "{{ keycloak_admin_console }}/admin/realms/{{ sso_realm }}/users/{{ user_id.stdout }}/groups" | jq -r ".[] | select(.id==\"{{ users_group_id.stdout }}\") | .id"
           register: users_member_check
           changed_when: false
           no_log: true
@@ -315,7 +314,7 @@
           when: users_group_id.stdout != "" and users_member_check.stdout == ""
           ansible.builtin.shell:
             cmd: |
-              curl -s -X PUT "{{ keycloak_url }}/admin/realms/{{ sso_realm }}/users/{{ user_id.stdout }}/groups/{{ users_group_id.stdout }}" \
+              curl -s -X PUT "{{ keycloak_admin_console }}/admin/realms/{{ sso_realm }}/users/{{ user_id.stdout }}/groups/{{ users_group_id.stdout }}" \
                 -H "Authorization: Bearer {{ create_admin_token.stdout }}"
           changed_when: true
           no_log: true
@@ -323,7 +322,7 @@
         - name: Set user password
           ansible.builtin.shell:
             cmd: |
-              curl -s -X PUT "{{ keycloak_url }}/admin/realms/{{ sso_realm }}/users/{{ user_id.stdout }}/reset-password" \
+              curl -s -X PUT "{{ keycloak_admin_console }}/admin/realms/{{ sso_realm }}/users/{{ user_id.stdout }}/reset-password" \
                 -H "Authorization: Bearer {{ create_admin_token.stdout }}" \
                 -H "Content-Type: application/json" \
                 -d "{
@@ -378,7 +377,7 @@
           ansible.builtin.set_fact:
             fulcio_url: "https://fulcio-server-{{ tas_namespace }}.{{ cluster_domain }}"
             rekor_url: "https://rekor-server-{{ tas_namespace }}.{{ cluster_domain }}"
-            issuer_url: "{{ keycloak_url }}/realms/{{ sso_realm }}"
+            issuer_url: "{{ keycloak_admin_console }}/realms/{{ sso_realm }}"
 
         - name: Create Dev Spaces ConfigMap
           ansible.builtin.shell:
@@ -439,7 +438,7 @@
                 bombastic_api_url: {{ tpa_server_url }}
                 oidc_client_id: cli
                 oidc_client_secret: {{ tpa_cli_client_secret }}
-                oidc_issuer_url: {{ keycloak_url }}/realms/{{ tpa_realm }}
+                oidc_issuer_url: {{ keycloak_admin_console }}/realms/{{ tpa_realm }}
                 supported_cyclonedx_version: "1.4"
               type: Opaque
               EOF

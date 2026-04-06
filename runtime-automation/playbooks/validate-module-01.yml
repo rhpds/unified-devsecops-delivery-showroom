@@ -10,7 +10,6 @@
     # Static variables
     keycloak_namespace: "tssc-keycloak"
     tpa_namespace: "tssc-tpa"
-    keycloak_url: "https://sso.{{ cluster_domain }}"
     sbom_id: "test-sbom"
 
   module_defaults:
@@ -259,7 +258,7 @@
 
     - name: Get Keycloak OpenID configuration
       ansible.builtin.uri:
-        url: "{{ keycloak_url }}/realms/{{ tpa_realm }}/.well-known/openid-configuration"
+        url: "{{ keycloak_admin_console }}/realms/{{ tpa_realm }}/.well-known/openid-configuration"
         method: GET
         validate_certs: false
         return_content: true

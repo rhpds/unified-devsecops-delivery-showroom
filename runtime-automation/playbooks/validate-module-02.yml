@@ -8,7 +8,6 @@
     bastion_hostname: "{{ bastion_public_hostname }}"
 
     # Static variables
-    keycloak_url: "https://sso.{{ cluster_domain }}"
     keycloak_namespace: "tssc-keycloak"
     tas_namespace: "tssc-tas"
     pipelines_namespace: "openshift-pipelines"
@@ -95,7 +94,7 @@
 
     - name: Get admin access token
       ansible.builtin.uri:
-        url: "{{ keycloak_url }}/realms/master/protocol/openid-connect/token"
+        url: "{{ keycloak_admin_console }}/realms/master/protocol/openid-connect/token"
         method: POST
         validate_certs: false
         body_format: form-urlencoded
@@ -138,7 +137,7 @@
 
     - name: Check if tas-chains realm exists
       ansible.builtin.uri:
-        url: "{{ keycloak_url }}/admin/realms/{{ tas_chains_realm }}"
+        url: "{{ keycloak_admin_console }}/admin/realms/{{ tas_chains_realm }}"
         method: GET
         validate_certs: false
         headers:
@@ -191,7 +190,7 @@
 
     - name: Get trusted-artifact-signer client in tas-chains realm
       ansible.builtin.uri:
-        url: "{{ keycloak_url }}/admin/realms/{{ tas_chains_realm }}/clients?clientId={{ tas_client_id }}"
+        url: "{{ keycloak_admin_console }}/admin/realms/{{ tas_chains_realm }}/clients?clientId={{ tas_client_id }}"
         method: GET
         validate_certs: false
         headers:
@@ -224,7 +223,7 @@
 
     - name: Get service account user email verification
       ansible.builtin.uri:
-        url: "{{ keycloak_url }}/admin/realms/{{ tas_chains_realm }}/clients/{{ tas_chains_client_id }}/service-account-user"
+        url: "{{ keycloak_admin_console }}/admin/realms/{{ tas_chains_realm }}/clients/{{ tas_chains_client_id }}/service-account-user"
         method: GET
         validate_certs: false
         headers:
@@ -291,7 +290,7 @@
 
     - name: Get trusted-artifact-signer client in sso realm
       ansible.builtin.uri:
-        url: "{{ keycloak_url }}/admin/realms/{{ tas_sso_realm }}/clients?clientId={{ tas_client_id }}"
+        url: "{{ keycloak_admin_console }}/admin/realms/{{ tas_sso_realm }}/clients?clientId={{ tas_client_id }}"
         method: GET
         validate_certs: false
         headers:
