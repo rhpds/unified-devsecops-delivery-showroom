@@ -14,6 +14,8 @@
     tpa_admin_username: "{{ tpa_admin_username }}"
     tpa_admin_password: "{{ tpa_admin_password }}"
     bastion_hostname: "{{ bastion_public_hostname }}"
+    openshift_api_url: "{{ openshift_api_url }}"
+    openshift_cluster_admin_token: "{{ openshift_cluster_admin_token }}"
 
     # Static variables (not in user_data)
     keycloak_namespace: "tssc-keycloak"
@@ -22,6 +24,16 @@
     sbom_file: "/home/lab-user/lab-assets/example-sbom.json"
     sbom_id: "test-sbom"
     lab_assets_dir: "/home/lab-user/lab-assets"
+
+  module_defaults:
+    kubernetes.core.k8s:
+      host: "{{ openshift_api_url }}"
+      api_key: "{{ openshift_cluster_admin_token }}"
+      validate_certs: false
+    kubernetes.core.k8s_info:
+      host: "{{ openshift_api_url }}"
+      api_key: "{{ openshift_cluster_admin_token }}"
+      validate_certs: false
 
   tasks:
     - name: Display module information
@@ -41,130 +53,123 @@
     # STEP 0: Reset Module 1 (reset-module-1.sh)
     ###########################################
     - name: Check if RHTPA instance exists
-      ansible.builtin.command:
-        cmd: oc get trustedprofileanalyzer trustedprofileanalyzer -n {{ tpa_namespace }}
+      kubernetes.core.k8s_info:
+        api_version: trusted-profile-analyzer.redhat.com/v1alpha1
+        kind: TrustedProfileAnalyzer
+        name: trustedprofileanalyzer
+        namespace: "{{ tpa_namespace }}"
       register: tpa_check
-      changed_when: false
       failed_when: false
-      delegate_to: bastion
 
     - name: Delete RHTPA instance (if exists)
-      when: tpa_check.rc == 0
+      when: tpa_check.resources | length > 0
       block:
         - name: Delete RHTPA instance
-          ansible.builtin.command:
-            cmd: oc delete trustedprofileanalyzer trustedprofileanalyzer -n {{ tpa_namespace }}
-          changed_when: true
-          delegate_to: bastion
-
-        - name: Wait for RHTPA instance deletion
-          ansible.builtin.command:
-            cmd: oc wait --for=delete trustedprofileanalyzer/trustedprofileanalyzer -n {{ tpa_namespace }} --timeout=300s
-          changed_when: false
-          failed_when: false
-          delegate_to: bastion
+          kubernetes.core.k8s:
+            api_version: trusted-profile-analyzer.redhat.com/v1alpha1
+            kind: TrustedProfileAnalyzer
+            name: trustedprofileanalyzer
+            namespace: "{{ tpa_namespace }}"
+            state: absent
+            wait: true
+            wait_timeout: 300
 
         - name: Verify RHTPA instance deletion
-          ansible.builtin.shell:
-            cmd: |
-              TIMEOUT=60
-              ELAPSED=0
-              while [ $ELAPSED -lt $TIMEOUT ]; do
-                if ! oc get trustedprofileanalyzer trustedprofileanalyzer -n {{ tpa_namespace }} &>/dev/null; then
-                  echo "deleted"
-                  exit 0
-                fi
-                sleep 5
-                ELAPSED=$((ELAPSED + 5))
-              done
-              echo "timeout"
-              exit 1
+          kubernetes.core.k8s_info:
+            api_version: trusted-profile-analyzer.redhat.com/v1alpha1
+            kind: TrustedProfileAnalyzer
+            name: trustedprofileanalyzer
+            namespace: "{{ tpa_namespace }}"
           register: tpa_verify
-          changed_when: false
+          until: tpa_verify.resources | length == 0
+          retries: 12
+          delay: 5
           failed_when: false
-          delegate_to: bastion
 
         - name: Display RHTPA deletion result
           ansible.builtin.debug:
-            msg: "{{ '✓ RHTPA instance deleted' if tpa_verify.stdout == 'deleted' else 'Warning: RHTPA instance still exists after timeout' }}"
+            msg: "{{ '✓ RHTPA instance deleted' if tpa_verify.resources | length == 0 else 'Warning: RHTPA instance still exists after timeout' }}"
 
     - name: RHTPA instance not found
-      when: tpa_check.rc != 0
+      when: tpa_check.resources | length == 0
       ansible.builtin.debug:
         msg: "✓ RHTPA instance not found (already clean)"
 
     - name: Check if TPA CLI credentials secret exists
-      ansible.builtin.command:
-        cmd: oc get secret tpa-cli-credentials -n {{ tpa_namespace }}
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Secret
+        name: tpa-cli-credentials
+        namespace: "{{ tpa_namespace }}"
       register: tpa_secret_check
-      changed_when: false
       failed_when: false
-      delegate_to: bastion
 
     - name: Delete TPA CLI credentials secret (if exists)
-      when: tpa_secret_check.rc == 0
+      when: tpa_secret_check.resources | length > 0
       block:
         - name: Delete TPA CLI credentials secret
-          ansible.builtin.command:
-            cmd: oc delete secret tpa-cli-credentials -n {{ tpa_namespace }}
-          changed_when: true
-          delegate_to: bastion
+          kubernetes.core.k8s:
+            api_version: v1
+            kind: Secret
+            name: tpa-cli-credentials
+            namespace: "{{ tpa_namespace }}"
+            state: absent
 
         - name: Verify TPA CLI credentials secret deletion
-          ansible.builtin.command:
-            cmd: oc get secret tpa-cli-credentials -n {{ tpa_namespace }}
+          kubernetes.core.k8s_info:
+            api_version: v1
+            kind: Secret
+            name: tpa-cli-credentials
+            namespace: "{{ tpa_namespace }}"
           register: secret_verify
-          changed_when: false
           failed_when: false
-          delegate_to: bastion
 
         - name: Display secret deletion result
           ansible.builtin.debug:
-            msg: "{{ '✓ TPA CLI credentials secret deleted' if secret_verify.rc != 0 else 'Warning: TPA CLI credentials secret still exists' }}"
+            msg: "{{ '✓ TPA CLI credentials secret deleted' if secret_verify.resources | length == 0 else 'Warning: TPA CLI credentials secret still exists' }}"
 
     - name: TPA CLI credentials secret not found
-      when: tpa_secret_check.rc != 0
+      when: tpa_secret_check.resources | length == 0
       ansible.builtin.debug:
         msg: "✓ TPA CLI credentials secret not found (already clean)"
 
     - name: Check if TPA Realm import exists
-      ansible.builtin.command:
-        cmd: oc get keycloakrealmimport {{ tpa_realm }} -n {{ keycloak_namespace }}
+      kubernetes.core.k8s_info:
+        api_version: k8s.keycloak.org/v2alpha1
+        kind: KeycloakRealmImport
+        name: "{{ tpa_realm }}"
+        namespace: "{{ keycloak_namespace }}"
       register: realm_check
-      changed_when: false
       failed_when: false
-      delegate_to: bastion
 
     - name: Delete TPA Realm import (if exists)
-      when: realm_check.rc == 0
+      when: realm_check.resources | length > 0
       block:
         - name: Delete TPA Realm import
-          ansible.builtin.command:
-            cmd: oc delete keycloakrealmimport {{ tpa_realm }} -n {{ keycloak_namespace }}
-          changed_when: true
-          delegate_to: bastion
-
-        - name: Wait for TPA Realm deletion
-          ansible.builtin.command:
-            cmd: oc wait --for=delete keycloakrealmimport/{{ tpa_realm }} -n {{ keycloak_namespace }} --timeout=60s
-          changed_when: false
-          failed_when: false
-          delegate_to: bastion
+          kubernetes.core.k8s:
+            api_version: k8s.keycloak.org/v2alpha1
+            kind: KeycloakRealmImport
+            name: "{{ tpa_realm }}"
+            namespace: "{{ keycloak_namespace }}"
+            state: absent
+            wait: true
+            wait_timeout: 60
 
         - name: Verify TPA Realm deletion
-          ansible.builtin.command:
-            cmd: oc get keycloakrealmimport {{ tpa_realm }} -n {{ keycloak_namespace }}
+          kubernetes.core.k8s_info:
+            api_version: k8s.keycloak.org/v2alpha1
+            kind: KeycloakRealmImport
+            name: "{{ tpa_realm }}"
+            namespace: "{{ keycloak_namespace }}"
           register: realm_verify
-          changed_when: false
           failed_when: false
-          delegate_to: bastion
 
         - name: Display realm deletion result
           ansible.builtin.debug:
-            msg: "{{ '✓ TPA Realm import deleted' if realm_verify.rc != 0 else 'Warning: TPA Realm import still exists' }}"
+            msg: "{{ '✓ TPA Realm import deleted' if realm_verify.resources | length == 0 else 'Warning: TPA Realm import still exists' }}"
 
     - name: TPA Realm import not found
-      when: realm_check.rc != 0
+      when: realm_check.resources | length == 0
       ansible.builtin.debug:
         msg: "✓ TPA Realm import not found (already clean)"
 
@@ -190,10 +195,17 @@
       delegate_to: bastion
 
     - name: Wait for TPA Realm import completion
-      ansible.builtin.command:
-        cmd: oc wait --for=condition=Done keycloakrealmimport/{{ tpa_realm }} -n {{ keycloak_namespace }} --timeout=300s
-      changed_when: false
-      delegate_to: bastion
+      kubernetes.core.k8s_info:
+        api_version: k8s.keycloak.org/v2alpha1
+        kind: KeycloakRealmImport
+        name: "{{ tpa_realm }}"
+        namespace: "{{ keycloak_namespace }}"
+      register: realm_status
+      until: >
+        realm_status.resources | length > 0 and
+        realm_status.resources[0].status.conditions | selectattr('type', 'equalto', 'Done') | selectattr('status', 'equalto', 'True') | list | length > 0
+      retries: 60
+      delay: 5
 
     - name: Display TPA Realm import result
       ansible.builtin.debug:
