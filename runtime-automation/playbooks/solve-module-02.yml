@@ -811,7 +811,8 @@
               export TAS_CHAINS_CLIENT_ID="{{ tas_client_id }}"
               export TAS_CHAINS_REALM="{{ tas_chains_realm }}"
               export TAS_SSO_REALM="{{ tas_sso_realm }}"
-              envsubst '${TAS_CHAINS_CLIENT_ID} ${TAS_CHAINS_REALM} ${TAS_SSO_REALM}' < {{ lab_assets_dir }}/tas-instance.yml | oc apply -n {{ tas_namespace }} -f -
+              export KEYCLOAK_URL="{{ keycloak_url }}"
+              envsubst '${TAS_CHAINS_CLIENT_ID} ${TAS_CHAINS_REALM} ${TAS_SSO_REALM} ${KEYCLOAK_URL}' < {{ lab_assets_dir }}/tas-instance.yml | oc apply -n {{ tas_namespace }} -f -
           changed_when: true
 
         - name: Display RHTAS Instance CR applied
@@ -896,7 +897,8 @@
         - name: Create OIDC info secret
           ansible.builtin.shell: |
               export TAS_CHAINS_CLIENT_ID="{{ tas_client_id }}"
-              export TAS_CHAINS_CLIENT_SECRET="{{ tas_client_secret.stdout }}"
+              export TAS_CHAINS_CLIENT_SECRET=$(curl -s -H "Authorization: Bearer {{ kc_admin_token.stdout }}" \
+                "{{ keycloak_admin_console }}/admin/realms/{{ tas_chains_realm }}/clients/{{ tas_chains_client_uuid.stdout }}/client-secret" | jq -r '.value')
               export TAS_CHAINS_REALM="{{ tas_chains_realm }}"
               envsubst '${TAS_CHAINS_CLIENT_ID} ${TAS_CHAINS_CLIENT_SECRET} ${TAS_CHAINS_REALM}' < {{ lab_assets_dir }}/oidc-info-secret.yml | oc apply -n {{ pipelines_namespace }} -f -
           changed_when: true
