@@ -34,6 +34,12 @@ def run_playbook(playbook_name, output_queue):
         if os.path.exists(USER_DATA_FILE):
             cmd.extend(["-e", f"@{USER_DATA_FILE}"])
 
+        # Set up environment for unbuffered output
+        env = os.environ.copy()
+        env['PYTHONUNBUFFERED'] = '1'
+        env['ANSIBLE_FORCE_COLOR'] = '1'
+        env['ANSIBLE_STDOUT_CALLBACK'] = 'yaml'
+
         # Run ansible-playbook with line-buffered output
         process = subprocess.Popen(
             cmd,
@@ -41,7 +47,7 @@ def run_playbook(playbook_name, output_queue):
             stderr=subprocess.STDOUT,
             bufsize=1,
             universal_newlines=True,
-            env=os.environ.copy()
+            env=env
         )
 
         # Stream output line by line
