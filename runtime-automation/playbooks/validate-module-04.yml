@@ -162,7 +162,7 @@
     # Only proceed if ACS credentials are available (matching script lines 78-104)
     - name: Check if ACS credentials are available
       ansible.builtin.set_fact:
-        acs_credentials_available: "{{ acs_api_token is defined and acs_api_token != '' and acs_central_url is defined and acs_central_url != '' }}"
+        acs_credentials_available: "{{ acs_api_token is defined and acs_api_token != '' and acs_route is defined and acs_route != '' }}"
 
     - name: Get ACS-Quay integration
       ansible.builtin.uri:
