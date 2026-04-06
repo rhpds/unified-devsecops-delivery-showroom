@@ -42,7 +42,7 @@
     ###########################################
     - name: Check if RHTPA instance exists
       ansible.builtin.command:
-        cmd: oc get tpa instance -n {{ tpa_namespace }}
+        cmd: oc get trustedprofileanalyzer trustedprofileanalyzer -n {{ tpa_namespace }}
       register: tpa_check
       changed_when: false
       failed_when: false
@@ -53,13 +53,13 @@
       block:
         - name: Delete RHTPA instance
           ansible.builtin.command:
-            cmd: oc delete tpa instance -n {{ tpa_namespace }}
+            cmd: oc delete trustedprofileanalyzer trustedprofileanalyzer -n {{ tpa_namespace }}
           changed_when: true
           delegate_to: bastion
 
         - name: Wait for RHTPA instance deletion
           ansible.builtin.command:
-            cmd: oc wait --for=delete tpa/instance -n {{ tpa_namespace }} --timeout=300s
+            cmd: oc wait --for=delete trustedprofileanalyzer/trustedprofileanalyzer -n {{ tpa_namespace }} --timeout=300s
           changed_when: false
           failed_when: false
           delegate_to: bastion
@@ -70,7 +70,7 @@
               TIMEOUT=60
               ELAPSED=0
               while [ $ELAPSED -lt $TIMEOUT ]; do
-                if ! oc get tpa instance -n {{ tpa_namespace }} &>/dev/null; then
+                if ! oc get trustedprofileanalyzer trustedprofileanalyzer -n {{ tpa_namespace }} &>/dev/null; then
                   echo "deleted"
                   exit 0
                 fi
