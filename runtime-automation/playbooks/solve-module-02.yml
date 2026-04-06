@@ -446,50 +446,55 @@
           ansible.builtin.debug:
             msg: "Warning: Failed to authenticate with Keycloak, skipping client/realm deletion"
 
-        - name: "Step 5: Cleaning up test TaskRuns"
+        - name: "Step 5: Cleaning up TaskRuns and PipelineRuns"
           ansible.builtin.debug:
-            msg: "Step 5: Cleaning up test TaskRuns..."
+            msg: "Step 5: Cleaning up TaskRuns and PipelineRuns..."
 
-        - name: Get TaskRun count with test label
+        - name: Get TaskRun count
           ansible.builtin.shell: |
-            oc get taskrun -n {{ app_ci_namespace }} -l test.workload.security.redhat.com/test=image-signing --no-headers 2>/dev/null | wc -l || echo 0
+            oc get taskrun -n {{ app_ci_namespace }} --no-headers 2>/dev/null | wc -l || echo 0
           register: taskrun_count
           changed_when: false
 
-        - name: Delete test TaskRuns
+        - name: Delete all TaskRuns
           when: taskrun_count.stdout | int > 0
           block:
-            - name: Delete TaskRuns with test label
+            - name: Delete all TaskRuns
               ansible.builtin.shell: |
-                oc delete taskrun -n {{ app_ci_namespace }} -l test.workload.security.redhat.com/test=image-signing
+                oc delete taskrun --all -n {{ app_ci_namespace }}
               changed_when: true
 
             - name: Display TaskRun deletion result
               ansible.builtin.debug:
-                msg: "✓ Deleted {{ taskrun_count.stdout }} test TaskRun(s)"
+                msg: "✓ Deleted {{ taskrun_count.stdout }} TaskRun(s)"
 
-        - name: Display no test TaskRuns found
+        - name: Display no TaskRuns found
           when: taskrun_count.stdout | int == 0
           ansible.builtin.debug:
-            msg: "✓ No test TaskRuns found"
+            msg: "✓ No TaskRuns found"
 
-        - name: Get orphaned TaskRun count
+        - name: Get PipelineRun count
           ansible.builtin.shell: |
-            oc get taskrun -n {{ app_ci_namespace }} -l tekton.dev/task=build-and-push --no-headers 2>/dev/null | wc -l || echo 0
-          register: orphaned_count
+            oc get pipelinerun -n {{ app_ci_namespace }} --no-headers 2>/dev/null | wc -l || echo 0
+          register: pipelinerun_count
           changed_when: false
 
-        - name: Delete orphaned TaskRuns
-          when: orphaned_count.stdout | int > 0
+        - name: Delete all PipelineRuns
+          when: pipelinerun_count.stdout | int > 0
           block:
-            - name: Delete orphaned TaskRuns
+            - name: Delete all PipelineRuns
               ansible.builtin.shell: |
-                oc delete taskrun -n {{ app_ci_namespace }} -l tekton.dev/task=build-and-push
+                oc delete pipelinerun --all -n {{ app_ci_namespace }}
               changed_when: true
 
-            - name: Display orphaned TaskRun deletion result
+            - name: Display PipelineRun deletion result
               ansible.builtin.debug:
-                msg: "✓ Deleted {{ orphaned_count.stdout }} orphaned TaskRun(s)"
+                msg: "✓ Deleted {{ pipelinerun_count.stdout }} PipelineRun(s)"
+
+        - name: Display no PipelineRuns found
+          when: pipelinerun_count.stdout | int == 0
+          ansible.builtin.debug:
+            msg: "✓ No PipelineRuns found"
 
         - name: "Step 6: Deleting Quay test repository"
           ansible.builtin.debug:
