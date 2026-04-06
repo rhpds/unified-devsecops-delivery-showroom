@@ -10,21 +10,29 @@ from flask_cors import CORS
 import threading
 import queue
 import time
+import tempfile
 
 app = Flask(__name__)
 CORS(app)
 
 PLAYBOOKS_DIR = "playbooks"
 USER_DATA_FILE = "/user_data/user_data.yml"
+LOG_DIR = "/tmp/playbook-logs"
+
+# Ensure log directory exists
+os.makedirs(LOG_DIR, exist_ok=True)
 
 def run_playbook(playbook_name, output_queue):
-    """Execute ansible-playbook and stream output to queue"""
+    """Execute ansible-playbook and stream output to queue via log file"""
     playbook_path = os.path.join(PLAYBOOKS_DIR, f"{playbook_name}.yml")
 
     if not os.path.exists(playbook_path):
         output_queue.put(f"ERROR: Playbook {playbook_name}.yml not found\n")
         output_queue.put("__DONE__")
         return
+
+    # Create unique log file for this execution
+    log_file = os.path.join(LOG_DIR, f"{playbook_name}-{int(time.time())}.log")
 
     try:
         # Build ansible-playbook command with extra vars file
@@ -37,26 +45,32 @@ def run_playbook(playbook_name, output_queue):
         # Set up environment for unbuffered output
         env = os.environ.copy()
         env['PYTHONUNBUFFERED'] = '1'
-        env['ANSIBLE_FORCE_COLOR'] = '1'
+        env['ANSIBLE_FORCE_COLOR'] = '0'  # Disable color for cleaner logs
 
-        # Run ansible-playbook with line-buffered output
-        process = subprocess.Popen(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            bufsize=1,
-            universal_newlines=True,
-            env=env
-        )
+        # Open log file for writing
+        with open(log_file, 'w') as log:
+            # Run ansible-playbook with output redirected to log file
+            process = subprocess.Popen(
+                cmd,
+                stdout=log,
+                stderr=subprocess.STDOUT,
+                env=env
+            )
 
-        # Stream output line by line
-        for line in iter(process.stdout.readline, ''):
-            if line:
-                output_queue.put(line)
-                # Force flush to ensure real-time streaming
-                import sys
-                sys.stdout.flush()
+            # Tail the log file while playbook is running
+            with open(log_file, 'r') as tail:
+                while process.poll() is None:
+                    line = tail.readline()
+                    if line:
+                        output_queue.put(line)
+                    else:
+                        time.sleep(0.1)  # Brief pause if no new output
 
+                # Read any remaining output after process completes
+                for line in tail:
+                    output_queue.put(line)
+
+        # Wait for process to complete
         process.wait()
 
         if process.returncode == 0:
@@ -68,6 +82,14 @@ def run_playbook(playbook_name, output_queue):
         output_queue.put(f"\nERROR: {str(e)}\n")
     finally:
         output_queue.put("__DONE__")
+        # Clean up old log files (keep last 10)
+        try:
+            logs = sorted([f for f in os.listdir(LOG_DIR) if f.endswith('.log')])
+            if len(logs) > 10:
+                for old_log in logs[:-10]:
+                    os.remove(os.path.join(LOG_DIR, old_log))
+        except:
+            pass
 
 @app.route('/health', methods=['GET'])
 def health():
