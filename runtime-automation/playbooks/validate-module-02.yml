@@ -59,39 +59,10 @@
         - ""
 
   #######################################
-  # Get Keycloak admin credentials and token
+  # Get Keycloak admin token
   #######################################
-  - name: Get Keycloak admin credentials and token
+  - name: Get Keycloak admin token
     block:
-    - name: Get Keycloak admin username
-      ansible.builtin.command:
-        cmd: "oc get secret keycloak-initial-admin -n {{ keycloak_namespace }} -o jsonpath='{.data.username}'"
-      register: keycloak_admin_user_b64
-      delegate_to: "{{ bastion_hostname | default('localhost') }}"
-      changed_when: false
-      failed_when: false
-      no_log: true
-
-    - name: Get Keycloak admin password
-      ansible.builtin.command:
-        cmd: "oc get secret keycloak-initial-admin -n {{ keycloak_namespace }} -o jsonpath='{.data.password}'"
-      register: keycloak_admin_password_b64
-      delegate_to: "{{ bastion_hostname | default('localhost') }}"
-      changed_when: false
-      failed_when: false
-      no_log: true
-
-    - name: Decode Keycloak admin credentials
-      ansible.builtin.set_fact:
-        keycloak_admin_user: "{{ keycloak_admin_user_b64.stdout | b64decode }}"
-        keycloak_admin_password: "{{ keycloak_admin_password_b64.stdout | b64decode }}"
-      no_log: true
-      when: >
-        keycloak_admin_user_b64.rc == 0 and
-        keycloak_admin_password_b64.rc == 0 and
-        keycloak_admin_user_b64.stdout != '' and
-        keycloak_admin_password_b64.stdout != ''
-
     - name: Get admin access token
       ansible.builtin.uri:
         url: "{{ keycloak_admin_console }}/realms/master/protocol/openid-connect/token"
@@ -100,7 +71,7 @@
         body_format: form-urlencoded
         body:
           client_id: admin-cli
-          username: "{{ keycloak_admin_user }}"
+          username: "{{ keycloak_admin_username }}"
           password: "{{ keycloak_admin_password }}"
           grant_type: password
         return_content: true
