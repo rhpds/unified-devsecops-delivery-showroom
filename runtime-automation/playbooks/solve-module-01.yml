@@ -8,12 +8,6 @@
   vars:
     # Variables from user_data.yml (injected via -e @/user_data/user_data.yml)
     cluster_domain: "{{ openshift_cluster_ingress_domain }}"
-    guid: "{{ guid }}"
-    tpa_realm: "{{ tpa_realm }}"
-    tpa_cli_client_secret: "{{ tpa_cli_client_secret }}"
-    tpa_admin_username: "{{ tpa_admin_username }}"
-    tpa_admin_password: "{{ tpa_admin_password }}"
-    bastion_hostname: "{{ bastion_public_hostname }}"
 
     # Static variables (not in user_data)
     keycloak_namespace: "tssc-keycloak"
@@ -37,7 +31,7 @@
     - name: Add bastion host to inventory
       ansible.builtin.add_host:
         name: "bastion"
-        ansible_host: "{{ bastion_hostname }}"
+        ansible_host: "{{ bastion_public_hostname }}"
         ansible_user: "{{ bastion_ssh_user_name }}"
         ansible_ssh_pass: "{{ bastion_ssh_password }}"
         ansible_port: "{{ bastion_ssh_port }}"

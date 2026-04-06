@@ -5,9 +5,6 @@
   vars:
     # Variables from user_data.yml (injected via -e @/user_data/user_data.yml)
     cluster_domain: "{{ openshift_cluster_ingress_domain }}"
-    guid: "{{ guid }}"
-    tpa_realm: "{{ tpa_realm }}"
-    tpa_cli_client_secret: "{{ tpa_cli_client_secret }}"
     bastion_hostname: "{{ bastion_public_hostname }}"
 
     # Static variables

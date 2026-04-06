@@ -8,11 +8,7 @@
   vars:
     # Variables from user_data.yml (injected via -e @/user_data/user_data.yml)
     cluster_domain: "{{ openshift_cluster_ingress_domain }}"
-    guid: "{{ guid }}"
-    bastion_hostname: "{{ bastion_public_hostname }}"
-    tpa_cli_client_secret: "{{ tpa_cli_client_secret }}"
-    developer_password: "{{ openshift_cluster_account_password }}"
-    gitlab_root_password: "{{ gitlab_root_password }}"
+    developer_password: "{{ password }}"
 
     # Static variables
     keycloak_url: "https://sso.{{ cluster_domain }}"
@@ -41,7 +37,7 @@
     - name: Add bastion host to inventory
       ansible.builtin.add_host:
         name: "bastion"
-        ansible_host: "{{ bastion_hostname }}"
+        ansible_host: "{{ bastion_public_hostname }}"
         ansible_user: "{{ bastion_ssh_user_name }}"
         ansible_ssh_pass: "{{ bastion_ssh_password }}"
         ansible_port: "{{ bastion_ssh_port }}"

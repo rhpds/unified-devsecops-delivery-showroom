@@ -8,7 +8,6 @@
   vars:
     # Variables from user_data.yml (injected via -e @/user_data/user_data.yml)
     cluster_domain: "{{ openshift_cluster_ingress_domain }}"
-    guid: "{{ guid }}"
     bastion_hostname: "{{ bastion_public_hostname }}"
     quay_token: "{{ quay_admin_token }}"
 
