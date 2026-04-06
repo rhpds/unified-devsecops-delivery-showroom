@@ -23,7 +23,7 @@ LOG_DIR = "/tmp/playbook-logs"
 os.makedirs(LOG_DIR, exist_ok=True)
 
 def run_playbook(playbook_name, output_queue):
-    """Execute ansible-playbook and stream output to queue via log file"""
+    """Execute ansible-playbook and stream output to queue via tail -f"""
     playbook_path = os.path.join(PLAYBOOKS_DIR, f"{playbook_name}.yml")
 
     if not os.path.exists(playbook_path):
@@ -47,36 +47,54 @@ def run_playbook(playbook_name, output_queue):
         env['PYTHONUNBUFFERED'] = '1'
         env['ANSIBLE_FORCE_COLOR'] = '0'  # Disable color for cleaner logs
 
-        # Open log file for writing
+        # Create the log file first
+        open(log_file, 'w').close()
+
+        # Start tail -f on the log file in a separate thread
+        tail_process = subprocess.Popen(
+            ["tail", "-f", log_file],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            bufsize=1,
+            universal_newlines=True
+        )
+
+        # Start the playbook execution
         with open(log_file, 'w') as log:
-            # Run ansible-playbook with output redirected to log file
-            process = subprocess.Popen(
+            playbook_process = subprocess.Popen(
                 cmd,
                 stdout=log,
                 stderr=subprocess.STDOUT,
                 env=env
             )
 
-            # Tail the log file while playbook is running
-            with open(log_file, 'r') as tail:
-                while process.poll() is None:
-                    line = tail.readline()
-                    if line:
-                        output_queue.put(line)
-                    else:
-                        time.sleep(0.1)  # Brief pause if no new output
+        # Stream output from tail
+        while playbook_process.poll() is None:
+            line = tail_process.stdout.readline()
+            if line:
+                output_queue.put(line)
 
-                # Read any remaining output after process completes
-                for line in tail:
-                    output_queue.put(line)
+        # Give tail a moment to catch up
+        time.sleep(0.5)
 
-        # Wait for process to complete
-        process.wait()
+        # Read any remaining lines
+        while True:
+            line = tail_process.stdout.readline()
+            if not line:
+                break
+            output_queue.put(line)
 
-        if process.returncode == 0:
+        # Kill tail process
+        tail_process.terminate()
+        tail_process.wait()
+
+        # Wait for playbook to complete
+        playbook_process.wait()
+
+        if playbook_process.returncode == 0:
             output_queue.put("\n✓ Playbook completed successfully!\n")
         else:
-            output_queue.put(f"\n✗ Playbook failed with exit code {process.returncode}\n")
+            output_queue.put(f"\n✗ Playbook failed with exit code {playbook_process.returncode}\n")
 
     except Exception as e:
         output_queue.put(f"\nERROR: {str(e)}\n")
