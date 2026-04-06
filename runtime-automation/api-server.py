@@ -68,27 +68,33 @@ def run_playbook(playbook_name, output_queue):
                 env=env
             )
 
-        # Stream output from tail while playbook is running
-        while playbook_process.poll() is None:
-            try:
-                line = tail_process.stdout.readline()
-                if line:
-                    output_queue.put(line)
-            except:
-                break
+        # Stream output from tail and watch for Ansible completion
+        playbook_complete = False
+        while not playbook_complete:
+            line = tail_process.stdout.readline()
+            if line:
+                output_queue.put(line)
+                # Check for Ansible PLAY RECAP marker
+                if 'PLAY RECAP' in line and '*' in line:
+                    playbook_complete = True
+            else:
+                # If no output and process ended, break
+                if playbook_process.poll() is not None:
+                    break
 
-        # Playbook finished, kill tail and read final output directly from log file
+        # Give tail a moment to catch any final lines
+        time.sleep(0.3)
+
+        # Read any remaining lines
+        for _ in range(10):  # Read up to 10 more lines
+            line = tail_process.stdout.readline()
+            if not line:
+                break
+            output_queue.put(line)
+
+        # Kill tail process
         tail_process.terminate()
         tail_process.wait(timeout=1)
-
-        # Read any remaining lines directly from log file
-        time.sleep(0.2)  # Brief pause to let file writes flush
-        with open(log_file, 'r') as final_read:
-            # Skip to end of what we've already sent
-            all_lines = final_read.readlines()
-            # Just send the last few lines we might have missed
-            for line in all_lines[-10:]:
-                output_queue.put(line)
 
         # Wait for playbook to complete
         playbook_process.wait()
