@@ -25,7 +25,7 @@
   - name: Add bastion host to inventory
     ansible.builtin.add_host:
       name: "bastion"
-      ansible_host: "{{ bastion_hostname }}"
+      ansible_host: "{{ bastion_public_hostname }}"
       ansible_user: "{{ bastion_ssh_user_name }}"
       ansible_ssh_pass: "{{ bastion_ssh_password }}"
       ansible_port: "{{ bastion_ssh_port }}"
