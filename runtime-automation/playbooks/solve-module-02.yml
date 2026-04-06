@@ -67,6 +67,7 @@
     # STEP 0: Reset Module 2 (reset-module-2.sh)
     ###########################################
     - name: "STEP 0: Reset Module 2"
+      delegate_to: bastion
       block:
         - name: "Step 1: Reverting Tekton Chains configuration"
           ansible.builtin.debug:
@@ -624,6 +625,7 @@
     # STEP 1: Install RHTAS (install-rhtas.sh)
     ###########################################
     - name: "STEP 1: Install RHTAS"
+      delegate_to: bastion
       block:
         - name: Display RHTAS installation start
           ansible.builtin.debug:
@@ -1128,6 +1130,7 @@
     # STEP 2: Test Image Signing (test-image-signing.sh)
     ###########################################
     - name: "STEP 2: Test Image Signing"
+      delegate_to: bastion
       block:
         - name: Display test start
           ansible.builtin.debug:
