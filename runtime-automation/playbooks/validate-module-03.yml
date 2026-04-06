@@ -12,6 +12,28 @@
     developer_username: "{{ user }}"
 
   tasks:
+  - name: Add bastion host to inventory
+    ansible.builtin.add_host:
+      name: "bastion"
+      ansible_host: "{{ bastion_public_hostname }}"
+      ansible_user: "{{ bastion_ssh_user_name }}"
+      ansible_ssh_pass: "{{ bastion_ssh_password }}"
+      ansible_port: "{{ bastion_ssh_port }}"
+      ansible_ssh_common_args: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+
+  - name: Login to OpenShift and get token
+    ansible.builtin.shell:
+      cmd: |
+        oc login {{ openshift_api_server_url }} -u {{ openshift_cluster_admin_username }} -p {{ openshift_cluster_admin_password }} --insecure-skip-tls-verify=true
+        oc whoami -t
+    delegate_to: bastion
+    register: oc_login_result
+    changed_when: false
+
+  - name: Set OpenShift token fact
+    ansible.builtin.set_fact:
+      openshift_token: "{{ oc_login_result.stdout_lines[-1] }}"
+
   - name: Initialize validation tracking
     ansible.builtin.set_fact:
       validation_failed: 0
@@ -33,7 +55,7 @@
       ansible.builtin.command:
         cmd: "oc get secret keycloak-initial-admin -n {{ keycloak_namespace }} -o jsonpath='{.data.username}'"
       register: keycloak_admin_user_b64
-      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      delegate_to: bastion
       changed_when: false
       failed_when: false
       no_log: true
@@ -42,7 +64,7 @@
       ansible.builtin.command:
         cmd: "oc get secret keycloak-initial-admin -n {{ keycloak_namespace }} -o jsonpath='{.data.password}'"
       register: keycloak_admin_password_b64
-      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      delegate_to: bastion
       changed_when: false
       failed_when: false
       no_log: true
@@ -71,7 +93,7 @@
           grant_type: password
         return_content: true
       register: admin_token_result
-      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      delegate_to: bastion
       changed_when: false
       failed_when: false
       no_log: true
@@ -110,7 +132,7 @@
           Authorization: "Bearer {{ admin_token }}"
         return_content: true
       register: user_exists_check
-      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      delegate_to: bastion
       changed_when: false
       failed_when: false
       no_log: true
@@ -143,7 +165,7 @@
           Authorization: "Bearer {{ admin_token }}"
         return_content: true
       register: user_data_check
-      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      delegate_to: bastion
       changed_when: false
       failed_when: false
       no_log: true
@@ -251,7 +273,7 @@
           Authorization: "Bearer {{ admin_token }}"
         return_content: true
       register: user_groups_check
-      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      delegate_to: bastion
       changed_when: false
       failed_when: false
       no_log: true
@@ -342,7 +364,7 @@
       ansible.builtin.command:
         cmd: "oc get configmap tas-git-config -n {{ devspaces_namespace }}"
       register: configmap_check
-      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      delegate_to: bastion
       changed_when: false
       failed_when: false
       no_log: true
@@ -356,7 +378,7 @@
       ansible.builtin.command:
         cmd: "oc get configmap tas-git-config -n {{ devspaces_namespace }} -o jsonpath='{.data.TAS_FULCIO_URL}'"
       register: tas_fulcio_url_check
-      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      delegate_to: bastion
       changed_when: false
       failed_when: false
       no_log: true
@@ -388,7 +410,7 @@
       ansible.builtin.command:
         cmd: "oc get configmap tas-git-config -n {{ devspaces_namespace }} -o jsonpath='{.data.TAS_REKOR_URL}'"
       register: tas_rekor_url_check
-      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      delegate_to: bastion
       changed_when: false
       failed_when: false
       no_log: true
@@ -419,7 +441,7 @@
       ansible.builtin.command:
         cmd: "oc get configmap tas-git-config -n {{ devspaces_namespace }} -o jsonpath='{.data.TAS_ISSUER_URL}'"
       register: tas_issuer_url_check
-      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      delegate_to: bastion
       changed_when: false
       failed_when: false
       no_log: true
@@ -450,7 +472,7 @@
       ansible.builtin.command:
         cmd: "oc get configmap tas-git-config -n {{ devspaces_namespace }} -o jsonpath='{.data.TAS_CLIENT_ID}'"
       register: tas_client_id_check
-      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      delegate_to: bastion
       changed_when: false
       failed_when: false
       no_log: true
@@ -481,7 +503,7 @@
       ansible.builtin.command:
         cmd: "oc get configmap tas-git-config -n {{ devspaces_namespace }} -o jsonpath='{.metadata.annotations.controller\\.devfile\\.io/mount-as}'"
       register: cm_annotation_check
-      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      delegate_to: bastion
       changed_when: false
       failed_when: false
       no_log: true
@@ -532,7 +554,7 @@
       ansible.builtin.command:
         cmd: "oc get secret tpa-secret -n {{ app_ci_namespace }}"
       register: tpa_secret_check
-      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      delegate_to: bastion
       changed_when: false
       failed_when: false
       no_log: true
@@ -546,7 +568,7 @@
       ansible.builtin.command:
         cmd: "oc get secret tpa-secret -n {{ app_ci_namespace }} -o jsonpath='{.data}'"
       register: tpa_secret_data_check
-      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      delegate_to: bastion
       changed_when: false
       failed_when: false
       no_log: true
@@ -583,7 +605,7 @@
       ansible.builtin.command:
         cmd: "oc get secret gitlab-auth-secret -n {{ app_ci_namespace }}"
       register: gitlab_secret_check
-      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      delegate_to: bastion
       changed_when: false
       failed_when: false
       no_log: true
@@ -597,7 +619,7 @@
       ansible.builtin.command:
         cmd: "oc get secret gitlab-auth-secret -n {{ app_ci_namespace }} -o jsonpath='{.data}'"
       register: gitlab_secret_data_check
-      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      delegate_to: bastion
       changed_when: false
       failed_when: false
       no_log: true
