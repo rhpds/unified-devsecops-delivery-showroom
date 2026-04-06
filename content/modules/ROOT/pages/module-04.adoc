@@ -1,6 +1,8 @@
 = Module 4: Enforce Policy and Promote Safely
 
 include::common/send-to.adoc[]
+include::common/solve-button.adoc[]
+include::common/validate-button.adoc[]
 
 == Introduction
 
@@ -763,5 +765,15 @@ ec validate image \
 * For consultants, this module provides a reusable pattern for embedding policy enforcement and release governance into real-world CI and CD pipelines, without introducing friction or slowing development teams down.
 * For technical sellers, this completes the workshop story: *Red Hat Advanced Developer Suite (RHADS)* prevents unsafe releases and turns every deployment into a controlled, compliant, and predictable outcome.
 * The key takeaway is this: with RHADS, developer velocity is preserved because trust is verified automatically, and enterprise risk is reduced because policy-driven guardrails ensure only trusted, compliant artifacts are promoted to production.
+
+---
+
+== Module 4: Automation
+
+=== Solve Module 4
+solve-button::module-04[]
+
+=== Validate Module 4
+validate-button::module-04[]
 
 ---

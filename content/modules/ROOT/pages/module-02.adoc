@@ -1,6 +1,8 @@
 = Module 2: Sign and Verify All Artifacts With *RHTAS*
 
 include::common/send-to.adoc[]
+include::common/solve-button.adoc[]
+include::common/validate-button.adoc[]
 
 == Introduction 
 
@@ -794,6 +796,18 @@ oc adm policy remove-scc-from-user anyuid -z chains-signing-image-tester -n tssc
 oc adm policy remove-scc-from-user privileged -z chains-signing-image-tester -n tssc-app-ci
 oc delete sa chains-signing-image-tester -n tssc-app-ci
 ----
+
+---
+
+== Module 2: Automation
+
+=== Solve Module 2
+solve-button::module-02[]
+
+=== Validate Module 2
+validate-button::module-02[]
+
+---
 
 ===  Module 2: Summary
 

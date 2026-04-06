@@ -30,7 +30,7 @@
 
     - name: Add bastion host to inventory
       ansible.builtin.add_host:
-        name: "{{ bastion_hostname }}"
+        name: "bastion"
         ansible_host: "{{ bastion_hostname }}"
         ansible_user: "{{ bastion_ssh_user_name }}"
         ansible_ssh_pass: "{{ bastion_ssh_password }}"
@@ -41,7 +41,7 @@
     # STEP 0: Reset Module 1 (reset-module-1.sh)
     ###########################################
     - name: "STEP 0: Reset Module 1"
-      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      delegate_to: "bastion"
       block:
         - name: Check if RHTPA instance exists
           ansible.builtin.command:
@@ -168,7 +168,7 @@
     # STEP 1: Install RHTPA (install-rhtpa.sh)
     ###########################################
     - name: "STEP 1: Install RHTPA"
-      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      delegate_to: "bastion"
       block:
         - name: Import TPA Realm to Keycloak
           ansible.builtin.shell:
@@ -243,7 +243,7 @@
     # STEP 2: Upload SBOM (upload-sbom.sh)
     ###########################################
     - name: "STEP 2: Upload SBOM"
-      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      delegate_to: "bastion"
       block:
         - name: Check TPA endpoint availability
           ansible.builtin.shell:

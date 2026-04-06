@@ -1,6 +1,8 @@
 = Module 3: Developer workflow without developer friction
 
 include::common/send-to.adoc[]
+include::common/solve-button.adoc[]
+include::common/validate-button.adoc[]
 
 == Introduction
 
@@ -808,5 +810,15 @@ For consultants, this module demonstrates how to design and implement an Interna
 For technical sellers, this provides a concrete way to address common customer challenges — tool sprawl, inconsistent onboarding, and security friction — by positioning Red Hat Developer Hub as the foundation for platform engineering, not just another developer tool. It shows how security, compliance, and productivity are delivered together, which is often the deciding factor in winning the deal.
 
 In the next module, you will switch personas and act as a developer, consuming the platform through a Software Template (Golden Path) to build and deploy an application.
+
+---
+
+== Module 3: Automation
+
+=== Solve Module 3
+solve-button::module-03[]
+
+=== Validate Module 3
+validate-button::module-03[]
 
 ---
