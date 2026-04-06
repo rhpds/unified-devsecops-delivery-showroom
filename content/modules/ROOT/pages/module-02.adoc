@@ -811,10 +811,13 @@ oc delete sa chains-signing-image-tester -n tssc-app-ci
 == Module 2: Automation
 
 === Solve Module 2
-:module-name: module-02
-include::common/solve-button.adoc[]
+++++
+<div class="solve-button-placeholder" data-module="module-02"></div>
+++++
 
 === Validate Module 2
-include::common/validate-button.adoc[]
+++++
+<div class="validate-button-placeholder" data-module="module-02"></div>
+++++
 
 ---
