@@ -5,9 +5,9 @@
   vars:
     # Environment variables matching shell script
     cluster_domain: "{{ openshift_cluster_ingress_domain }}"
-    acs_namespace: "{{ rhpds_build_secured_dev_workflows_lab_scripts_acs_namespace }}"
-    app_ci_namespace: "{{ rhpds_build_secured_dev_workflows_lab_scripts_app_ci_namespace }}"
-    quay_namespace: "{{ rhpds_build_secured_dev_workflows_lab_scripts_quay_namespace }}"
+    acs_namespace: "stackrox"
+    app_ci_namespace: "tssc-app-ci"
+    quay_namespace: "quay-enterprise"
     # Hard-coded integration name matching script line 18
     acs_integration_name: "acs_quay"
 
@@ -39,7 +39,7 @@
       ansible.builtin.command:
         cmd: "oc get secret rox-api-token -n {{ app_ci_namespace }}"
       register: token_secret_check
-      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      delegate_to: bastion
       changed_when: false
       failed_when: false
       no_log: true
@@ -48,7 +48,7 @@
       ansible.builtin.command:
         cmd: "oc get secret rox-api-token -n {{ app_ci_namespace }} -o jsonpath='{.data.rox-api-token}'"
       register: token_b64
-      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      delegate_to: bastion
       changed_when: false
       failed_when: false
       no_log: true
@@ -97,7 +97,7 @@
       ansible.builtin.command:
         cmd: "oc get route central -n {{ acs_namespace }} -o jsonpath='{.spec.host}'"
       register: acs_central_route
-      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      delegate_to: bastion
       changed_when: false
       failed_when: false
       no_log: true
@@ -115,7 +115,7 @@
         status_code: [200, 302, 401]
         timeout: 10
       register: acs_central_check
-      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      delegate_to: bastion
       changed_when: false
       failed_when: false
       no_log: true
@@ -170,7 +170,7 @@
           Authorization: "Bearer {{ acs_api_token }}"
         return_content: true
       register: integrations_response
-      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      delegate_to: bastion
       changed_when: false
       failed_when: false
       no_log: true
@@ -202,7 +202,7 @@
           Authorization: "Bearer {{ acs_api_token }}"
         return_content: true
       register: integration_details
-      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      delegate_to: bastion
       changed_when: false
       failed_when: false
       no_log: true
@@ -274,7 +274,7 @@
       ansible.builtin.command:
         cmd: command -v roxctl
       register: roxctl_check
-      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      delegate_to: bastion
       changed_when: false
       failed_when: false
       no_log: true
@@ -283,7 +283,7 @@
       ansible.builtin.command:
         cmd: roxctl version
       register: roxctl_version
-      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      delegate_to: bastion
       changed_when: false
       failed_when: false
       no_log: true
