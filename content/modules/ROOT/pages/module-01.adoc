@@ -618,13 +618,14 @@ image::rhtpa_vulnerabilities_complete.png[rhtpa_vulnerabilities_complete,align="
 
 If you would like to skip the manual steps above and automatically complete this module, click the button below:
 
-solve-button::module-01[]
+:module-name: module-01
+include::common/solve-button.adoc[]
 
 === Validate Module 1
 
 To verify that Module 1 has been completed successfully (either manually or via the solve button), click the button below:
 
-validate-button::module-01[]
+include::common/validate-button.adoc[]
 
 ---
 

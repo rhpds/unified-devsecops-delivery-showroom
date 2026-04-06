@@ -816,9 +816,10 @@ In the next module, you will switch personas and act as a developer, consuming t
 == Module 3: Automation
 
 === Solve Module 3
-solve-button::module-03[]
+:module-name: module-03
+include::common/solve-button.adoc[]
 
 === Validate Module 3
-validate-button::module-03[]
+include::common/validate-button.adoc[]
 
 ---

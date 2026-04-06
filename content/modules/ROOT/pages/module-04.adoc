@@ -771,9 +771,10 @@ ec validate image \
 == Module 4: Automation
 
 === Solve Module 4
-solve-button::module-04[]
+:module-name: module-04
+include::common/solve-button.adoc[]
 
 === Validate Module 4
-validate-button::module-04[]
+include::common/validate-button.adoc[]
 
 ---
