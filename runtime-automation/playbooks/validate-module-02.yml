@@ -171,19 +171,12 @@
         admin_token != '' and
         admin_token != 'null'
 
-    - name: Set client ID from response
-      ansible.builtin.set_fact:
-        tas_chains_client_id: "{{ (tas_chains_client_check.json | default([{}]))[0].id | default('') }}"
-      when: >
-        tas_chains_client_check.json is defined and
-        tas_chains_client_check.json | length > 0
-
     - name: Display client existence result
       ansible.builtin.debug:
         msg: "✓ PASS: {{ tas_client_id }} client exists in tas-chains realm"
       when: >
-        tas_chains_client_id is defined and
-        tas_chains_client_id != ''
+        tas_chains_client_check.json is defined and
+        tas_chains_client_check.json | length > 0
 
     - name: Get service account user email verification
       ansible.builtin.uri:
@@ -222,15 +215,15 @@
       ansible.builtin.set_fact:
         validation_failed: "{{ validation_failed | int + 1 }}"
       when: >
-        tas_chains_client_id is not defined or
-        tas_chains_client_id == '' or
+        tas_chains_client_check.json is not defined or
+        tas_chains_client_check.json | length == 0 or
         (service_account_check.json is defined and
          service_account_check.json.emailVerified | default(false) != true)
 
     - name: Display service account email verification result
       ansible.builtin.debug:
         msg: >-
-          {% if tas_chains_client_id is not defined or tas_chains_client_id == '' %}
+          {% if tas_chains_client_check.json is not defined or tas_chains_client_check.json | length == 0 %}
           ✗ FAIL: {{ tas_client_id }} client not found in tas-chains realm
           {% elif service_account_check.json is defined and service_account_check.json.emailVerified | default(false) == true %}
           ✓ PASS: Service account email is verified
