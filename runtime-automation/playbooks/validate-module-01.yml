@@ -3,16 +3,28 @@
   hosts: localhost
   gather_facts: false
   vars:
-    # Environment variables matching shell script
+    # Variables from user_data.yml (injected via -e @/user_data/user_data.yml)
     cluster_domain: "{{ openshift_cluster_ingress_domain }}"
-    keycloak_namespace: "{{ rhpds_build_secured_dev_workflows_lab_scripts_keycloak_namespace }}"
-    tpa_namespace: "{{ rhpds_build_secured_dev_workflows_lab_scripts_tpa_namespace }}"
-    tpa_realm: "{{ rhpds_build_secured_dev_workflows_lab_scripts_tpa_keycloak_realm }}"
-    tpa_cli_client_secret: "{{ rhpds_build_secured_dev_workflows_lab_scripts_tpa_cli_client_secret }}"
-    sbom_id: "{{ rhpds_build_secured_dev_workflows_lab_scripts_tpa_sbom_id }}"
-    keycloak_url: "https://sso.{{ openshift_cluster_ingress_domain }}"
+    guid: "{{ guid }}"
+    tpa_realm: "{{ tpa_realm }}"
+    tpa_cli_client_secret: "{{ tpa_cli_client_secret }}"
+    bastion_hostname: "{{ bastion_public_hostname }}"
+
+    # Static variables
+    keycloak_namespace: "tssc-keycloak"
+    tpa_namespace: "tssc-tpa"
+    keycloak_url: "https://sso.{{ cluster_domain }}"
+    sbom_id: "test-sbom"
 
   tasks:
+  - name: Add bastion host to inventory
+    ansible.builtin.add_host:
+      name: "bastion"
+      ansible_host: "{{ bastion_hostname }}"
+      ansible_user: "{{ bastion_ssh_user_name }}"
+      ansible_ssh_pass: "{{ bastion_ssh_password }}"
+      ansible_port: "{{ bastion_ssh_port }}"
+      ansible_ssh_common_args: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
   - name: Initialize validation tracking
     ansible.builtin.set_fact:
       validation_failed: 0
@@ -40,7 +52,7 @@
       ansible.builtin.command:
         cmd: "oc get keycloakrealmimport {{ tpa_realm }} -n {{ keycloak_namespace }}"
       register: realm_import_check
-      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      delegate_to: bastion
       changed_when: false
       failed_when: false
       no_log: true
@@ -49,7 +61,7 @@
       ansible.builtin.command:
         cmd: "oc get keycloakrealmimport {{ tpa_realm }} -n {{ keycloak_namespace }} -o jsonpath='{.status.conditions[?(@.type==\"Done\")].status}'"
       register: realm_status
-      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      delegate_to: bastion
       changed_when: false
       failed_when: false
       no_log: true
@@ -92,7 +104,7 @@
       ansible.builtin.command:
         cmd: "oc get secret tpa-realm-cli-clients -n {{ tpa_namespace }}"
       register: cli_secret_check
-      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      delegate_to: bastion
       changed_when: false
       failed_when: false
       no_log: true
@@ -130,7 +142,7 @@
       ansible.builtin.command:
         cmd: "oc get trustedprofileanalyzer trustedprofileanalyzer -n {{ tpa_namespace }}"
       register: tpa_instance_check
-      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      delegate_to: bastion
       changed_when: false
       failed_when: false
       no_log: true
@@ -144,7 +156,7 @@
       ansible.builtin.command:
         cmd: "oc get trustedprofileanalyzer trustedprofileanalyzer -n {{ tpa_namespace }} -o jsonpath='{.status.conditions[?(@.type==\"Deployed\")].status}'"
       register: tpa_deployed_status
-      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      delegate_to: bastion
       changed_when: false
       failed_when: false
       no_log: true
@@ -197,7 +209,7 @@
         status_code: [200, 302, 401]
         timeout: 10
       register: tpa_server_check
-      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      delegate_to: localhost
       changed_when: false
       failed_when: false
       no_log: true
@@ -238,7 +250,7 @@
         validate_certs: false
         return_content: true
       register: openid_config
-      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      delegate_to: localhost
       changed_when: false
       failed_when: false
       no_log: true
@@ -255,7 +267,7 @@
           client_secret: "{{ tpa_cli_client_secret }}"
         return_content: true
       register: oauth_token
-      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      delegate_to: localhost
       changed_when: false
       failed_when: false
       no_log: true
@@ -265,7 +277,7 @@
       ansible.builtin.command:
         cmd: "oc get route -l app.kubernetes.io/component=server -n {{ tpa_namespace }} -o jsonpath='{.items[0].spec.host}'"
       register: tpa_server_route
-      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      delegate_to: bastion
       changed_when: false
       failed_when: false
       no_log: true
@@ -283,7 +295,7 @@
           Authorization: "Bearer {{ oauth_token.json.access_token }}"
         return_content: true
       register: sbom_check
-      delegate_to: "{{ bastion_hostname | default('localhost') }}"
+      delegate_to: localhost
       changed_when: false
       failed_when: false
       no_log: true
