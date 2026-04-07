@@ -21,14 +21,6 @@
       ansible_port: "{{ bastion_ssh_port }}"
       ansible_ssh_common_args: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
 
-  - name: Login to OpenShift and get token
-    ansible.builtin.shell:
-      cmd: |
-        oc login {{ openshift_api_server_url }} -t {{
-          lookup('file', '/var/run/secrets/kubernetes.io/serviceaccount/token') }} --insecure-skip-tls-verify=true
-        oc whoami -t
-    delegate_to: bastion
-
   - name: Initialize validation tracking
     ansible.builtin.set_fact:
       validation_failed: 0

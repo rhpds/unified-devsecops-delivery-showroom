@@ -29,7 +29,7 @@
   module_defaults:
     group/kubernetes.core.k8s:
       host: "{{ openshift_api_server_url }}"
-      api_key: "{{ lookup('file', '/var/run/secrets/kubernetes.io/serviceaccount/token') }}"
+      api_key: "{{ (lookup('file', k8s_kubeconfig) | from_yaml).users[0].user.token }}"
       validate_certs: false
 
   tasks:
@@ -41,14 +41,6 @@
         ansible_ssh_pass: "{{ bastion_ssh_password }}"
         ansible_port: "{{ bastion_ssh_port }}"
         ansible_ssh_common_args: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
-
-    - name: Login to OpenShift and get token
-      ansible.builtin.shell:
-        cmd: |
-          oc login {{ openshift_api_server_url }} -t {{
-            lookup('file', '/var/run/secrets/kubernetes.io/serviceaccount/token') }} --insecure-skip-tls-verify=true
-          oc whoami -t
-      delegate_to: bastion
 
     - name: Display module information
       ansible.builtin.debug:
