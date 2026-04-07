@@ -645,16 +645,16 @@
         gitlab_url is defined and
         gitlab_username is defined
 
-    - name: Check GitOps charts/backstage-values.yaml file
+    - name: Check GitOps charts/backstage/backstage-values.yaml file
       ansible.builtin.shell:
         cmd: |
           cd /tmp/gitops-backstage
           # Check lines 172-175 are commented
-          lines_172_175_commented=$(sed -n '172,175p' charts/backstage-values.yaml | grep -c '^#')
+          lines_172_175_commented=$(sed -n '172,175p' charts/backstage/backstage-values.yaml | grep -c '^#')
           # Check remaining lines (not 172-175) are NOT commented
-          total_lines=$(wc -l < charts/backstage-values.yaml)
+          total_lines=$(wc -l < charts/backstage/backstage-values.yaml)
           remaining_lines=$((total_lines - 4))
-          uncommented_remaining=$(sed -n '1,171p;176,$p' charts/backstage-values.yaml | grep -cv '^#')
+          uncommented_remaining=$(sed -n '1,171p;176,$p' charts/backstage/backstage-values.yaml | grep -cv '^#')
 
           if [ "$lines_172_175_commented" -eq 4 ] && [ "$uncommented_remaining" -eq "$remaining_lines" ]; then
             echo "valid"
@@ -675,11 +675,11 @@
       ansible.builtin.debug:
         msg: >-
           {% if gitops_file_valid is defined and gitops_file_valid == true %}
-          ✓ PASS: GitOps charts/backstage-values.yaml correctly configured (lines 172-175 commented, others uncommented)
+          ✓ PASS: GitOps charts/backstage/backstage-values.yaml correctly configured (lines 172-175 commented, others uncommented)
           {% elif gitops_file_check.stdout is defined and gitops_file_check.stdout != '' %}
-          ✗ FAIL: GitOps charts/backstage-values.yaml not correctly configured ({{ gitops_file_check.stdout }})
+          ✗ FAIL: GitOps charts/backstage/backstage-values.yaml not correctly configured ({{ gitops_file_check.stdout }})
           {% else %}
-          ✗ FAIL: Could not check GitOps charts/backstage-values.yaml file
+          ✗ FAIL: Could not check GitOps charts/backstage/backstage-values.yaml file
           {% endif %}
 
     - name: Clone RHDH devfile repository
@@ -695,12 +695,12 @@
         gitlab_url is defined and
         gitlab_username is defined
 
-    - name: Check RHDH .devfile file for comments
+    - name: Check RHDH .devfile.yaml file for comments
       ansible.builtin.shell:
         cmd: |
           cd /tmp/rhdh-devfile
           # Count lines that start with # (excluding empty lines)
-          comment_count=$(grep -c '^#' .devfile || echo "0")
+          comment_count=$(grep -c '^#' scaffolder-templates/quarkus-stssc-template/skeleton/.devfile.yaml || echo "0")
 
           if [ "$comment_count" -eq 0 ]; then
             echo "valid"
@@ -721,11 +721,11 @@
       ansible.builtin.debug:
         msg: >-
           {% if devfile_file_valid is defined and devfile_file_valid == true %}
-          ✓ PASS: RHDH .devfile has no comment markers
+          ✓ PASS: RHDH .devfile.yaml has no comment markers
           {% elif devfile_file_check.stdout is defined and devfile_file_check.stdout != '' %}
-          ✗ FAIL: RHDH .devfile contains comment markers ({{ devfile_file_check.stdout }})
+          ✗ FAIL: RHDH .devfile.yaml contains comment markers ({{ devfile_file_check.stdout }})
           {% else %}
-          ✗ FAIL: Could not check RHDH .devfile file
+          ✗ FAIL: Could not check RHDH .devfile.yaml file
           {% endif %}
 
     - name: Validate GitOps and RHDH file configurations
