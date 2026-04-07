@@ -640,30 +640,31 @@
           - "Check 5: GitOps Repository Commits"
           - "-----------------------------------"
 
-    - name: Get GitOps backstage commit message
-      ansible.builtin.uri:
-        url: "{{ gitlab_url }}/api/v4/projects/{{ gitlab_username }}%2Fgitops-backstage/repository/commits/{{ gitops_backstage_commit_id }}"
-        method: GET
-        validate_certs: false
-        headers:
-          PRIVATE-TOKEN: "{{ gitlab_password }}"
-        return_content: true
-      register: gitops_commit_check
+    - name: Clone GitOps backstage repository
+      ansible.builtin.shell:
+        cmd: |
+          cd /tmp
+          rm -rf gitops-backstage
+          git clone {{ gitlab_url }}/{{ gitlab_username }}/gitops-backstage.git
       delegate_to: bastion
       changed_when: false
       failed_when: false
       when: >
         gitlab_url is defined and
-        gitlab_username is defined and
-        gitlab_password is defined and
-        gitops_backstage_commit_id is defined
+        gitlab_username is defined
+
+    - name: Get GitOps backstage last commit message
+      ansible.builtin.shell:
+        cmd: cd /tmp/gitops-backstage && git log -1 --pretty=%B
+      register: gitops_commit_check
+      delegate_to: bastion
+      changed_when: false
+      failed_when: false
 
     - name: Set GitOps backstage commit message
       ansible.builtin.set_fact:
-        gitops_commit_message: "{{ gitops_commit_check.json.message | default('') | trim }}"
-      when: >
-        gitops_commit_check.json is defined and
-        gitops_commit_check.json.message is defined
+        gitops_commit_message: "{{ gitops_commit_check.stdout | default('') | trim }}"
+      when: gitops_commit_check.rc == 0
 
     - name: Check if GitOps backstage commit message contains required text
       ansible.builtin.set_fact:
@@ -675,36 +676,37 @@
         msg: >-
           {% if gitops_commit_valid is defined and gitops_commit_valid == true %}
           ✓ PASS: GitOps backstage commit message contains required text
-          {% elif gitops_commit_message is defined %}
+          {% elif gitops_commit_message is defined and gitops_commit_message != '' %}
           ✗ FAIL: GitOps backstage commit does not contain 'Uncommented all lines in backstage-values.yaml' (message: {{ gitops_commit_message }})
           {% else %}
           ✗ FAIL: Could not retrieve GitOps backstage commit message
           {% endif %}
 
-    - name: Get RHDH devfile commit message
-      ansible.builtin.uri:
-        url: "{{ gitlab_url }}/api/v4/projects/{{ gitlab_username }}%2Frhdh-devfile/repository/commits/{{ gitops_backstage_commit_id }}"
-        method: GET
-        validate_certs: false
-        headers:
-          PRIVATE-TOKEN: "{{ gitlab_password }}"
-        return_content: true
-      register: devfile_commit_check
+    - name: Clone RHDH devfile repository
+      ansible.builtin.shell:
+        cmd: |
+          cd /tmp
+          rm -rf rhdh-devfile
+          git clone {{ gitlab_url }}/{{ gitlab_username }}/rhdh-devfile.git
       delegate_to: bastion
       changed_when: false
       failed_when: false
       when: >
         gitlab_url is defined and
-        gitlab_username is defined and
-        gitlab_password is defined and
-        gitops_backstage_commit_id is defined
+        gitlab_username is defined
+
+    - name: Get RHDH devfile last commit message
+      ansible.builtin.shell:
+        cmd: cd /tmp/rhdh-devfile && git log -1 --pretty=%B
+      register: devfile_commit_check
+      delegate_to: bastion
+      changed_when: false
+      failed_when: false
 
     - name: Set RHDH devfile commit message
       ansible.builtin.set_fact:
-        devfile_commit_message: "{{ devfile_commit_check.json.message | default('') | trim }}"
-      when: >
-        devfile_commit_check.json is defined and
-        devfile_commit_check.json.message is defined
+        devfile_commit_message: "{{ devfile_commit_check.stdout | default('') | trim }}"
+      when: devfile_commit_check.rc == 0
 
     - name: Check if RHDH devfile commit message contains required text
       ansible.builtin.set_fact:
@@ -716,7 +718,7 @@
         msg: >-
           {% if devfile_commit_valid is defined and devfile_commit_valid == true %}
           ✓ PASS: RHDH devfile commit message contains required text
-          {% elif devfile_commit_message is defined %}
+          {% elif devfile_commit_message is defined and devfile_commit_message != '' %}
           ✗ FAIL: RHDH devfile commit does not contain 'Uncommented all lines in devfile.yaml' (message: {{ devfile_commit_message }})
           {% else %}
           ✗ FAIL: Could not retrieve RHDH devfile commit message
