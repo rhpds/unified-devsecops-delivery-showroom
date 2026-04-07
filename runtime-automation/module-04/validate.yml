@@ -9,7 +9,6 @@
     app_ci_namespace: "tssc-app-ci"
     # Hard-coded integration name matching script line 18
     acs_integration_name: "acs_quay"
-    job_info_dir: /tmp/job-info
 
   tasks:
   - name: Add bastion host to inventory
