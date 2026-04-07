@@ -16,6 +16,7 @@
     quay_org: "tssc"
     quay_repo: "tekton-chains-test"
     image_tag: "latest"
+    job_info_dir: "{{ job_info_dir | default('/tmp') }}"
 
   module_defaults:
     group/kubernetes.core.k8s:
