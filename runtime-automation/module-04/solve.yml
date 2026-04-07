@@ -16,7 +16,6 @@
     quay_org: "tssc"
     quay_repo: "tekton-chains-test"
     image_tag: "latest"
-    job_info_dir: "{{ job_info_dir | default('/tmp') }}"
 
   module_defaults:
     group/kubernetes.core.k8s:
@@ -211,7 +210,7 @@
 
         - name: Run roxctl image scan
           ansible.builtin.shell:
-            cmd: roxctl --insecure-skip-tls-verify image scan --image="{{ test_image }}" > {{ job_info_dir }}/roxctl-scan.txt 2>&1
+            cmd: roxctl --insecure-skip-tls-verify image scan --image="{{ test_image }}" > {{ job_info_dir | default('/tmp') }}/roxctl-scan.txt 2>&1
           environment:
             ROX_API_TOKEN: "{{ rox_token.stdout }}"
             ROX_ENDPOINT: "{{ rox_endpoint }}"
@@ -221,11 +220,11 @@
 
         - name: Display scan summary
           ansible.builtin.debug:
-            msg: "✓ Image scan completed (output saved to {{ job_info_dir }}/roxctl-scan.txt)"
+            msg: "✓ Image scan completed (output saved to {{ job_info_dir | default('/tmp') }}/roxctl-scan.txt)"
 
         - name: Run roxctl image check
           ansible.builtin.shell:
-            cmd: roxctl --insecure-skip-tls-verify image check --image="{{ test_image }}" > {{ job_info_dir }}/roxctl-check.txt 2>&1
+            cmd: roxctl --insecure-skip-tls-verify image check --image="{{ test_image }}" > {{ job_info_dir | default('/tmp') }}/roxctl-check.txt 2>&1
           environment:
             ROX_API_TOKEN: "{{ rox_token.stdout }}"
             ROX_ENDPOINT: "{{ rox_endpoint }}"
@@ -235,7 +234,7 @@
 
         - name: Display policy check summary
           ansible.builtin.debug:
-            msg: "✓ Policy check completed (output saved to {{ job_info_dir }}/roxctl-check.txt)"
+            msg: "✓ Policy check completed (output saved to {{ job_info_dir | default('/tmp') }}/roxctl-check.txt)"
 
         - name: Image scanning test complete
           ansible.builtin.debug:
