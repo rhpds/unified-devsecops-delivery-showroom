@@ -700,12 +700,15 @@
         cmd: |
           cd /tmp/rhdh-devfile
           # Count lines that start with # (excluding empty lines)
-          comment_count=$(grep -c '^#' scaffolder-templates/quarkus-stssc-template/skeleton/.devfile.yaml || echo "0")
-
-          if [ "$comment_count" -eq 0 ]; then
-            echo "valid"
+          if [ -f scaffolder-templates/quarkus-stssc-template/skeleton/.devfile.yaml ]; then
+            comment_count=$(grep -c '^#' scaffolder-templates/quarkus-stssc-template/skeleton/.devfile.yaml || echo "0")
+            if [ "$comment_count" -eq 0 ]; then
+              echo "valid"
+            else
+              echo "invalid:found_${comment_count}_comments"
+            fi
           else
-            echo "invalid:found_$comment_count\_comments"
+            echo "file_not_found"
           fi
       register: devfile_file_check
       delegate_to: bastion
@@ -722,6 +725,8 @@
         msg: >-
           {% if devfile_file_valid is defined and devfile_file_valid == true %}
           ✓ PASS: RHDH .devfile.yaml has no comment markers
+          {% elif devfile_file_check.stdout is defined and 'file_not_found' in devfile_file_check.stdout %}
+          ✗ FAIL: RHDH .devfile.yaml file not found
           {% elif devfile_file_check.stdout is defined and devfile_file_check.stdout != '' %}
           ✗ FAIL: RHDH .devfile.yaml contains comment markers ({{ devfile_file_check.stdout }})
           {% else %}
