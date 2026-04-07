@@ -210,7 +210,7 @@
 
         - name: Run roxctl image scan
           ansible.builtin.shell:
-            cmd: roxctl --insecure-skip-tls-verify image scan --image="{{ test_image }}"
+            cmd: roxctl --insecure-skip-tls-verify image scan --image="{{ test_image }}" > {{ job_info_dir }}/roxctl-scan.txt 2>&1
           environment:
             ROX_API_TOKEN: "{{ rox_token.stdout }}"
             ROX_ENDPOINT: "{{ rox_endpoint }}"
@@ -218,13 +218,13 @@
           failed_when: false  # Script uses || true
           register: scan_result
 
-        - name: Display scan results
+        - name: Display scan summary
           ansible.builtin.debug:
-            msg: "{{ scan_result.stdout_lines }}"
+            msg: "✓ Image scan completed (output saved to {{ job_info_dir }}/roxctl-scan.txt)"
 
         - name: Run roxctl image check
           ansible.builtin.shell:
-            cmd: roxctl --insecure-skip-tls-verify image check --image="{{ test_image }}"
+            cmd: roxctl --insecure-skip-tls-verify image check --image="{{ test_image }}" > {{ job_info_dir }}/roxctl-check.txt 2>&1
           environment:
             ROX_API_TOKEN: "{{ rox_token.stdout }}"
             ROX_ENDPOINT: "{{ rox_endpoint }}"
@@ -232,9 +232,9 @@
           failed_when: false  # Script uses || true
           register: check_result
 
-        - name: Display policy check results
+        - name: Display policy check summary
           ansible.builtin.debug:
-            msg: "{{ check_result.stdout_lines }}"
+            msg: "✓ Policy check completed (output saved to {{ job_info_dir }}/roxctl-check.txt)"
 
         - name: Image scanning test complete
           ansible.builtin.debug:
