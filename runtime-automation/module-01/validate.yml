@@ -374,7 +374,8 @@
           - ""
       when: validation_failed | int > 0
 
-    - name: Fail playbook if validation failed
-      ansible.builtin.fail:
-        msg: "Validation failed with {{ validation_failed }} error(s)"
-      when: validation_failed | int > 0
+    - name: Report validation result to runner
+      validation_check:
+        check: "{{ validation_failed | int == 0 }}"
+        pass_msg: "✓ Module validation passed"
+        error_msg: "✗ Module validation FAILED with {{ validation_failed }} error(s). Review the output above."
