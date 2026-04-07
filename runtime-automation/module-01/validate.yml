@@ -70,7 +70,7 @@
     - name: Get TPA Realm import status
       ansible.builtin.set_fact:
         realm_status:
-          stdout: "{{ realm_import_check.resources[0].status.conditions | selectattr('type', 'equalto', 'Done') | map(attribute='status') | first | default('Unknown') }}"
+          stdout: "{{ realm_import_check.resources[0].status.conditions | selectattr('type', 'equalto', 'Done') | map(attribute='status') | first | default('Unknown') | trim }}"
       when: realm_import_check.resources | length > 0
 
     - name: Validate TPA Realm import status
@@ -78,15 +78,15 @@
         validation_failed: "{{ validation_failed | int + 1 }}"
       when: >
         realm_import_check.resources | length == 0 or
-        (realm_status.stdout | default('Unknown')) != 'True'
+        (realm_status.stdout | default('Unknown') | trim) != 'True'
 
     - name: Display TPA Realm import result
       ansible.builtin.debug:
         msg: >-
-          {% if realm_import_check.resources | length > 0 and realm_status.stdout == 'True' %}
+          {% if realm_import_check.resources | length > 0 and realm_status.stdout | trim == 'True' %}
           ✓ PASS: TPA Realm imported successfully
           {% elif realm_import_check.resources | length > 0 %}
-          ✗ FAIL: TPA Realm import exists but status is: {{ realm_status.stdout | default('Unknown') }}
+          ✗ FAIL: TPA Realm import exists but status is: {{ realm_status.stdout | default('Unknown') | trim }}
           {% else %}
           ✗ FAIL: TPA Realm import not found
           {% endif %}
