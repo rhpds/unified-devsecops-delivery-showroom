@@ -701,7 +701,7 @@
           cd /tmp/rhdh-devfile
           # Count lines that start with # (excluding empty lines)
           if [ -f scaffolder-templates/quarkus-stssc-template/skeleton/.devfile.yaml ]; then
-            comment_count=$(grep -c '^#' scaffolder-templates/quarkus-stssc-template/skeleton/.devfile.yaml || echo "0")
+            comment_count=$(grep -c '^#' scaffolder-templates/quarkus-stssc-template/skeleton/.devfile.yaml || true)
             if [ "$comment_count" -eq 0 ]; then
               echo "valid"
             else
