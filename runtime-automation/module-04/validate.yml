@@ -333,7 +333,7 @@
           - "✗ VALIDATION FAILED"
           - ""
           - "Some checks did not pass. Please review the output above."
-          - "Run solve-module-4.sh to complete missing steps."
+          - "Run Solve Module 04 to complete missing steps."
           - ""
       when: validation_failed | int > 0
 

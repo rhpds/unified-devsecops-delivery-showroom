@@ -693,7 +693,7 @@
           - "✗ VALIDATION FAILED"
           - ""
           - "Some checks did not pass. Please review the output above."
-          - "Run solve-module-2.sh to complete missing steps."
+          - "Run Solve Module 02 to complete missing steps."
           - ""
       when: validation_failed | int > 0
 
