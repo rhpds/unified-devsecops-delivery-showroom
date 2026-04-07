@@ -637,7 +637,7 @@
         cmd: |
           cd /tmp
           rm -rf gitops-backstage
-          git clone {{ gitlab_url }}/{{ gitlab_username }}/gitops-backstage.git
+          git clone {{ gitlab_url }}/gitops/build-secured-dev-workflows-idp-gitops.git
       delegate_to: bastion
       changed_when: false
       failed_when: false
@@ -679,7 +679,7 @@
         cmd: |
           cd /tmp
           rm -rf rhdh-devfile
-          git clone {{ gitlab_url }}/{{ gitlab_username }}/rhdh-devfile.git
+          git clone {{ gitlab_url }}/rhdh/build-secured-dev-workflows-idp-configuration.git
       delegate_to: bastion
       changed_when: false
       failed_when: false
