@@ -545,17 +545,17 @@
 
     - name: Set transparency value
       ansible.builtin.set_fact:
-        transparency: "{{ transparency_check.stdout | default('') }}"
+        transparency: "{{ transparency_check.stdout | default('') | trim }}"
 
     - name: Validate transparency configuration
       ansible.builtin.set_fact:
         validation_failed: "{{ validation_failed | int + 1 }}"
-      when: transparency != 'true'
+      when: transparency | lower != 'true'
 
     - name: Display transparency result
       ansible.builtin.debug:
         msg: >-
-          {% if transparency == 'true' %}
+          {% if transparency | lower == 'true' %}
           ✓ PASS: Tekton Chains transparency is enabled
           {% else %}
           ✗ FAIL: Tekton Chains transparency is not enabled (value: {{ transparency }})
