@@ -649,12 +649,12 @@
       ansible.builtin.shell:
         cmd: |
           cd /tmp/gitops-backstage
-          # Check lines 172-175 are commented
-          lines_172_175_commented=$(sed -n '172,175p' charts/backstage/backstage-values.yaml | grep -c '^#')
+          # Check lines 172-175 are commented (with optional leading whitespace)
+          lines_172_175_commented=$(sed -n '172,175p' charts/backstage/backstage-values.yaml | grep -cE '^\s*#')
           # Check remaining lines (not 172-175) are NOT commented
           total_lines=$(wc -l < charts/backstage/backstage-values.yaml)
           remaining_lines=$((total_lines - 4))
-          uncommented_remaining=$(sed -n '1,171p;176,$p' charts/backstage/backstage-values.yaml | grep -cv '^#')
+          uncommented_remaining=$(sed -n '1,171p;176,$p' charts/backstage/backstage-values.yaml | grep -cvE '^\s*#')
 
           if [ "$lines_172_175_commented" -eq 4 ] && [ "$uncommented_remaining" -eq "$remaining_lines" ]; then
             echo "valid"
@@ -699,9 +699,9 @@
       ansible.builtin.shell:
         cmd: |
           cd /tmp/rhdh-devfile
-          # Count lines that start with # (excluding empty lines)
+          # Count lines that start with # (with optional leading whitespace)
           if [ -f scaffolder-templates/quarkus-stssc-template/skeleton/.devfile.yaml ]; then
-            comment_count=$(grep -c '^#' scaffolder-templates/quarkus-stssc-template/skeleton/.devfile.yaml || true)
+            comment_count=$(grep -cE '^\s*#' scaffolder-templates/quarkus-stssc-template/skeleton/.devfile.yaml || true)
             if [ "$comment_count" -eq 0 ]; then
               echo "valid"
             else
