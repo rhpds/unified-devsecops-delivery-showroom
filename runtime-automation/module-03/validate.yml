@@ -622,15 +622,15 @@
         msg: ""
 
   #######################################
-  # Check 5: GitOps Repository Commits
+  # Check 5: GitOps Repository File Configuration
   #######################################
-  - name: "Check 5: GitOps Repository Commits"
+  - name: "Check 5: GitOps Repository File Configuration"
     block:
     - name: Display check header
       ansible.builtin.debug:
         msg:
-          - "Check 5: GitOps Repository Commits"
-          - "-----------------------------------"
+          - "Check 5: GitOps Repository File Configuration"
+          - "---------------------------------------------"
 
     - name: Clone GitOps backstage repository
       ansible.builtin.shell:
@@ -645,33 +645,41 @@
         gitlab_url is defined and
         gitlab_username is defined
 
-    - name: Get GitOps backstage last commit message
+    - name: Check GitOps charts/backstage-values.yaml file
       ansible.builtin.shell:
-        cmd: cd /tmp/gitops-backstage && git log -1 --pretty=%B
-      register: gitops_commit_check
+        cmd: |
+          cd /tmp/gitops-backstage
+          # Check lines 172-175 are commented
+          lines_172_175_commented=$(sed -n '172,175p' charts/backstage-values.yaml | grep -c '^#')
+          # Check remaining lines (not 172-175) are NOT commented
+          total_lines=$(wc -l < charts/backstage-values.yaml)
+          remaining_lines=$((total_lines - 4))
+          uncommented_remaining=$(sed -n '1,171p;176,$p' charts/backstage-values.yaml | grep -cv '^#')
+
+          if [ "$lines_172_175_commented" -eq 4 ] && [ "$uncommented_remaining" -eq "$remaining_lines" ]; then
+            echo "valid"
+          else
+            echo "invalid:lines_172_175=$lines_172_175_commented,uncommented_remaining=$uncommented_remaining/$remaining_lines"
+          fi
+      register: gitops_file_check
       delegate_to: bastion
       changed_when: false
       failed_when: false
 
-    - name: Set GitOps backstage commit message
+    - name: Set GitOps file validation result
       ansible.builtin.set_fact:
-        gitops_commit_message: "{{ gitops_commit_check.stdout | default('') | trim }}"
-      when: gitops_commit_check.rc == 0
+        gitops_file_valid: "{{ gitops_file_check.stdout | default('') | trim == 'valid' }}"
+      when: gitops_file_check.rc == 0
 
-    - name: Check if GitOps backstage commit message contains required text
-      ansible.builtin.set_fact:
-        gitops_commit_valid: "{{ 'Uncommented all lines in backstage-values.yaml' in gitops_commit_message }}"
-      when: gitops_commit_message is defined
-
-    - name: Display GitOps backstage commit result
+    - name: Display GitOps backstage file result
       ansible.builtin.debug:
         msg: >-
-          {% if gitops_commit_valid is defined and gitops_commit_valid == true %}
-          ✓ PASS: GitOps backstage commit message contains required text
-          {% elif gitops_commit_message is defined and gitops_commit_message != '' %}
-          ✗ FAIL: GitOps backstage commit does not contain 'Uncommented all lines in backstage-values.yaml' (message: {{ gitops_commit_message }})
+          {% if gitops_file_valid is defined and gitops_file_valid == true %}
+          ✓ PASS: GitOps charts/backstage-values.yaml correctly configured (lines 172-175 commented, others uncommented)
+          {% elif gitops_file_check.stdout is defined and gitops_file_check.stdout != '' %}
+          ✗ FAIL: GitOps charts/backstage-values.yaml not correctly configured ({{ gitops_file_check.stdout }})
           {% else %}
-          ✗ FAIL: Could not retrieve GitOps backstage commit message
+          ✗ FAIL: Could not check GitOps charts/backstage-values.yaml file
           {% endif %}
 
     - name: Clone RHDH devfile repository
@@ -687,41 +695,45 @@
         gitlab_url is defined and
         gitlab_username is defined
 
-    - name: Get RHDH devfile last commit message
+    - name: Check RHDH .devfile file for comments
       ansible.builtin.shell:
-        cmd: cd /tmp/rhdh-devfile && git log -1 --pretty=%B
-      register: devfile_commit_check
+        cmd: |
+          cd /tmp/rhdh-devfile
+          # Count lines that start with # (excluding empty lines)
+          comment_count=$(grep -c '^#' .devfile || echo "0")
+
+          if [ "$comment_count" -eq 0 ]; then
+            echo "valid"
+          else
+            echo "invalid:found_$comment_count\_comments"
+          fi
+      register: devfile_file_check
       delegate_to: bastion
       changed_when: false
       failed_when: false
 
-    - name: Set RHDH devfile commit message
+    - name: Set RHDH devfile validation result
       ansible.builtin.set_fact:
-        devfile_commit_message: "{{ devfile_commit_check.stdout | default('') | trim }}"
-      when: devfile_commit_check.rc == 0
+        devfile_file_valid: "{{ devfile_file_check.stdout | default('') | trim == 'valid' }}"
+      when: devfile_file_check.rc == 0
 
-    - name: Check if RHDH devfile commit message contains required text
-      ansible.builtin.set_fact:
-        devfile_commit_valid: "{{ 'Uncommented all lines in devfile.yaml' in devfile_commit_message }}"
-      when: devfile_commit_message is defined
-
-    - name: Display RHDH devfile commit result
+    - name: Display RHDH devfile file result
       ansible.builtin.debug:
         msg: >-
-          {% if devfile_commit_valid is defined and devfile_commit_valid == true %}
-          ✓ PASS: RHDH devfile commit message contains required text
-          {% elif devfile_commit_message is defined and devfile_commit_message != '' %}
-          ✗ FAIL: RHDH devfile commit does not contain 'Uncommented all lines in devfile.yaml' (message: {{ devfile_commit_message }})
+          {% if devfile_file_valid is defined and devfile_file_valid == true %}
+          ✓ PASS: RHDH .devfile has no comment markers
+          {% elif devfile_file_check.stdout is defined and devfile_file_check.stdout != '' %}
+          ✗ FAIL: RHDH .devfile contains comment markers ({{ devfile_file_check.stdout }})
           {% else %}
-          ✗ FAIL: Could not retrieve RHDH devfile commit message
+          ✗ FAIL: Could not check RHDH .devfile file
           {% endif %}
 
-    - name: Validate commit messages
+    - name: Validate GitOps and RHDH file configurations
       ansible.builtin.set_fact:
         validation_failed: "{{ validation_failed | int + 1 }}"
       when: >
-        (gitops_commit_valid is not defined or gitops_commit_valid != true) or
-        (devfile_commit_valid is not defined or devfile_commit_valid != true)
+        (gitops_file_valid is not defined or gitops_file_valid != true) or
+        (devfile_file_valid is not defined or devfile_file_valid != true)
 
     - name: Display blank line
       ansible.builtin.debug:
@@ -753,7 +765,7 @@
           - "  ✓ Pipeline secrets created:"
           - "    - tpa-secret (RHTPA authentication)"
           - "    - gitlab-auth-secret (GitLab authentication)"
-          - "  ✓ GitOps repositories updated with correct commits"
+          - "  ✓ GitOps repositories correctly configured"
           - ""
           - "The developer environment is fully configured!"
           - ""
