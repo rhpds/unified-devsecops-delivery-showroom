@@ -161,7 +161,7 @@
     - name: Get RHTPA instance deployed status
       ansible.builtin.set_fact:
         tpa_deployed_status:
-          stdout: "{{ tpa_instance_check.resources[0].status.conditions | selectattr('type', 'equalto', 'Deployed') | map(attribute='status') | first | default('Unknown') }}"
+          stdout: "{{ tpa_instance_check.resources[0].status.conditions | selectattr('type', 'equalto', 'Deployed') | map(attribute='status') | first | default('Unknown') | trim }}"
       when: tpa_instance_check.resources | length > 0
 
     - name: Validate RHTPA instance deployment
@@ -169,15 +169,15 @@
         validation_failed: "{{ validation_failed | int + 1 }}"
       when: >
         tpa_instance_check.resources | length == 0 or
-        (tpa_deployed_status.stdout | default('Unknown')) != 'True'
+        (tpa_deployed_status.stdout | default('Unknown') | trim) != 'True'
 
     - name: Display RHTPA instance deployment result
       ansible.builtin.debug:
         msg: >-
-          {% if tpa_instance_check.resources | length > 0 and tpa_deployed_status.stdout == 'True' %}
+          {% if tpa_instance_check.resources | length > 0 and tpa_deployed_status.stdout | trim == 'True' %}
           ✓ PASS: RHTPA instance is deployed
           {% elif tpa_instance_check.resources | length > 0 %}
-          ✗ FAIL: RHTPA instance deployed status is: {{ tpa_deployed_status.stdout | default('Unknown') }}
+          ✗ FAIL: RHTPA instance deployed status is: {{ tpa_deployed_status.stdout | default('Unknown') | trim }}
           {% else %}
           ✗ FAIL: RHTPA instance not found
           {% endif %}
