@@ -1,5 +1,9 @@
 = Module 4: Enforce Policy and Promote Safely
 
+include::common/send-to.adoc[]
+include::common/solve-button.adoc[]
+include::common/validate-button.adoc[]
+
 == Introduction
 
 * By this point in the workshop, you have established strong foundations of trust across the software supply chain. In Module 1, you made software composition visible by ingesting and analysing SBOMs, turning dependency risk from an assumption into evidence. In Module 2, you anchored trust in cryptographic provenance, ensuring every build artifact is signed, traceable, and verifiably produced by your CI pipeline. In Module 3, you reduced developer friction by centralising access to tools and security capabilities through *Red Hat Developer Hub*, using *GitOps* to configure authentication, plugins, and catalog discovery as a consistent, secure entry point for developers.
@@ -348,14 +352,14 @@ image::login_with_openshift.png[login_with_openshift,align="center"]
 . Provide your credentials follows:
 ** *Username*:
 +
-[source, role="execute"]
+[source, role="send-to"]
 ----
 user1
 ----
 +
 ** *Password*:
 +
-[source, role="execute", subs="attributes"]
+[source, role="send-to", subs="attributes"]
 ----
 {password}
 ----
@@ -375,14 +379,14 @@ image::devspaces_gitlab_login.png[devspaces_gitlab_login,align="center"]
 . Provide your credentials follows:
 ** *Username*:
 +
-[source, role="execute", subs="attributes"]
+[source, role="send-to", subs="attributes"]
 ----
 {gitlab_root_user}
 ----
 +
 ** *Password*:
 +
-[source, role="execute", subs="attributes"]
+[source, role="send-to", subs="attributes"]
 ----
 {gitlab_root_password}
 ----
@@ -431,7 +435,7 @@ image::Gitsign_Git_Global_Config.png[Git Global Configuration with Gitsign,link=
 . Navigate to the *docs* folder and open the *index.md* file.
 . Add the following line at the bottom of the document:
 +
-[source, role="execute"]
+[source, role="send-to"]
 ----
 # Test code signing.
 ----
@@ -461,14 +465,14 @@ image::open_sso.png[open_sso,align="center",self,window=blank]
 . Provide your credentials follows:
 ** *Username*:
 +
-[source, role="execute"]
+[source, role="send-to"]
 ----
 user1
 ----
 +
 ** *Password*:
 +
-[source, role="execute", subs="attributes"]
+[source, role="send-to", subs="attributes"]
 ----
 {password}
 ----
@@ -653,14 +657,14 @@ In this step you will promote the application to staging by creating this tag, a
 
 * *Username*:
 
-[source, role="execute", subs="attributes"]
+[source, role="send-to", subs="attributes"]
 ----
 {gitlab_root_user}
 ----
 
 * *Password*:
 
-[source, role="execute", subs="attributes"]
+[source, role="send-to", subs="attributes"]
 ----
 {gitlab_root_password}
 ----
@@ -764,10 +768,16 @@ ec validate image \
 
 ---
 
-pass:[<script type="text/plain" id="solve-module-4" style="display: none;">~/lab-assets/solve-module-4.sh</script>]
+== Module 4: Automation
 
-pass:[<script type="text/plain" id="validate-module-4" style="display: none;">~/lab-assets/validate-module-4.sh</script>]
+=== Solve Module 4
+++++
+<div class="solve-button-placeholder" data-module="module-04"></div>
+++++
 
-pass:[<div class="module-buttons"><button class="solve-button" data-solve-script="solve-module-4">✅ Solve</button><button class="validate-button" data-validate-script="validate-module-4">🔍 Validate</button></div>]
+=== Validate Module 4
+++++
+<div class="validate-button-placeholder" data-module="module-04"></div>
+++++
 
-include::partial$execute-button-init.adoc[]
+---

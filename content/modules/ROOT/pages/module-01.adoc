@@ -1,5 +1,9 @@
 = Module 1: Establish Software Composition Trust with SBOMs
 
+include::common/send-to.adoc[]
+include::common/solve-button.adoc[]
+include::common/validate-button.adoc[]
+
 == Before you begin
 
 === Showroom
@@ -67,14 +71,14 @@ In this module, you help customers answer a foundational software supply chain q
 * Log in to the *OpenShift console* using the following details:
 * *Username*: 
 +
-[source, role="execute", subs="attributes"]
+[source, role="send-to", subs="attributes"]
 ----
 {openshift_gitops_admin_user}
 ----
 +
 * *Password*:
 +
-[source, role="execute", subs="attributes"]
+[source, role="send-to", subs="attributes"]
 ----
 {openshift_gitops_admin_password}
 ----
@@ -84,7 +88,7 @@ In this module, you help customers answer a foundational software supply chain q
 * Switch to the *tssc-keycloak* project.
 * In the name filter input: 
 
-[source, role="execute", subs="attributes"]
+[source, role="send-to", subs="attributes"]
 ----
 keycloak
 ----
@@ -315,14 +319,14 @@ image::rhbk_refresh.png[rhbk_refresh,align="center",link=self,window=blank]
 
 * *Username*:
 
-[source, role="execute", subs="attributes"]
+[source, role="send-to", subs="attributes"]
 ----
 {keycloak_admin_user}
 ----
 
 * *Password*:
 
-[source, role="execute", subs="attributes"]
+[source, role="send-to", subs="attributes"]
 ----
 {keycloak_admin_password}
 ----
@@ -486,7 +490,7 @@ modules:
 * Switch to the *OpenShift Console* tab in your Showroom.
 * Select the project:
 
-[source,role="execute"]
+[source,role="send-to"]
 ----
 tssc-tpa
 ----
@@ -561,14 +565,14 @@ image:refresh_rhtpa.png[refresh_rhtpa.png,align="center",link=self,window=blank]
 
 * *Username*:
 
-[source, role="execute", subs="attributes"]
+[source, role="send-to", subs="attributes"]
 ----
 {tpa_admin_username}
 ----
 
 * *Password*:
 
-[source, role="execute", subs="attributes"]
+[source, role="send-to", subs="attributes"]
 ----
 {tpa_admin_password}
 ----
@@ -608,6 +612,26 @@ image::rhtpa_vulnerabilities_complete.png[rhtpa_vulnerabilities_complete,align="
 
 ---
 
+== Module 1: Automation
+
+=== Solve Module 1
+
+If you would like to skip the manual steps above and automatically complete this module, click the button below:
+
+++++
+<div class="solve-button-placeholder" data-module="module-01"></div>
+++++
+
+=== Validate Module 1
+
+To verify that Module 1 has been completed successfully (either manually or via the solve button), click the button below:
+
+++++
+<div class="validate-button-placeholder" data-module="module-01"></div>
+++++
+
+---
+
 ===  Module 1: Summary
 
 * By completing this module, you configured identity in *RHBK*, deployed *RHTPA* and validated your first SBOM, establishing a reliable source of truth for software composition. This is a good starting point for consultants implementing early-stage supply-chain controls for customers.
@@ -616,11 +640,3 @@ image::rhtpa_vulnerabilities_complete.png[rhtpa_vulnerabilities_complete,align="
 * Head to Module 2 to learn how to cryptographically sign and verify artifacts using *Red Hat Trusted Artifact Signer (RHTAS)*, ensuring every image you build can be traced, trusted and validated.
 
 ---
-
-pass:[<script type="text/plain" id="solve-module-1" style="display: none;">~/lab-assets/solve-module-1.sh</script>]
-
-pass:[<script type="text/plain" id="validate-module-1" style="display: none;">~/lab-assets/validate-module-1.sh</script>]
-
-pass:[<div class="module-buttons"><button class="solve-button" data-solve-script="solve-module-1">✅ Solve</button><button class="validate-button" data-validate-script="validate-module-1">🔍 Validate</button></div>]
-
-include::partial$execute-button-init.adoc[]

@@ -1,0 +1,10 @@
+# DNF packages for solver container
+# The solver container runs as root to enable DNF package installation
+# Packages are installed at container startup from this file
+#
+# Add package names one per line (comments and blank lines are ignored):
+# example-package
+# another-package
+#
+# Note: Packages are installed on EVERY container restart
+# For frequently restarted containers, consider building a custom image instead

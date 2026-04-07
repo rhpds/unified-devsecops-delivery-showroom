@@ -1,4 +1,8 @@
-= Module 3: Developer workflow without developer friction 
+= Module 3: Developer workflow without developer friction
+
+include::common/send-to.adoc[]
+include::common/solve-button.adoc[]
+include::common/validate-button.adoc[]
 
 == Introduction
 
@@ -47,14 +51,14 @@ If you are not already logged in to *RHBK*, click the RHBK Console tab in the Sh
 
 *Username*:
 
-[source, role="execute", subs="attributes"]
+[source, role="send-to", subs="attributes"]
 ----
 {keycloak_admin_user}
 ----
 
 *Password*:
 
-[source, role="execute", subs="attributes"]
+[source, role="send-to", subs="attributes"]
 ----
 {keycloak_admin_password}
 ----
@@ -82,28 +86,28 @@ image::add_new_user.png[add_new_user,align="center",link=self,window=blank]
 . *Email Verified*: Toggle on (required for TAS signing)
 .	*Username*:
 +
-[source, role="execute"]
+[source, role="send-to"]
 ----
 user1
 ----
 +
 . *Email*:
 +
-[source, role="execute"]
+[source, role="send-to"]
 ----
 user1@demo.redhat.com
 ----
 +
 .	*First Name*: 
 +	
-[source, role="execute"]
+[source, role="send-to"]
 ----
 User1
 ----
 + 
 . *Last Name*: 
 +
-[source, role="execute"]
+[source, role="send-to"]
 ----
 Demo
 ----
@@ -148,7 +152,7 @@ image::select_set_password.png[select_set_password,align="center",link=self,wind
 
 . Enter the *Password* and *Password confirmation* to:
 +
-[source, role="execute", subs="attributes"]
+[source, role="send-to", subs="attributes"]
 ----
 {password}
 ----
@@ -193,14 +197,14 @@ image::empty_catalog.png[empty_catalog,align="center",link=self,window=blank]
 In Showroom, switch to the *GitLab* tab and login using the following credentials: 
 
 *Username*:
-[source, role="execute", subs="attributes"]
+[source, role="send-to", subs="attributes"]
 ----
 {gitlab_root_user}
 
 ----
 
 *Password*:
-[source, role="execute", subs="attributes"]
+[source, role="send-to", subs="attributes"]
 ----
 {gitlab_root_password}
 ----
@@ -504,7 +508,7 @@ In this step you enable integration between Red Hat Developer Hub and your *GitL
 
 . Scroll down and enter a commit message: 
 +
-[source, role="execute"]
+[source, role="send-to"]
 ----
 feat: Update Red Hat Developer Hub Configuration 
 ----
@@ -521,14 +525,14 @@ image::enable_integration_proxy.png[enable_integration_proxy,align="center",link
 +
 *Username*:
 +
-[source, role="execute", subs="attributes"]
+[source, role="send-to", subs="attributes"]
 ----
 {openshift_gitops_admin_user}
 ----
 +
 *Password*:
 +
-[source, role="execute", subs="attributes"]
+[source, role="send-to", subs="attributes"]
 ----
 {openshift_gitops_admin_password}
 ----
@@ -572,14 +576,14 @@ image::sign_in_with_oidc.png[sign_in_with_oidc,align="center",link=self,window=b
 +
 *Username*:
 +
-[source, role="execute"]
+[source, role="send-to"]
 ----
 user1
 ----
 +
 *Password*:
 +
-[source, role="execute", subs="attributes"]
+[source, role="send-to", subs="attributes"]
 ----
 {password}
 ----
@@ -652,14 +656,14 @@ image::devfile_anatomy.png[Devfile Anatomy Diagram,link=self,window=blank]
 +
 *Username*:
 +
-[source, role="execute", subs="attributes"]
+[source, role="send-to", subs="attributes"]
 ----
 {gitlab_root_user}
 ----
 +
 *Password*:
 +
-[source, role="execute", subs="attributes"]
+[source, role="send-to", subs="attributes"]
 ----
 {gitlab_root_password}
 ----
@@ -712,7 +716,7 @@ image::poststart_Event.png[poststart_Event.png,align="center",link=self,window=b
 
 . Scroll down and enter a commit message: 
 +
-[source, role="execute"]
+[source, role="send-to"]
 ----
 feat: Update Devfile Configuration.
 ----
@@ -809,10 +813,16 @@ In the next module, you will switch personas and act as a developer, consuming t
 
 ---
 
-pass:[<script type="text/plain" id="solve-module-3" style="display: none;">~/lab-assets/solve-module-3.sh</script>]
+== Module 3: Automation
 
-pass:[<script type="text/plain" id="validate-module-3" style="display: none;">~/lab-assets/validate-module-3.sh</script>]
+=== Solve Module 3
+++++
+<div class="solve-button-placeholder" data-module="module-03"></div>
+++++
 
-pass:[<div class="module-buttons"><button class="solve-button" data-solve-script="solve-module-3">✅ Solve</button><button class="validate-button" data-validate-script="validate-module-3">🔍 Validate</button></div>]
+=== Validate Module 3
+++++
+<div class="validate-button-placeholder" data-module="module-03"></div>
+++++
 
-include::partial$execute-button-init.adoc[]
+---

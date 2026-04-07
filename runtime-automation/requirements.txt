@@ -1,0 +1,4 @@
+# Python packages for solver API server
+# Add any additional Python libraries needed here
+flask==3.0.0
+flask-cors==4.0.0

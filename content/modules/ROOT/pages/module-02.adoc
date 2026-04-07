@@ -1,4 +1,8 @@
-= Module 2: Sign and Verify All Artifacts With *RHTAS* 
+= Module 2: Sign and Verify All Artifacts With *RHTAS*
+
+include::common/send-to.adoc[]
+include::common/solve-button.adoc[]
+include::common/validate-button.adoc[]
 
 == Introduction 
 
@@ -79,14 +83,14 @@ If you are not already logged in to *RHBK*, click the *RHBK* Console tab in the 
 
 *Username*:
 
-[source, role="execute", subs="attributes"]
+[source, role="send-to", subs="attributes"]
 ----
 {keycloak_admin_user}
 ----
 
 *Password*:
 
-[source, role="execute", subs="attributes"]
+[source, role="send-to", subs="attributes"]
 ----
 {keycloak_admin_password}
 ----
@@ -104,7 +108,7 @@ image::create_tas_realm.png[Create Realm,align="center",link=self,window=blank]
 
 . In the *Create realm* pop up, enter the *Realm name*:
 +
-[source, role="execute", subs="attributes"]
+[source, role="send-to", subs="attributes"]
 ----
 tas-chains 
 ----
@@ -128,7 +132,7 @@ image::create_client.png[Create Client,align="center",link=self,window=blank]
 
 . Set the *Client ID* to:
 +
-[source, role="execute", subs="attributes"]
+[source, role="send-to", subs="attributes"]
 ----
 trusted-artifact-signer
 ----
@@ -172,21 +176,21 @@ image::tas_client_service_account_roles.png[New Client Service Account Roles,ali
 . *Email Verified*: toggle on
 . *Email*: 
 +
-[source, role="execute", subs="attributes"]
+[source, role="send-to", subs="attributes"]
 ----
 trusted-artifact-signer@demo.redhat.com
 ----
 +
 . *First name*:
 +
-[source, role="execute", subs="attributes"]
+[source, role="send-to", subs="attributes"]
 ----
 Trusted
 ----
 +
 . *Last name*: 
 +
-[source, role="execute", subs="attributes"]
+[source, role="send-to", subs="attributes"]
 ----
 Content
 ----
@@ -226,7 +230,7 @@ image::tas_create_client.png[TAS Create Client,align="center",link=self,window=b
 
 . Set the *Client ID* to:
 +
-[source, role="execute", subs="attributes"]
+[source, role="send-to", subs="attributes"]
 ----
 trusted-artifact-signer
 ----
@@ -247,14 +251,14 @@ image::tas_commit_client_capability_config.png[New Client Capability Config,alig
 
 . Add the first URI: 
 +
-[source, role="execute", subs="attributes"]
+[source, role="send-to", subs="attributes"]
 ----
 urn:ietf:wg:oauth:2.0:oob
 ----
 +
 . Click *Add valid redirect URIs*, then input:
 +
-[source, role="execute", subs="attributes"]
+[source, role="send-to", subs="attributes"]
 ----
 *
 ----
@@ -425,7 +429,7 @@ ctlog:
 * Navigate to *Workloads → Pods*
 * Change the project/namespace to:
 
-[source, role="execute", subs="attributes"]
+[source, role="send-to", subs="attributes"]
 ----
 tssc-tas
 ----
@@ -758,14 +762,14 @@ attestation:
 * Click the *Quay Console* tab in the Showroom and log in using:
 * *Username*:
 
-[source, role="execute", subs="attributes"]
+[source, role="send-to", subs="attributes"]
 ----
 {quay_admin_user}
 ----
 
 * *Password*:
 
-[source, role="execute", subs="attributes"]
+[source, role="send-to", subs="attributes"]
 ----
 {quay_admin_password}
 ----
@@ -804,10 +808,16 @@ oc delete sa chains-signing-image-tester -n tssc-app-ci
 
 ---
 
-pass:[<script type="text/plain" id="solve-module-2" style="display: none;">~/lab-assets/solve-module-2.sh</script>]
+== Module 2: Automation
 
-pass:[<script type="text/plain" id="validate-module-2" style="display: none;">~/lab-assets/validate-module-2.sh</script>]
+=== Solve Module 2
+++++
+<div class="solve-button-placeholder" data-module="module-02"></div>
+++++
 
-pass:[<div class="module-buttons"><button class="solve-button" data-solve-script="solve-module-2">✅ Solve</button><button class="validate-button" data-validate-script="validate-module-2">🔍 Validate</button></div>]
+=== Validate Module 2
+++++
+<div class="validate-button-placeholder" data-module="module-02"></div>
+++++
 
-include::partial$execute-button-init.adoc[]
+---

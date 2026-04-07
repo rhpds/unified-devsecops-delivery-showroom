@@ -1,0 +1,345 @@
+---
+- name: Validate Module 04 - Policy Enforcement
+  hosts: localhost
+  gather_facts: false
+  vars:
+    # Environment variables matching shell script
+    cluster_domain: "{{ openshift_cluster_ingress_domain }}"
+    acs_namespace: "stackrox"
+    app_ci_namespace: "tssc-app-ci"
+    # Hard-coded integration name matching script line 18
+    acs_integration_name: "acs_quay"
+    job_info_dir: /tmp/job-info
+
+  tasks:
+  - name: Add bastion host to inventory
+    ansible.builtin.add_host:
+      name: "bastion"
+      ansible_host: "{{ bastion_public_hostname }}"
+      ansible_user: "{{ bastion_ssh_user_name }}"
+      ansible_ssh_pass: "{{ bastion_ssh_password }}"
+      ansible_port: "{{ bastion_ssh_port }}"
+      ansible_ssh_common_args: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+
+  - name: Login to OpenShift and get token
+    ansible.builtin.shell:
+      cmd: |
+        oc login {{ openshift_api_server_url }} -t {{
+          lookup('file', '/var/run/secrets/kubernetes.io/serviceaccount/token') }} --insecure-skip-tls-verify=true
+        oc whoami -t
+    delegate_to: bastion
+    register: oc_login_result
+    changed_when: false
+
+  - name: Initialize validation tracking
+    ansible.builtin.set_fact:
+      validation_failed: 0
+
+  - name: Display validation header
+    ansible.builtin.debug:
+      msg:
+        - "========================================="
+        - "Validating Module 4: Policy Enforcement"
+        - "========================================="
+        - ""
+
+  #######################################
+  # Check 1: ACS API Token Secret
+  #######################################
+  - name: "Check 1: ACS API Token Secret"
+    block:
+    - name: Display check header
+      ansible.builtin.debug:
+        msg:
+          - "Check 1: ACS API Token Secret"
+          - "------------------------------"
+
+    - name: Check if ACS API token secret exists
+      ansible.builtin.command:
+        cmd: "oc get secret rox-api-token -n {{ app_ci_namespace }}"
+      register: token_secret_check
+      delegate_to: bastion
+      changed_when: false
+      failed_when: false
+
+    - name: Get ACS API token from secret
+      ansible.builtin.command:
+        cmd: "oc get secret rox-api-token -n {{ app_ci_namespace }} -o jsonpath='{.data.rox-api-token}'"
+      register: token_b64
+      delegate_to: bastion
+      changed_when: false
+      failed_when: false
+      when: token_secret_check.rc == 0
+
+    - name: Decode ACS API token
+      ansible.builtin.set_fact:
+        acs_api_token: "{{ token_b64.stdout | b64decode }}"
+      when: token_secret_check.rc == 0 and token_b64.stdout is defined and token_b64.stdout != ''
+
+    - name: Validate ACS API token secret
+      ansible.builtin.set_fact:
+        validation_failed: "{{ validation_failed | int + 1 }}"
+      when: >
+        token_secret_check.rc != 0 or
+        (acs_api_token is not defined or acs_api_token == '')
+
+    - name: Display ACS API token secret result
+      ansible.builtin.debug:
+        msg: >-
+          {% if token_secret_check.rc == 0 and acs_api_token is defined and acs_api_token != '' %}
+          ✓ PASS: ACS API token secret exists and contains token
+          {% elif token_secret_check.rc == 0 %}
+          ✗ FAIL: ACS API token is empty in secret
+          {% else %}
+          ✗ FAIL: rox-api-token secret not found in {{ app_ci_namespace }}
+          {% endif %}
+
+    - name: Display blank line
+      ansible.builtin.debug:
+        msg: ""
+
+  #######################################
+  # Check 2: ACS Central Availability
+  #######################################
+  - name: "Check 2: ACS Central Availability"
+    block:
+    - name: Display check header
+      ansible.builtin.debug:
+        msg:
+          - "Check 2: ACS Central Availability"
+          - "----------------------------------"
+
+    - name: Check ACS Central endpoint accessibility
+      ansible.builtin.uri:
+        url: "{{ acs_route }}"
+        method: GET
+        validate_certs: false
+        status_code: [200, 302, 401]
+        timeout: 10
+      register: acs_central_check
+      delegate_to: bastion
+      changed_when: false
+      failed_when: false
+      when: acs_route is defined and acs_route != ''
+
+    - name: Validate ACS Central availability
+      ansible.builtin.set_fact:
+        validation_failed: "{{ validation_failed | int + 1 }}"
+      when: >
+        acs_route is not defined or
+        acs_route == '' or
+        acs_central_check.status is not defined or
+        acs_central_check.status not in [200, 302, 401]
+
+    - name: Display ACS Central availability result
+      ansible.builtin.debug:
+        msg: >-
+          {% if acs_route is defined and acs_route != '' and acs_central_check.status is defined and acs_central_check.status in [200, 302, 401] %}
+          ✓ PASS: ACS Central is accessible (HTTP {{ acs_central_check.status }})
+          {% elif acs_route is not defined or acs_route == '' %}
+          ✗ FAIL: ACS Central route not found
+          {% else %}
+          ✗ FAIL: ACS Central is not accessible (HTTP {{ acs_central_check.status | default('000') }})
+          {% endif %}
+
+    - name: Display blank line
+      ansible.builtin.debug:
+        msg: ""
+
+  #######################################
+  # Check 3: ACS-Quay Integration
+  #######################################
+  - name: "Check 3: ACS-Quay Integration"
+    block:
+    - name: Display check header
+      ansible.builtin.debug:
+        msg:
+          - "Check 3: ACS-Quay Integration"
+          - "------------------------------"
+
+    # Only proceed if ACS credentials are available (matching script lines 78-104)
+    - name: Check if ACS credentials are available
+      ansible.builtin.set_fact:
+        acs_credentials_available: "{{ acs_api_token is defined and acs_api_token != '' and acs_route is defined and acs_route != '' }}"
+
+    - name: Get ACS-Quay integration
+      ansible.builtin.uri:
+        url: "{{ acs_route }}/v1/imageintegrations"
+        method: GET
+        validate_certs: false
+        headers:
+          Authorization: "Bearer {{ acs_api_token }}"
+        return_content: true
+      register: integrations_response
+      delegate_to: bastion
+      changed_when: false
+      failed_when: false
+      when: acs_credentials_available | bool
+
+    - name: Extract integration ID
+      ansible.builtin.set_fact:
+        integration_id: "{{ integrations_response.json.integrations | selectattr('name', 'equalto', acs_integration_name) | map(attribute='id') | first | default('') }}"
+      when: >
+        acs_credentials_available | bool and
+        integrations_response.json is defined and
+        integrations_response.json.integrations is defined
+
+    - name: Display integration exists result
+      ansible.builtin.debug:
+        msg: "✓ PASS: ACS-Quay integration exists (ID: {{ integration_id }})"
+      when: >
+        acs_credentials_available | bool and
+        integration_id is defined and
+        integration_id != ''
+
+    - name: Get integration details
+      ansible.builtin.uri:
+        url: "{{ acs_route }}/v1/imageintegrations/{{ integration_id }}"
+        method: GET
+        validate_certs: false
+        headers:
+          Authorization: "Bearer {{ acs_api_token }}"
+        return_content: true
+      register: integration_details
+      delegate_to: bastion
+      changed_when: false
+      failed_when: false
+      when: >
+        acs_credentials_available | bool and
+        integration_id is defined and
+        integration_id != ''
+
+    - name: Extract integration categories
+      ansible.builtin.set_fact:
+        integration_categories: "{{ integration_details.json.categories | default([]) }}"
+      when: >
+        acs_credentials_available | bool and
+        integration_id is defined and
+        integration_id != '' and
+        integration_details.json is defined
+
+    - name: Display integration categories result
+      ansible.builtin.debug:
+        msg: >-
+          {% if integration_categories is defined and 'REGISTRY' in integration_categories and 'SCANNER' in integration_categories %}
+          ✓ PASS: Integration configured as Registry + Scanner
+          {% elif integration_categories is defined %}
+          ⚠ WARNING: Integration categories may not include both REGISTRY and SCANNER
+          {% endif %}
+      when: >
+        acs_credentials_available | bool and
+        integration_id is defined and
+        integration_id != '' and
+        integration_categories is defined
+
+    - name: Validate ACS-Quay integration
+      ansible.builtin.set_fact:
+        validation_failed: "{{ validation_failed | int + 1 }}"
+      when: >
+        not (acs_credentials_available | bool) or
+        integration_id is not defined or
+        integration_id == ''
+
+    - name: Display integration not found result
+      ansible.builtin.debug:
+        msg: "✗ FAIL: ACS-Quay integration not found"
+      when: >
+        acs_credentials_available | bool and
+        (integration_id is not defined or integration_id == '')
+
+    - name: Display credentials not available result
+      ansible.builtin.debug:
+        msg: "✗ FAIL: Cannot check integration (ACS credentials not available)"
+      when: not (acs_credentials_available | bool)
+
+    - name: Display blank line
+      ansible.builtin.debug:
+        msg: ""
+
+  #######################################
+  # Check 4: roxctl availability
+  #######################################
+  - name: "Check 4: roxctl CLI availability"
+    block:
+    - name: Display check header
+      ansible.builtin.debug:
+        msg:
+          - "Check 4: roxctl CLI availability"
+          - "---------------------------------"
+
+    - name: Check if roxctl command exists
+      ansible.builtin.command:
+        cmd: command -v roxctl
+      register: roxctl_check
+      delegate_to: bastion
+      changed_when: false
+      failed_when: false
+
+    - name: Get roxctl version
+      ansible.builtin.command:
+        cmd: roxctl version
+      register: roxctl_version
+      delegate_to: bastion
+      changed_when: false
+      failed_when: false
+      when: roxctl_check.rc == 0
+
+    - name: Extract roxctl version string
+      ansible.builtin.set_fact:
+        roxctl_version_string: "{{ roxctl_version.stdout_lines[0] | default('unknown') }}"
+      when: roxctl_check.rc == 0 and roxctl_version.stdout_lines is defined
+
+    - name: Display roxctl availability result
+      ansible.builtin.debug:
+        msg: >-
+          {% if roxctl_check.rc == 0 %}
+          ✓ PASS: roxctl is available ({{ roxctl_version_string | default('unknown') }})
+          {% else %}
+          ⚠ WARNING: roxctl CLI not found in PATH
+            Image scanning will require roxctl to be installed
+          {% endif %}
+
+    - name: Display blank line
+      ansible.builtin.debug:
+        msg: ""
+
+  #######################################
+  # Summary
+  #######################################
+  - name: Display validation summary
+    block:
+    - name: Display summary header
+      ansible.builtin.debug:
+        msg:
+          - "========================================="
+          - "Validation Summary"
+          - "========================================="
+          - ""
+
+    - name: Display successful validation summary
+      ansible.builtin.debug:
+        msg:
+          - "✓ ALL CHECKS PASSED"
+          - ""
+          - "Module 4 is complete:"
+          - "  ✓ ACS Central is accessible"
+          - "  ✓ ACS-Quay integration configured"
+          - "  ✓ Ready for image scanning and policy enforcement"
+          - ""
+      when: validation_failed | int == 0
+
+    - name: Display failed validation summary
+      ansible.builtin.debug:
+        msg:
+          - "✗ VALIDATION FAILED"
+          - ""
+          - "Some checks did not pass. Please review the output above."
+          - "Run solve-module-4.sh to complete missing steps."
+          - ""
+      when: validation_failed | int > 0
+
+    - name: Report validation result to runner
+      validation_check:
+        check: "{{ validation_failed | int == 0 }}"
+        pass_msg: "✓ Module validation passed"
+        error_msg: "✗ Module validation FAILED with {{ validation_failed }} error(s). Review the output above."
