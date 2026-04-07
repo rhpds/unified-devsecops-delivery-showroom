@@ -36,7 +36,8 @@ def run_playbook(playbook_name, output_queue):
 
     try:
         # Build ansible-playbook command with extra vars file
-        cmd = ["ansible-playbook", playbook_path, "-v"]
+        # Use stdbuf to force line-buffered output for real-time streaming
+        cmd = ["stdbuf", "-oL", "ansible-playbook", playbook_path, "-v"]
 
         # Add user data vars file if it exists
         if os.path.exists(USER_DATA_FILE):
