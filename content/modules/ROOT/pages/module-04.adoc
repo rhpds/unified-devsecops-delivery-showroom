@@ -352,14 +352,14 @@ image::login_with_openshift.png[login_with_openshift,align="center"]
 . Provide your credentials follows:
 ** *Username*:
 +
-[source, role="send-to"]
+[source, role="execute"]
 ----
 user1
 ----
 +
 ** *Password*:
 +
-[source, role="send-to", subs="attributes"]
+[source, role="execute", subs="attributes"]
 ----
 {password}
 ----
@@ -379,14 +379,14 @@ image::devspaces_gitlab_login.png[devspaces_gitlab_login,align="center"]
 . Provide your credentials follows:
 ** *Username*:
 +
-[source, role="send-to", subs="attributes"]
+[source, role="execute", subs="attributes"]
 ----
 {gitlab_root_user}
 ----
 +
 ** *Password*:
 +
-[source, role="send-to", subs="attributes"]
+[source, role="execute", subs="attributes"]
 ----
 {gitlab_root_password}
 ----
@@ -435,7 +435,7 @@ image::Gitsign_Git_Global_Config.png[Git Global Configuration with Gitsign,link=
 . Navigate to the *docs* folder and open the *index.md* file.
 . Add the following line at the bottom of the document:
 +
-[source, role="send-to"]
+[source, role="execute"]
 ----
 # Test code signing.
 ----
@@ -465,14 +465,14 @@ image::open_sso.png[open_sso,align="center",self,window=blank]
 . Provide your credentials follows:
 ** *Username*:
 +
-[source, role="send-to"]
+[source, role="execute"]
 ----
 user1
 ----
 +
 ** *Password*:
 +
-[source, role="send-to", subs="attributes"]
+[source, role="execute", subs="attributes"]
 ----
 {password}
 ----
@@ -657,14 +657,14 @@ In this step you will promote the application to staging by creating this tag, a
 
 * *Username*:
 
-[source, role="send-to", subs="attributes"]
+[source, role="execute", subs="attributes"]
 ----
 {gitlab_root_user}
 ----
 
 * *Password*:
 
-[source, role="send-to", subs="attributes"]
+[source, role="execute", subs="attributes"]
 ----
 {gitlab_root_password}
 ----

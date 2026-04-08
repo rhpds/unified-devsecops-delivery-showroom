@@ -83,14 +83,14 @@ If you are not already logged in to *RHBK*, click the *RHBK* Console tab in the 
 
 *Username*:
 
-[source, role="send-to", subs="attributes"]
+[source, role="execute", subs="attributes"]
 ----
 {keycloak_admin_user}
 ----
 
 *Password*:
 
-[source, role="send-to", subs="attributes"]
+[source, role="execute", subs="attributes"]
 ----
 {keycloak_admin_password}
 ----
@@ -108,9 +108,9 @@ image::create_tas_realm.png[Create Realm,align="center",link=self,window=blank]
 
 . In the *Create realm* pop up, enter the *Realm name*:
 +
-[source, role="send-to", subs="attributes"]
+[source, role="execute"]
 ----
-tas-chains 
+tas-chains
 ----
 +
 . Click *Create*.
@@ -132,7 +132,7 @@ image::create_client.png[Create Client,align="center",link=self,window=blank]
 
 . Set the *Client ID* to:
 +
-[source, role="send-to", subs="attributes"]
+[source, role="execute"]
 ----
 trusted-artifact-signer
 ----
@@ -174,23 +174,23 @@ image::tas_client_service_account_roles.png[New Client Service Account Roles,ali
 * Set the following attributes:
 
 . *Email Verified*: toggle on
-. *Email*: 
+. *Email*:
 +
-[source, role="send-to", subs="attributes"]
+[source, role="execute"]
 ----
 trusted-artifact-signer@demo.redhat.com
 ----
 +
 . *First name*:
 +
-[source, role="send-to", subs="attributes"]
+[source, role="execute"]
 ----
 Trusted
 ----
 +
-. *Last name*: 
+. *Last name*:
 +
-[source, role="send-to", subs="attributes"]
+[source, role="execute"]
 ----
 Content
 ----
@@ -230,7 +230,7 @@ image::tas_create_client.png[TAS Create Client,align="center",link=self,window=b
 
 . Set the *Client ID* to:
 +
-[source, role="send-to", subs="attributes"]
+[source, role="execute"]
 ----
 trusted-artifact-signer
 ----
@@ -249,16 +249,16 @@ image::tas_commit_client_capability_config.png[New Client Capability Config,alig
 
 * In the *Login Settings* page, add the following *Valid redirect URIs*:
 
-. Add the first URI: 
+. Add the first URI:
 +
-[source, role="send-to", subs="attributes"]
+[source, role="execute"]
 ----
 urn:ietf:wg:oauth:2.0:oob
 ----
 +
 . Click *Add valid redirect URIs*, then input:
 +
-[source, role="send-to", subs="attributes"]
+[source, role="execute"]
 ----
 *
 ----
@@ -429,7 +429,7 @@ ctlog:
 * Navigate to *Workloads → Pods*
 * Change the project/namespace to:
 
-[source, role="send-to", subs="attributes"]
+[source, role="execute"]
 ----
 tssc-tas
 ----
@@ -762,14 +762,14 @@ attestation:
 * Click the *Quay Console* tab in the Showroom and log in using:
 * *Username*:
 
-[source, role="send-to", subs="attributes"]
+[source, role="execute", subs="attributes"]
 ----
 {quay_admin_user}
 ----
 
 * *Password*:
 
-[source, role="send-to", subs="attributes"]
+[source, role="execute", subs="attributes"]
 ----
 {quay_admin_password}
 ----

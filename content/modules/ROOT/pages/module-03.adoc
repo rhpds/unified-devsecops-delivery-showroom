@@ -51,14 +51,14 @@ If you are not already logged in to *RHBK*, click the RHBK Console tab in the Sh
 
 *Username*:
 
-[source, role="send-to", subs="attributes"]
+[source, role="execute", subs="attributes"]
 ----
 {keycloak_admin_user}
 ----
 
 *Password*:
 
-[source, role="send-to", subs="attributes"]
+[source, role="execute", subs="attributes"]
 ----
 {keycloak_admin_password}
 ----
@@ -86,28 +86,28 @@ image::add_new_user.png[add_new_user,align="center",link=self,window=blank]
 . *Email Verified*: Toggle on (required for TAS signing)
 .	*Username*:
 +
-[source, role="send-to"]
+[source, role="execute"]
 ----
 user1
 ----
 +
 . *Email*:
 +
-[source, role="send-to"]
+[source, role="execute"]
 ----
 user1@demo.redhat.com
 ----
 +
-.	*First Name*: 
-+	
-[source, role="send-to"]
+.	*First Name*:
++
+[source, role="execute"]
 ----
 User1
 ----
-+ 
-. *Last Name*: 
 +
-[source, role="send-to"]
+. *Last Name*:
++
+[source, role="execute"]
 ----
 Demo
 ----
@@ -152,7 +152,7 @@ image::select_set_password.png[select_set_password,align="center",link=self,wind
 
 . Enter the *Password* and *Password confirmation* to:
 +
-[source, role="send-to", subs="attributes"]
+[source, role="execute", subs="attributes"]
 ----
 {password}
 ----
@@ -194,17 +194,16 @@ image::empty_catalog.png[empty_catalog,align="center",link=self,window=blank]
 
 === 2.2 Log in to Gitlab
 
-In Showroom, switch to the *GitLab* tab and login using the following credentials: 
+In Showroom, switch to the *GitLab* tab and login using the following credentials:
 
 *Username*:
-[source, role="send-to", subs="attributes"]
+[source, role="execute", subs="attributes"]
 ----
 {gitlab_root_user}
-
 ----
 
 *Password*:
-[source, role="send-to", subs="attributes"]
+[source, role="execute", subs="attributes"]
 ----
 {gitlab_root_password}
 ----
@@ -506,11 +505,11 @@ In this step you enable integration between Red Hat Developer Hub and your *GitL
 
 . In backstage-values.yaml, locate and uncomment the integrations and proxy blocks using `CMD + /` (Mac) or `CTRL + /` (Windows/Linux) as shown below.
 
-. Scroll down and enter a commit message: 
+. Scroll down and enter a commit message:
 +
-[source, role="send-to"]
+[source, role="execute"]
 ----
-feat: Update Red Hat Developer Hub Configuration 
+feat: Update Red Hat Developer Hub Configuration
 ----
 
 . Click *Commit Changes*.
@@ -521,18 +520,18 @@ image::enable_integration_proxy.png[enable_integration_proxy,align="center",link
 
 === 2.7 Sync via Argo CD
 
-. In Showroom, switch to the *Argo CD* tab and log in using the following credentials: 
+. In Showroom, switch to the *Argo CD* tab and log in using the following credentials:
 +
 *Username*:
 +
-[source, role="send-to", subs="attributes"]
+[source, role="execute", subs="attributes"]
 ----
 {openshift_gitops_admin_user}
 ----
 +
 *Password*:
 +
-[source, role="send-to", subs="attributes"]
+[source, role="execute", subs="attributes"]
 ----
 {openshift_gitops_admin_password}
 ----
@@ -576,14 +575,14 @@ image::sign_in_with_oidc.png[sign_in_with_oidc,align="center",link=self,window=b
 +
 *Username*:
 +
-[source, role="send-to"]
+[source, role="execute"]
 ----
 user1
 ----
 +
 *Password*:
 +
-[source, role="send-to", subs="attributes"]
+[source, role="execute", subs="attributes"]
 ----
 {password}
 ----
@@ -656,14 +655,14 @@ image::devfile_anatomy.png[Devfile Anatomy Diagram,link=self,window=blank]
 +
 *Username*:
 +
-[source, role="send-to", subs="attributes"]
+[source, role="execute", subs="attributes"]
 ----
 {gitlab_root_user}
 ----
 +
 *Password*:
 +
-[source, role="send-to", subs="attributes"]
+[source, role="execute", subs="attributes"]
 ----
 {gitlab_root_password}
 ----
@@ -714,9 +713,9 @@ image::init_git_config_command.png[init_git_config_command,align="center",link=s
 +
 image::poststart_Event.png[poststart_Event.png,align="center",link=self,window=blank]
 
-. Scroll down and enter a commit message: 
+. Scroll down and enter a commit message:
 +
-[source, role="send-to"]
+[source, role="execute"]
 ----
 feat: Update Devfile Configuration.
 ----

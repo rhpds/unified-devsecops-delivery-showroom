@@ -69,16 +69,16 @@ In this module, you help customers answer a foundational software supply chain q
 * Before importing the *tpa* realm, switch to the *OpenShift Console* to monitor the realm import job.
 * Click the *OpenShift Console* tab in the Showroom
 * Log in to the *OpenShift console* using the following details:
-* *Username*: 
+* *Username*:
 +
-[source, role="send-to", subs="attributes"]
+[source, role="execute", subs="attributes"]
 ----
 {openshift_gitops_admin_user}
 ----
 +
 * *Password*:
 +
-[source, role="send-to", subs="attributes"]
+[source, role="execute", subs="attributes"]
 ----
 {openshift_gitops_admin_password}
 ----
@@ -86,9 +86,9 @@ In this module, you help customers answer a foundational software supply chain q
 * After entering your credentials, click the *Sign In* button.
 * Expand the *Ecosystem* list in the left Navigation menu and select *Installed Operators*
 * Switch to the *tssc-keycloak* project.
-* In the name filter input: 
+* In the name filter input:
 
-[source, role="send-to", subs="attributes"]
+[source, role="execute"]
 ----
 keycloak
 ----
@@ -319,14 +319,14 @@ image::rhbk_refresh.png[rhbk_refresh,align="center",link=self,window=blank]
 
 * *Username*:
 
-[source, role="send-to", subs="attributes"]
+[source, role="execute", subs="attributes"]
 ----
 {keycloak_admin_user}
 ----
 
 * *Password*:
 
-[source, role="send-to", subs="attributes"]
+[source, role="execute", subs="attributes"]
 ----
 {keycloak_admin_password}
 ----
@@ -490,7 +490,7 @@ modules:
 * Switch to the *OpenShift Console* tab in your Showroom.
 * Select the project:
 
-[source,role="send-to"]
+[source,role="execute"]
 ----
 tssc-tpa
 ----
@@ -565,14 +565,14 @@ image:refresh_rhtpa.png[refresh_rhtpa.png,align="center",link=self,window=blank]
 
 * *Username*:
 
-[source, role="send-to", subs="attributes"]
+[source, role="execute", subs="attributes"]
 ----
 {tpa_admin_username}
 ----
 
 * *Password*:
 
-[source, role="send-to", subs="attributes"]
+[source, role="execute", subs="attributes"]
 ----
 {tpa_admin_password}
 ----
