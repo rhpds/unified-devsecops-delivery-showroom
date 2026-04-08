@@ -1,4 +1,8 @@
-= Module 3: Developer workflow without developer friction 
+= Module 3: Developer workflow without developer friction
+
+include::common/send-to.adoc[]
+include::common/solve-button.adoc[]
+include::common/validate-button.adoc[]
 
 == Introduction
 
@@ -94,14 +98,14 @@ user1
 user1@demo.redhat.com
 ----
 +
-.	*First Name*: 
-+	
+.	*First Name*:
++
 [source, role="execute"]
 ----
 User1
 ----
-+ 
-. *Last Name*: 
++
+. *Last Name*:
 +
 [source, role="execute"]
 ----
@@ -190,13 +194,12 @@ image::empty_catalog.png[empty_catalog,align="center",link=self,window=blank]
 
 === 2.2 Log in to Gitlab
 
-In Showroom, switch to the *GitLab* tab and login using the following credentials: 
+In Showroom, switch to the *GitLab* tab and login using the following credentials:
 
 *Username*:
 [source, role="execute", subs="attributes"]
 ----
 {gitlab_root_user}
-
 ----
 
 *Password*:
@@ -502,11 +505,11 @@ In this step you enable integration between Red Hat Developer Hub and your *GitL
 
 . In backstage-values.yaml, locate and uncomment the integrations and proxy blocks using `CMD + /` (Mac) or `CTRL + /` (Windows/Linux) as shown below.
 
-. Scroll down and enter a commit message: 
+. Scroll down and enter a commit message:
 +
 [source, role="execute"]
 ----
-feat: Update Red Hat Developer Hub Configuration 
+feat: Update Red Hat Developer Hub Configuration
 ----
 
 . Click *Commit Changes*.
@@ -517,7 +520,7 @@ image::enable_integration_proxy.png[enable_integration_proxy,align="center",link
 
 === 2.7 Sync via Argo CD
 
-. In Showroom, switch to the *Argo CD* tab and log in using the following credentials: 
+. In Showroom, switch to the *Argo CD* tab and log in using the following credentials:
 +
 *Username*:
 +
@@ -710,7 +713,7 @@ image::init_git_config_command.png[init_git_config_command,align="center",link=s
 +
 image::poststart_Event.png[poststart_Event.png,align="center",link=self,window=blank]
 
-. Scroll down and enter a commit message: 
+. Scroll down and enter a commit message:
 +
 [source, role="execute"]
 ----
@@ -727,7 +730,7 @@ In this step, you will create a ConfigMap for *Dev Spaces* so that every develop
 
 Create a new ConfigMap in the openshift-devspaces namespace using this command in the Terminal:
 
-[source, role="execute", subs="attributes"]
+[source, role="send-to", subs="attributes"]
 ----
 cat << 'EOF' | oc apply -n openshift-devspaces -f -
 apiVersion: v1
@@ -766,7 +769,7 @@ Let's get started.
 
 . Run the following command to set the TPA_SERVER_URL
 +
-[source,role="execute"]
+[source,role="send-to"]
 ----
 export TPA_SERVER_URL="https://$(oc get route -l app.kubernetes.io/component=server -n tssc-tpa -o json \
   | jq -r '.items[0].spec.host')"
@@ -774,21 +777,21 @@ export TPA_SERVER_URL="https://$(oc get route -l app.kubernetes.io/component=ser
 +
 . Then run this command to create the secret *tpa-secret*:
 +
-[source,role="execute"]
+[source,role="send-to"]
 ----
 envsubst < ~/lab-assets/tpa-secret.yml | oc apply -n tssc-app-ci -f -
 ----
 +
 . Next, create the GitLab authentication secret. First, retrieve the GitLab personal access token:
 +
-[source,role="execute"]
+[source,role="send-to"]
 ----
 export GITLAB_TOKEN=$(oc get secret root-user-personal-token -n gitlab -o jsonpath='{.data.token}' | base64 -d)
 ----
 +
 . Next, create the *gitlab-auth-secret* secret:
 +
-[source,role="execute"]
+[source,role="send-to"]
 ----
 envsubst < ~/lab-assets/gitlab-auth-secret.yml | oc apply -n tssc-app-ci -f -
 ----
@@ -806,3 +809,19 @@ For consultants, this module demonstrates how to design and implement an Interna
 For technical sellers, this provides a concrete way to address common customer challenges — tool sprawl, inconsistent onboarding, and security friction — by positioning Red Hat Developer Hub as the foundation for platform engineering, not just another developer tool. It shows how security, compliance, and productivity are delivered together, which is often the deciding factor in winning the deal.
 
 In the next module, you will switch personas and act as a developer, consuming the platform through a Software Template (Golden Path) to build and deploy an application.
+
+---
+
+== Module 3: Automation
+
+=== Solve Module 3
+++++
+<div class="solve-button-placeholder" data-module="module-03"></div>
+++++
+
+=== Validate Module 3
+++++
+<div class="validate-button-placeholder" data-module="module-03"></div>
+++++
+
+---

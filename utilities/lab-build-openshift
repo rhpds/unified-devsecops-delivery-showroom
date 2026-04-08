@@ -93,7 +93,7 @@ podman run --rm --name showroom-builder --platform linux/amd64 \
   --attribute acs_url="https://$ACS_URL" \
   --attribute acs_admin_user="admin" \
   --attribute acs_admin_password="$ACS_ADMIN_PASSWORD" \
-  default-site.yml
+  site.yml
 
 echo "Build process complete. Check the ./www folder for the generated site."
 echo "To view the site locally, run the following command: utilities/lab-serve"

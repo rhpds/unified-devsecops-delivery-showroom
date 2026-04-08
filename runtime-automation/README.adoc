@@ -1,0 +1,161 @@
+= Runtime Automation - Solver & Validator POC
+
+== Overview
+
+The runtime automation system provides two features in the Showroom lab guide:
+
+* **Solve Module**: Executes Ansible playbooks to automatically complete module exercises
+* **Validate Module**: Executes Ansible playbooks to verify module exercises were completed correctly
+
+Both use the same infrastructure and stream output in real-time.
+
+**Note**: The automation container gracefully handles missing `runtime-automation/` folder. If the folder doesn't exist, the container stays running (sleeps) without crashing. This allows the deployment patch to be applied to any showroom without breaking deployments.
+
+== Architecture
+
+* **API Server**: Flask application (`api-server.py`) running in solver sidecar container
+* **Playbooks**: Ansible playbooks in `playbooks/` directory
+* **Deployment**: Solver sidecar added via `deployment-patch.yaml`
+
+== Adding Dependencies
+
+=== Python Libraries
+
+To add Python libraries needed by the API server or playbooks:
+
+1. Edit `requirements.txt`
+2. Add the package and version:
++
+[source,txt]
+----
+flask==3.0.0
+flask-cors==4.0.0
+ansible-runner==2.3.0  # Example: add new package
+----
+
+3. Redeploy the showroom pod (delete pod to trigger restart)
+4. The startup script automatically installs packages from `requirements.txt`
+
+=== DNF Packages
+
+To add DNF packages needed by the solver or playbooks:
+
+1. Edit `packages.txt`
+2. Add the package name (one per line):
++
+[source,txt]
+----
+# DNF packages for solver container
+git
+vim-enhanced
+----
+
+3. Redeploy the showroom pod (delete pod to trigger restart)
+4. The startup script automatically installs packages from `packages.txt`
+
+**Note**: The solver container runs as root (`runAsUser: 0`) to enable DNF package installation. This is acceptable in the RHDP environment where showroom pods run in isolated namespaces per user.
+
+**Performance consideration**: Packages install on every pod restart. For production use with many packages, consider building a custom image instead.
+
+== Adding New Modules
+
+To add a new module (e.g., module-05):
+
+1. Create playbooks as needed:
+   - Solve: `playbooks/solve-module-05.yml`
+   - Validate: `playbooks/validate-module-05.yml`
+
+2. Add button(s) to AsciiDoc page - choose one of three options:
+
+**Option 1: Both buttons (recommended)**
+[source,asciidoc]
+----
+:module-name: module-05
+include::common/automation-buttons.adoc[]
+----
+
+**Option 2: Only solve button**
+[source,asciidoc]
+----
+:module-name: module-05
+include::common/solve-button.adoc[]
+----
+
+**Option 3: Only validate button**
+[source,asciidoc]
+----
+:module-name: module-05
+include::common/validate-button.adoc[]
+----
+
+=== Convention-Based Mapping
+
+The system uses convention-based routing:
+
+* **Solve**: Button → API endpoint `/api/solve/module-05` → Playbook `playbooks/solve-module-05.yml`
+* **Validate**: Button → API endpoint `/api/validate/module-05` → Playbook `playbooks/validate-module-05.yml`
+
+== Files
+
+[cols="1,3"]
+|===
+| File | Purpose
+
+| `api-server.py`
+| Flask API server with SSE streaming for both solve and validate endpoints
+
+| `playbooks/solve-module-*.yml`
+| Ansible playbooks to automatically complete module exercises
+
+| `playbooks/validate-module-*.yml`
+| Ansible playbooks to verify module exercises were completed correctly
+
+| `deployment-patch.yaml`
+| Kubernetes patch to add solver sidecar container
+
+| `requirements.txt`
+| Python dependencies (auto-installed on startup)
+
+| `packages.txt`
+| DNF packages (auto-installed on startup)
+
+| `content/modules/ROOT/pages/common/solve-button.adoc`
+| AsciiDoc partial for solve button only (green)
+
+| `content/modules/ROOT/pages/common/validate-button.adoc`
+| AsciiDoc partial for validate button only (blue)
+
+| `content/modules/ROOT/pages/common/automation-buttons.adoc`
+| AsciiDoc partial with both solve and validate buttons side-by-side
+
+|===
+
+== Deployment
+
+[source,bash]
+----
+# Apply the solver sidecar patch
+oc apply -f deployment-patch.yaml
+
+# Restart showroom pod to pick up changes
+oc delete pod -l app=showroom -n <YOUR_NAMESPACE>
+----
+
+== Troubleshooting
+
+**Button doesn't appear**:
+- Check AsciiDoc includes the solve-button partial
+- Verify `:module-name:` attribute is set correctly
+
+**Playbook not found**:
+- Verify playbook exists at `playbooks/solve-{module-name}.yml`
+- Check playbook naming matches convention
+
+**Python import errors**:
+- Add missing packages to `requirements.txt`
+- Delete pod to reinstall packages
+
+**Permission denied errors**:
+- Automation container runs as root (USER 0) with showroom ServiceAccount
+- Has cluster-admin equivalent via AnarchySubject ownership
+- Can perform any OpenShift operation via `oc` commands

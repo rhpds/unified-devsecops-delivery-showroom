@@ -1,5 +1,9 @@
 = Module 4: Enforce Policy and Promote Safely
 
+include::common/send-to.adoc[]
+include::common/solve-button.adoc[]
+include::common/validate-button.adoc[]
+
 == Introduction
 
 * By this point in the workshop, you have established strong foundations of trust across the software supply chain. In Module 1, you made software composition visible by ingesting and analysing SBOMs, turning dependency risk from an assumption into evidence. In Module 2, you anchored trust in cryptographic provenance, ensuring every build artifact is signed, traceable, and verifiably produced by your CI pipeline. In Module 3, you reduced developer friction by centralising access to tools and security capabilities through *Red Hat Developer Hub*, using *GitOps* to configure authentication, plugins, and catalog discovery as a consistent, secure entry point for developers.
@@ -19,74 +23,39 @@ NOTE: Enterprise Contract is the policy engine that governs whether an applicati
 === 1.1 Configure ACS - Quay Integration
 
 * In this step, you will configure *ACS* to scan images stored in *Quay* and validate that vulnerability data can be evaluated as part of the trusted supply chain.
-* In Showroom, Switch to the *ACS* tab and login using the following credentials: 
-* *Username*:
+* You will use the ACS API to create the integration programmatically, mirroring how platform teams automate integration setup in production environments.
+* In the Showroom terminal, run the following command to create the Quay integration:
 +
-[source, role="execute", subs="attributes"]
+[source, role="send-to", subs="attributes"]
 ----
-{rhacs_admin_user}
-----
-+
-* *Password*:
-+
-[source, role="execute", subs="attributes"]
-----
-{rhacs_admin_password}
-----
-+
-* In the *ACS console*, navigate to *Platform Configuration* → *Integrations*
-* Select Red Hat Quay.io
-
-image::acs_quay_integration.png[acs_quay_integration,align="center",link=self,window=blank]
-
-* Click *New Integration*.
-
-image::acs_new_integration.png[acs_new_integration,align="center",link=self,window=blank]
-
-* Provide the following details:
-
-. Integration name:
-+
-[source, role="execute"]
-----
-acs_quay
+curl -k -X POST \
+  -u "{rhacs_admin_user}:{rhacs_admin_password}" \
+  -H "Content-Type: application/json" \
+  {rhacs_admin_console}/v1/imageintegrations \
+  -d '{
+    "name": "acs_quay",
+    "type": "quay",
+    "categories": ["REGISTRY", "SCANNER"],
+    "quay": {
+      "endpoint": "{quay_host}",
+      "oauthToken": "{quay_admin_token}",
+      "insecure": true
+    },
+    "skipTestIntegration": false
+  }'
 ----
 +
-. Type: Select *Registry + Scanner*
-. *End Point*:
+* This command creates a new image integration in *ACS* with the following configuration:
+** *Integration name*: `acs_quay`
+** *Type*: Quay registry with vulnerability scanning capabilities
+** *Endpoint*: `{quay_host}` - your Quay registry instance
+** *Authentication*: OAuth token for secure access
+** *Test on create*: The integration will be validated before being saved
 +
-[source, role="execute", subs="attributes"]
-----
-{quay_host}
-----
-+
-. *OAuth token*:
-+
-[source, role="execute", subs="attributes"]
-----
-{quay_admin_token}
-----
-+
-. *Username*:
-+
-[source, role="execute", subs="attributes"]
-----
-{quay_admin_user}
-----
-+
-. *Password*:
-+
-[source, role="execute", subs="attributes"]
-----
-{quay_admin_password}
-----
-+
-. Click *Test* to validate the connection.
-+
-image::acs_quay_inegration.png[acs_quay_inegration,align="center",link=self,window=blank]
-
-* Once the test succeeds, click *Save* to create the integration.
+* Upon successful execution, you will receive a JSON response confirming the integration has been created and tested.
 * At this point, *ACS* can securely access images stored in *Quay* and perform scans automatically.
++
+NOTE: For more details on configuring Quay Container Registry as a scanner integration, refer to the link:https://docs.redhat.com/en/documentation/red_hat_advanced_cluster_security_for_kubernetes/4.9/html/integrating/integrate-with-image-vulnerability-scanners#integrate-with-qcr-scanner_integrate-with-image-vulnerability-scanners[official Red Hat ACS documentation^].
 
 ---
 
@@ -96,14 +65,14 @@ image::acs_quay_inegration.png[acs_quay_inegration,align="center",link=self,wind
 * This next command retrieves vulnerability data for the image and returns a detailed scan report.
 * In the Showroom terminal, run:
 
-[source, role="execute", subs="attributes"]
+[source, role="send-to", subs="attributes"]
 ----
 roxctl image scan --image={quay_host}/tssc/tekton-chains-test:latest
 ----
 
 * This command evaluates the image against ACS policies and reports whether it meets deployment requirements.
 
-[source, role="execute", subs="attributes"]
+[source, role="send-to", subs="attributes"]
 ----
 roxctl image check --image={quay_host}/tssc/tekton-chains-test:latest
 ----
@@ -451,7 +420,7 @@ image::open_new_terminal.png[open_new_terminal,align="center"]
 +
 Then run the following command, you may be prompted by your browser to allow paste access into the terminal. If so, approve the prompt to proceed.
 +
-[source, role="execute"]
+[source, role="send-to"]
 ----
 git config --global --list
 ----
@@ -475,7 +444,7 @@ image::Index_Markdown_Updated.png[Updated Index Markdown File,link=self,window=b
 +
 . To begin commiting your code to the repository, run the following command to add your changes to staging and commiting your changes:
 +
-[source, role="execute"]
+[source, role="send-to"]
 ----
 git add .
 git commit -m "feat: test secure signing."
@@ -523,7 +492,7 @@ image::Gitsign_Commit_Signed.png[Successfully Signed Commit with Gitsign,link=se
 +
 . Push the code to the repository with the below command:
 +
-[source, role="execute"]
+[source, role="send-to"]
 ----
 git push origin master
 ----
@@ -796,3 +765,19 @@ ec validate image \
 * For consultants, this module provides a reusable pattern for embedding policy enforcement and release governance into real-world CI and CD pipelines, without introducing friction or slowing development teams down.
 * For technical sellers, this completes the workshop story: *Red Hat Advanced Developer Suite (RHADS)* prevents unsafe releases and turns every deployment into a controlled, compliant, and predictable outcome.
 * The key takeaway is this: with RHADS, developer velocity is preserved because trust is verified automatically, and enterprise risk is reduced because policy-driven guardrails ensure only trusted, compliant artifacts are promoted to production.
+
+---
+
+== Module 4: Automation
+
+=== Solve Module 4
+++++
+<div class="solve-button-placeholder" data-module="module-04"></div>
+++++
+
+=== Validate Module 4
+++++
+<div class="validate-button-placeholder" data-module="module-04"></div>
+++++
+
+---

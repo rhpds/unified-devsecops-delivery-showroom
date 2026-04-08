@@ -1,0 +1,112 @@
+// Send-to Terminal Button Component
+// Usage: include::common/send-to.adoc[]
+//
+// Then add role="send-to" to any code block:
+// [source,bash,role="send-to"]
+// ----
+// echo "This command will have a send-to button"
+// ----
+
+[pass,subs="attributes"]
+++++
+<style>
+.listingblock { position: relative; }
+.send-to-command-btn {
+    position: absolute; top: 0.5rem; right: 0.5rem;
+    background: #28a745; color: white; border: none; border-radius: 4px;
+    padding: 0.5rem 1rem; font-size: 0.875rem; font-weight: 600;
+    cursor: pointer; transition: all 0.2s; z-index: 100;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    opacity: 0.3;
+}
+.send-to-command-btn:hover {
+    background: #218838;
+    transform: translateY(-2px);
+    opacity: 1;
+}
+.send-to-command-btn.success { background: #27ae60; }
+.send-to-command-btn.copied { background: #3498db; }
+.listingblock pre.send-to { padding-top: 3rem !important; }
+</style>
+<script>
+(function() {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+
+  function init() {
+    // Add buttons to code blocks with role=send-to
+    document.querySelectorAll('pre.send-to, .send-to').forEach(function(block) {
+      if (block.dataset.sendToButtonAdded) return;
+      const listingBlock = block.closest('.listingblock');
+      if (!listingBlock) return;
+
+      const btn = document.createElement('button');
+      btn.className = 'send-to-command-btn';
+      btn.innerHTML = '▶';
+
+      btn.onclick = function() {
+        const cmd = (block.querySelector('code') || block).textContent.trim();
+        sendToTerminal(cmd, btn);
+      };
+
+      listingBlock.appendChild(btn);
+      block.dataset.sendToButtonAdded = 'true';
+    });
+  }
+
+  function sendToTerminal(command, button) {
+    // Find wetty iframe - it's in the parent window
+    let wettyFrame = null;
+
+    try {
+      if (window.parent && window.parent !== window) {
+        const frames = window.parent.document.querySelectorAll('iframe');
+        for (let i = 0; i < frames.length; i++) {
+          const src = frames[i].src || '';
+          if (src.indexOf('/wetty') !== -1 || src.indexOf('/tty') !== -1) {
+            wettyFrame = frames[i];
+            break;
+          }
+        }
+      }
+    } catch (e) {
+      console.log('[Send-To] Cannot access parent:', e.message);
+    }
+
+    if (wettyFrame) {
+      // Send command via postMessage
+      wettyFrame.contentWindow.postMessage({
+        type: 'execute',
+        data: command + '\r'
+      }, '*');
+
+      // Store original text
+      const originalText = button.innerHTML;
+
+      button.classList.add('success');
+      button.innerHTML = '✓ Sent!';
+      setTimeout(function() {
+        button.classList.remove('success');
+        button.innerHTML = originalText;
+      }, 2000);
+    } else {
+      // Fallback to clipboard
+      navigator.clipboard.writeText(command).then(function() {
+        const originalText = button.innerHTML;
+        button.classList.add('copied');
+        button.innerHTML = '📋 Copied!';
+        setTimeout(function() {
+          button.classList.remove('copied');
+          button.innerHTML = originalText;
+        }, 2000);
+      }).catch(function() {
+        button.innerHTML = '✗ Failed';
+      });
+    }
+  }
+})();
+</script>
+++++

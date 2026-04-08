@@ -3,25 +3,48 @@ type: showroom
 default_width: 50
 persist_url_state: true
 
+antora:
+  name: modules
+  dir: www
+  modules:
+    - name: index
+      label: "Welcome"
+    - name: module-01
+      label: "Module 1: Software Composition Trust"
+    - name: module-02
+      label: "Module 2: Sign and Verify Artifacts"
+    - name: module-03
+      label: "Module 3: Developer Workflows"
+    - name: module-04
+      label: "Module 4: Policy Enforcement"
+    - name: module-05
+      label: "Conclusion"
+
 tabs:
   - name: Terminal
     path: /wetty
     port: 443
   - name: OCP Console
     url: 'https://console-openshift-console.${DOMAIN}'
+    external: false
   - name: RHBK
-    url: 'https://sso.${DOMAIN}' 
+    url: 'https://sso.${DOMAIN}'
+    external: false
   - name: RHTPA
     url: 'https://server-tssc-tpa.${DOMAIN}'
+    external: false
   - name: REKOR Search UI
     url: 'https://rekor-search-ui-tssc-tas.${DOMAIN}'
+    external: false
   - name: Quay
     url: 'https://quay-${GUID}.${DOMAIN}'
+    external: false
   - name: Gitlab
     url: 'https://gitlab-gitlab.${DOMAIN}'
+    external: false
   - name: RHDH
     url: 'https://backstage-backstage.${DOMAIN}'
+    external: false
   - name: Argo CD
     url: 'https://argocd-server-openshift-gitops.${DOMAIN}'
-  - name: ACS
-    url: 'https://central-stackrox.${DOMAIN}'
+    external: false
