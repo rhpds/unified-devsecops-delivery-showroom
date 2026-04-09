@@ -56,9 +56,70 @@
       alert('Cannot find terminal at ' + targetPath + ' in this showroom.\nCheck ui-config.yml has a tab with ' + targetPath + ' URL.');
       return;
     }
+
+    // Inject execute-listener into ttyd terminal if not already done
+    // Only inject for /terminal or /tty paths, not for /wetty (which has native support)
+    if (targetPath.match(/^\/(terminal|tty)/)) {
+      ensureTerminalListener(frame);
+    }
+
     frame.contentWindow.postMessage({ type: 'execute', data: command + '\r' }, '*');
     button.classList.add('success'); button.innerHTML = '✓ Sent!';
     setTimeout(function () { button.classList.remove('success'); button.innerHTML = original; }, 2000);
+  }
+
+  function ensureTerminalListener(frame) {
+    if (frame.dataset.listenerInjected) return;
+
+    var listenerScript = `
+(function() {
+  if (window.__terminalListenerInstalled) return;
+  window.__terminalListenerInstalled = true;
+
+  window.addEventListener("message", function(event) {
+    if (event.data && event.data.type === "execute") {
+      var command = event.data.data;
+      var term = window.term;
+
+      if (term) {
+        command = command.replace(/[\\r\\n]+$/, "");
+
+        // Method 1: Try ttyd client object (most reliable)
+        if (window.client && typeof window.client.sendData === 'function') {
+          window.client.sendData(command + '\\r');
+          return;
+        }
+
+        // Method 2: Simulate keyboard input using xterm.js internal API
+        if (term._core && term._core.coreService && term._core.coreService._inputHandler) {
+          for (var i = 0; i < command.length; i++) {
+            term._core.coreService._inputHandler.parse(command[i]);
+          }
+          term._core.coreService._inputHandler.parse('\\r');
+          return;
+        }
+
+        // Method 3: Try accessing onData handler through _core
+        if (term._core && term._core._onData) {
+          term._core._onData.fire(command + '\\r');
+          return;
+        }
+
+        // Method 4: Fallback - write to display only (won't execute)
+        term.write(command + '\\r\\n');
+      }
+    }
+  }, false);
+})();`;
+
+    try {
+      var script = frame.contentWindow.document.createElement('script');
+      script.textContent = listenerScript;
+      frame.contentWindow.document.body.appendChild(script);
+      frame.dataset.listenerInjected = 'true';
+    } catch (e) {
+      console.error('Failed to inject terminal listener:', e);
+    }
   }
 
   // ── Solve / Validate buttons ──────────────────────────────────────────────
