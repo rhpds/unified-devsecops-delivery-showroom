@@ -1,9 +1,5 @@
 = Module 1: Establish Software Composition Trust with SBOMs
 
-include::common/send-to.adoc[]
-include::common/solve-button.adoc[]
-include::common/validate-button.adoc[]
-
 == Before you begin
 
 === Showroom
@@ -16,7 +12,7 @@ Along the way, you will encounter collapsible sections marked with the following
 
 ---
 
-== Module 1 - Introduction 
+== Module 1 - Introduction
 
 In this module, you help customers answer a foundational software supply chain question: “Do we actually trust the software components inside our applications?” Modern applications are assembled rather than written. Container images typically bundle hundreds of upstream packages, along with direct and transitive dependencies, each carrying its own CVEs and security advisories. Without clear visibility into that composition, trust becomes an assumption rather than evidence.
 
@@ -24,9 +20,9 @@ In this module, you help customers answer a foundational software supply chain q
 
 * This is where *RHTPA* comes into play.
 * *RHTPA* is Red Hat's supported distribution of the upstream link:https://github.com/guacsec/trustify[*trustify project*^], which is part of the link:https://guac.sh/trustify/[*GUAC Community*^] (Graph for Understanding Artifact Composition).
-* *RHTPA* ingests *SBOM* documents, indexes every component inside them, and continuously correlates that inventory against known CVEs and security advisories, producing an auditable view of software composition. 
+* *RHTPA* ingests *SBOM* documents, indexes every component inside them, and continuously correlates that inventory against known CVEs and security advisories, producing an auditable view of software composition.
 
-=== By the end of this module you will be able to: 
+=== By the end of this module you will be able to:
 . Configure Identity and Access Management using *Red Hat Build of Keycloak (RHBK)*
 . Install an *RHTPA* Instance using an operator
 . Ingest an *SBOM* and view it in *RHTPA*
@@ -45,10 +41,10 @@ In this module, you help customers answer a foundational software supply chain q
 
 * *Realm*: A realm is an isolated security domain that manages its own users, groups, roles and clients. In this workshop, the *tpa* realm contains the identity configuration that *RHTPA* trusts when validating incoming requests.
 
-* *Client*: A client represents an application that requests tokens from the realm.  
-  Each client defines how identities authenticate (browser login, CLI, or service account),  
-  and which client scopes may be embedded into the issued tokens. In this workshop,  
-  the *cli* client is used by machine automation (Tekton), while the *frontend* client  
+* *Client*: A client represents an application that requests tokens from the realm.
+  Each client defines how identities authenticate (browser login, CLI, or service account),
+  and which client scopes may be embedded into the issued tokens. In this workshop,
+  the *cli* client is used by machine automation (Tekton), while the *frontend* client
   is used by human users accessing the RHTPA web console.
 
 * *Client Scope*: A client scope represents specific permissions encoded into an access token. While roles are assigned to users or service accounts, scopes are what the *RHTPA* backend checks to authorize API operations such as uploading or reading SBOMs. Scopes are mapped to Roles in Keycloak. When a user with a specific role logs in, the corresponding scope is stamped onto their access token.
@@ -93,7 +89,7 @@ In this module, you help customers answer a foundational software supply chain q
 keycloak
 ----
 
-* After a few seconds, the *Red Hat build of Keycloak Operator* will appear in the list of installed operators. 
+* After a few seconds, the *Red Hat build of Keycloak Operator* will appear in the list of installed operators.
 * Click its link to view the details.
 
 image::keycloak_operator.png[Keycloak Operator ,align="center",link=self,window=blank]
@@ -105,7 +101,7 @@ image::keycloak_realmimport.png[Keycloak Realm Import,align="center",link=self,w
 
 * Execute the following command in the Showroom terminal to set the required variables for this module.
 
-[source, role="send-to", subs="attributes"]
+[source, role="send-to-wetty", subs="attributes"]
 ----
 cat << 'EOF' >> ~/.bashrc
 export TPA_REALM={tpa_realm}
@@ -119,7 +115,7 @@ source ~/.bashrc
 
 * Execute the following command to apply the configuration in the *keycloak-tpa-realm.yml* and import the new *tpa* realm configuration to the *tssc-keycloak* namespace.
 
-[source, role="send-to"]
+[source, role="send-to-wetty"]
 ----
 envsubst '${TPA_REALM} ${TPA_CLI_CLIENT_SECRET} ${TPA_ADMIN_USERNAME} ${TPA_ADMIN_PASSWORD}' < ~/lab-assets/keycloak-tpa-realm.yml | oc apply -n tssc-keycloak -f -
 ----
@@ -194,7 +190,7 @@ clientScopes:
 
 ==== 3. Frontend and cli clients
 
-* The YAML defines 2 clients: *frontend* and *cli* 
+* The YAML defines 2 clients: *frontend* and *cli*
 
 =====  *frontend* client
 
@@ -236,7 +232,7 @@ clients:
       - delete:document
 ----
 
-* Because *serviceAccountsEnabled* is set to true, *RHBK* automatically creates a backing user called *service-account-cli* 
+* Because *serviceAccountsEnabled* is set to true, *RHBK* automatically creates a backing user called *service-account-cli*
 * This service account is the identity is what *Tekton Chains* and other CI tools authenticate as when uploading SBOMs.
 * *clientAuthenticatorType* is set to *client-secret*, this configures the client to authenticate using a shared secret when requesting tokens. Combined with *serviceAccountsEnabled: true*, this allows the client to use the OAuth 2.0 Client Credentials flow for machine-to-machine authentication.
 * Client scopes again include the document permissions, so a service account based on the client *cli* can upload and manage SBOMs.
@@ -289,7 +285,7 @@ username: service-account-cli
 . Has the *tpa-manager* realm role
 * This service account is entitled to receive *create:document* and *delete:document* scopes in its token, when it requests a token for the *cli* client.
 
-==== Putting it all together 
+==== Putting it all together
 
 * *RHBK* is responsible for issuing client scopes in the token.
 * *RHTPA* is responsible for interpreting them and enforcing which operations are allowed.
@@ -367,14 +363,14 @@ image::cli_account_roles.png[cli_account_roles,align="center",link=self,window=b
 
 * Now that identity is configured, you can deploy a *Red Hat Trusted Profile Analyzer (RHTPA)* instance.
 * You can deploy *RHTPA* using Helm or an Operator. In enterprise clusters, the Operator model is preferred because it manages CR lifecycle, upgrades, and dependent components.
-* In this lab, you will apply a Custom Resource (CR) that instructs the Operator to deploy all *RHTPA* components. 
+* In this lab, you will apply a Custom Resource (CR) that instructs the Operator to deploy all *RHTPA* components.
 
 === 2.1 Configure the Client Secret
 
 * The *RHTPA* components authenticate to the Identity Provider using an OIDC Client ID and Client Secret stored in a Kubernetes Secret.
 * Run the following command in the showroom terminal to create the *tpa-realm-cli-clients* secret:
 
-[source,role="send-to"]
+[source,role="send-to-wetty"]
 ----
 envsubst < ~/lab-assets/tpa-cli-credentials.yml | oc apply -n tssc-tpa -f -
 ----
@@ -387,7 +383,7 @@ envsubst < ~/lab-assets/tpa-cli-credentials.yml | oc apply -n tssc-tpa -f -
 * The Custom Resource defines the desired state of the *RHTPA* deployment and instructs the *RHTPA Operator* to provision it's components.
 * Run the following command to apply the *RHTPA* Instance CR:
 
-[source,role="send-to"]
+[source,role="send-to-wetty"]
 ----
 envsubst < ~/lab-assets/tpa-instance.yml | oc apply -n tssc-tpa -f -
 ----
@@ -424,7 +420,7 @@ database:
         name: tpa-pgsql-user
 ----
 
-==== 2. OIDC configuration 
+==== 2. OIDC configuration
 
 * This tells *RHTPA* how to validate OIDC tokens and which clients are allowed to act on it.
 
@@ -516,7 +512,7 @@ image::tpa_server_pod.png[TPA Server Pod,align="center",link=self,window=blank]
 
 * In the Showroom terminal, run the following command to extract the external route for the RHTPA server:
 
-[source,role="send-to"]
+[source,role="send-to-wetty"]
 ----
 export TPA_SERVER_URL="https://$(oc get route -l app.kubernetes.io/component=server -n tssc-tpa -o json \
   | jq -r '.items[0].spec.host')"
@@ -526,7 +522,7 @@ export TPA_SERVER_URL="https://$(oc get route -l app.kubernetes.io/component=ser
 * The CLI client does this by obtaining an access token from *Red Hat Build of Keycloak (RHBK)*, which is then included in each API call.
 * Run the following commands to discover the token endpoint and obtain an access token:
 
-[source,role="send-to"]
+[source,role="send-to-wetty"]
 ----
 TOKEN_EP=$(curl "$KEYCLOAK_URL/realms/$TPA_REALM/.well-known/openid-configuration" | jq -r .token_endpoint)
 TOKEN=$(curl -s -X POST "$TOKEN_EP" \
@@ -537,12 +533,12 @@ TOKEN=$(curl -s -X POST "$TOKEN_EP" \
 
 * Use the token to POST an SBOM file to the ingestion API:
 
-[source,role="send-to"]
+[source,role="send-to-wetty"]
 ----
 curl -X POST ${TPA_SERVER_URL}/api/v2/sbom?id=test-sbom  -H "Authorization: Bearer ${TOKEN}" -H "Content-Type: application/json" --data-binary @/home/lab-user/lab-assets/example-sbom.json
 ----
 
-* A successful upload returns a JSON payload containing a UUID, for example: {"id":"urn:uuid:..."}. 
+* A successful upload returns a JSON payload containing a UUID, for example: {"id":"urn:uuid:..."}.
 * This confirms three things:
 
 . Authentication via OIDC is functioning.
@@ -593,7 +589,7 @@ image::rhtpa_vulnerabilities.png[rhtpa_vulnerabilities,align="center",link=self,
 
 [NOTE]
 ====
-Why is the vulnerability report empty? 
+Why is the vulnerability report empty?
 If the test-sbom entry shows zero vulnerabilities, this is expected in a fresh installation.
 *Reason*: RHTPA relies on background importer jobs to download large vulnerability advisory datasets, including the National Vulnerability Database (NVD), the U.S. government’s authoritative CVE repository, and GitHub Security Advisories.
 These datasets must be fully synced before *RHTPA* can correlate vulnerabilities with SBOM components.

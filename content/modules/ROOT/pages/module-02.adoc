@@ -1,10 +1,6 @@
 = Module 2: Sign and Verify All Artifacts With *RHTAS*
 
-include::common/send-to.adoc[]
-include::common/solve-button.adoc[]
-include::common/validate-button.adoc[]
-
-== Introduction 
+== Introduction
 
 In Module 1, you established trust in what is inside your software. The next challenge customers face is this: “How do we know these artifacts were really built by us and haven’t been tampered with?” Organisations need assurance that both code commits and build artifacts originate from verified identities, not rogue machines or compromised pipelines.
 
@@ -34,7 +30,7 @@ Together, these components establish an auditable chain of trust across containe
 [%collapsible]
 ====
 
-Traditional signing models rely on long-lived private keys that developers or CI systems must generate, store, rotate and protect. In contrast, RHTAS uses keyless signing and short lived certificates. 
+Traditional signing models rely on long-lived private keys that developers or CI systems must generate, store, rotate and protect. In contrast, RHTAS uses keyless signing and short lived certificates.
 
 The flow below shows how image signing is carried out in this workshop:
 
@@ -66,7 +62,7 @@ The flow below shows how image signing is carried out in this workshop:
 
 image::keyless_signing_flow.png[keyless_signing_flow,align="center",link=self,window=blank]
 
-NOTE: In an interactive keyless signing flow (for example, when signing code from your IDE), Cosign will prompt you to authenticate with the OIDC provider, such as RHBK. It prints a login URL (and sometimes a short verification code), you complete the login in your browser, and provide the OIDC access token to Cosign, which behind the scenes requests a signing certificate from Fulcio.  
+NOTE: In an interactive keyless signing flow (for example, when signing code from your IDE), Cosign will prompt you to authenticate with the OIDC provider, such as RHBK. It prints a login URL (and sometimes a short verification code), you complete the login in your browser, and provide the OIDC access token to Cosign, which behind the scenes requests a signing certificate from Fulcio.
 
 ====
 
@@ -158,7 +154,7 @@ image::tas_client_login_settings.png[New Client Login Settings,align="center",li
 
 * Scroll down to *Logout Settings*:
 
-. Set the *Front channel logout* toggle to *Off*. 
+. Set the *Front channel logout* toggle to *Off*.
 . Click *Save*.
 * You’ll see a pop-up message saying “Client successfully updated".
 
@@ -166,7 +162,7 @@ image::tas_commit_client_logout_settings.png[New Client Logout Settings,align="c
 
 * Scroll back up to top of the screen:
 
-. Click the *Service account roles* tab 
+. Click the *Service account roles* tab
 . Then, click the *service-account-trusted-artifact-signer* link
 
 image::tas_client_service_account_roles.png[New Client Service Account Roles,align="center",link=self,window=blank]
@@ -221,7 +217,7 @@ image::tas_sso_realm.png[TAS SSO Realm,align="center",link=self,window=blank]
 
 * To create a new client:
 
-. Navigate to *Clients* in the left menu 
+. Navigate to *Clients* in the left menu
 . Then click *Create client*.
 
 image::tas_create_client.png[TAS Create Client,align="center",link=self,window=blank]
@@ -270,7 +266,7 @@ urn:ietf:wg:oauth:2.0:oob
 image::tas_commit_client_client_login_settings.png[New Client Login Settings,align="center",link=self,window=blank]
 
 * Now scroll down to the *Logout settings* section
-. Set the *Front channel logout* toggle to *Off*. 
+. Set the *Front channel logout* toggle to *Off*.
 . Then click *Save*
 * You’ll see a pop-up message saying “Client successfully updated".
 
@@ -286,7 +282,7 @@ image::tas_commit_client_logout_settings.png[New Client Logout Settings,align="c
 
 * In Showroom terminal, run the following command to apply the *RHTAS* Instance CR:
 
-[source, role="send-to", subs="attributes"]
+[source, role="send-to-wetty", subs="attributes"]
 ----
 cat << 'EOF' >> ~/.bashrc
 export TAS_CHAINS_CLIENT_ID={tas_chains_client_id}
@@ -414,8 +410,8 @@ ctlog:
       port: 8091
 ----
 
-* CT log is a cryptographically verifiable ledger, entries cannot be deleted or modified without detection. 
-* When Fulcio issues a certificate, it performs a Certificate Transparency (CT) log submission. 
+* CT log is a cryptographically verifiable ledger, entries cannot be deleted or modified without detection.
+* When Fulcio issues a certificate, it performs a Certificate Transparency (CT) log submission.
 * ctlog then records the submission in Trillian, ensuring no certificate can be issued secretly.
 * That guarantee is what allows auditors or verification tools to prove that a certificate existed at a specific moment in time.
 
@@ -440,7 +436,7 @@ image::tas_verify_deploy.png[Verify RHTAS deploy,align="center",link=self,window
 
 ---
 
-== Step 4: Deploy The OIDC Refresher App 
+== Step 4: Deploy The OIDC Refresher App
 
 * In this step you will deploy a small helper application that continuously refreshes the OIDC token required for signing in pipelines.
 
@@ -465,7 +461,7 @@ image::tas_verify_deploy.png[Verify RHTAS deploy,align="center",link=self,window
 
 . First, retrieve the Keycloak admin credentials from the keycloak-initial-admin secret in the tssc-keycloak namespace:
 +
-[source, role="send-to", subs="attributes"]
+[source, role="send-to-wetty", subs="attributes"]
 ----
 export keycloak_admin_user=$(oc get secret keycloak-initial-admin -n tssc-keycloak -o jsonpath='{.data.username}' | base64 -d)
 export keycloak_admin_password=$(oc get secret keycloak-initial-admin -n tssc-keycloak -o jsonpath='{.data.password}' | base64 -d)
@@ -473,7 +469,7 @@ export keycloak_admin_password=$(oc get secret keycloak-initial-admin -n tssc-ke
 +
 . Next, use the credentials to request an access token:
 +
-[source, role="send-to", subs="attributes"]
+[source, role="send-to-wetty", subs="attributes"]
 ----
 KEYCLOAK_ACCESS_TOKEN=$(curl -s -X POST "${KEYCLOAK_URL}/realms/master/protocol/openid-connect/token" \
 -H "Content-Type: application/x-www-form-urlencoded" \
@@ -485,7 +481,7 @@ KEYCLOAK_ACCESS_TOKEN=$(curl -s -X POST "${KEYCLOAK_URL}/realms/master/protocol/
 +
 . Next, retrieve the client secret for the trusted-artifact-signer client from the tas-chains realm:
 +
-[source, role="send-to", subs="attributes"]
+[source, role="send-to-wetty", subs="attributes"]
 ----
 export TAS_CHAINS_CLIENT_SECRET=$(curl -s -X GET "${KEYCLOAK_URL}/admin/realms/$TAS_CHAINS_REALM/clients?clientId=$TAS_CHAINS_CLIENT_ID" \
   -H "Authorization: Bearer $KEYCLOAK_ACCESS_TOKEN" | jq -r '.[0].secret')
@@ -493,7 +489,7 @@ export TAS_CHAINS_CLIENT_SECRET=$(curl -s -X GET "${KEYCLOAK_URL}/admin/realms/$
 +
 . Finally, create the Kubernetes Secret containing the OIDC configuration, then deploy the refresher application:
 +
-[source, role="send-to"]
+[source, role="send-to-wetty"]
 ----
 envsubst < ~/lab-assets/oidc-info-secret.yml | oc apply -n openshift-pipelines -f -
 oc apply -f ~/lab-assets/oidc-refresher-app.yml -n openshift-pipelines
@@ -501,13 +497,13 @@ oc apply -f ~/lab-assets/oidc-refresher-app.yml -n openshift-pipelines
 +
 . Use the following command to continuously monitor the refresher pod until it reaches the Running state:
 +
-[source, role="send-to"]
+[source, role="send-to-wetty"]
 ----
 watch -n 2 "oc get pods -n openshift-pipelines | awk '/^oidc-token-refresher/ { print; exit }'"
 ----
 
 * Once the pod is running, the OIDC refresher is actively maintaining valid tokens for Tekton Chains.
-* Exit using `CTRL+Z` . 
+* Exit using `CTRL+Z` .
 
 ---
 
@@ -525,7 +521,7 @@ watch -n 2 "oc get pods -n openshift-pipelines | awk '/^oidc-token-refresher/ { 
 
 * Patch the Tekton configuration to point *Tekton Chains* at the *RHTAS* services and token source:
 
-[source, role="send-to"]
+[source, role="send-to-wetty"]
 ----
 oc patch tektonconfig config -n openshift-pipelines --type=merge  --patch "$(cat ~/lab-assets/tekton-chains-patch.yml)"
 ----
@@ -572,7 +568,7 @@ transparency:
 
 * Create a temporary service account with the permissions required to run buildah, which requires elevated SCCs.
 
-[source, role="send-to", subs="attributes"]
+[source, role="send-to-wetty", subs="attributes"]
 ----
 oc create sa chains-signing-image-tester -n tssc-app-ci
 oc adm policy add-scc-to-user anyuid -z chains-signing-image-tester -n tssc-app-ci
@@ -612,7 +608,7 @@ steps:
 
 * Run the *Tekton Task* that builds and pushes an image:
 
-[source, role="send-to"]
+[source, role="send-to-wetty"]
 ----
 oc create -f ~/lab-assets/example-image-sign.yml -n tssc-app-ci
 ----
@@ -620,12 +616,12 @@ oc create -f ~/lab-assets/example-image-sign.yml -n tssc-app-ci
 * *Tekton* will execute the task, and upon successful completion, *Tekton Chains* will automatically call Cosign to sign the resulting image.
 * Wait until the PipelineTask status shows Succeeded = true.
 
-[source,role="send-to"]
+[source,role="send-to-wetty"]
 ----
 watch -n 2 "oc get taskrun -n tssc-app-ci"
 ----
 
-* Exit using `CTRL+Z` . 
+* Exit using `CTRL+Z` .
 
 ---
 
@@ -676,7 +672,7 @@ Issuer: O=TSSC, CN=fulcio_hostname
 Not Before: 2025-12-21T15:42:54
 Not After:  2025-12-21T15:42:54
 ----
-.  The signing algorithm: 
+.  The signing algorithm:
 +
 [source]
 ----
@@ -779,7 +775,7 @@ attestation:
 image::select_tekton_chains_image.png[select tekton_chains image,align="center",link=self,window=blank]
 
 * Locate the image tag created by the task.
-* You should see a shield icon next to the image tag as seen in the following screenshot. 
+* You should see a shield icon next to the image tag as seen in the following screenshot.
 * This indicates that a valid Cosign signature is attached to the image.
 
 image::Cosign_signature_shield.png[Cosign signature shield,align="center",link=self,window=blank]
@@ -790,7 +786,7 @@ image::Cosign_signature_shield.png[Cosign signature shield,align="center",link=s
 
 Once verification is complete, remove the elevated permissions and delete the service account:
 
-[source, role="send-to", subs="attributes"]
+[source, role="send-to-wetty", subs="attributes"]
 ----
 oc adm policy remove-scc-from-user anyuid -z chains-signing-image-tester -n tssc-app-ci
 oc adm policy remove-scc-from-user privileged -z chains-signing-image-tester -n tssc-app-ci

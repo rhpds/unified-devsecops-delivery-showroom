@@ -1,9 +1,5 @@
 = Module 3: Developer workflow without developer friction
 
-include::common/send-to.adoc[]
-include::common/solve-button.adoc[]
-include::common/validate-button.adoc[]
-
 == Introduction
 
 Modern software delivery is shaped by two opposing forces. On one side, security expectations have never been higher. Organisations are under pressure to prove where their software comes from, how it was built, and whether it can be trusted across every stage of the supply chain. On the other side, developers face increasing cognitive load. Tool sprawl, fragmented workflows, and manual security steps slow delivery and create frustration when security is bolted on after the fact. Most organisations struggle to balance both. They invest heavily in security tooling or developer productivity, but rarely achieve both without friction. This is where platform engineering comes in.
@@ -76,7 +72,7 @@ After entering your credentials, click *Sign In*.
 image::switch_to_sso_realm.png[Switch to SSO Realm,align="center",link=self,window=blank]
 
 *	To create a new user:
-. Navigate to *Users*.  
+. Navigate to *Users*.
 . Click *Add user*.
 +
 image::add_new_user.png[add_new_user,align="center",link=self,window=blank]
@@ -112,7 +108,7 @@ User1
 Demo
 ----
 +
-. Click *Create*. 
+. Click *Create*.
 +
 * You'll see a pop-up message saying "The user has been created."
 +
@@ -146,7 +142,7 @@ NOTE: The tssc group mapping in RHDH ensures this user has ownership and managem
 === 1.4 Set User Credentials
 
 . Click the *Credentials* tab.
-. Click *Set Password*. 
+. Click *Set Password*.
 
 image::select_set_password.png[select_set_password,align="center",link=self,window=blank]
 
@@ -396,7 +392,7 @@ In this step, you will replace temporary Guest access with Single Sign-On (SSO) 
 ==== 2.4.1 Configuration steps
 
 . Comment the developer environment block under authusing `CMD + /` (Mac) or `CTRL + /` (Windows/Linux).
-. Then, uncomment the production environment configuration using `CMD + /` (Mac) or `CTRL + /` (Windows/Linux). 
+. Then, uncomment the production environment configuration using `CMD + /` (Mac) or `CTRL + /` (Windows/Linux).
 . Finally uncomment the signInPage setting using `CMD + /` (Mac) or `CTRL + /` (Windows/Linux) as shown below:
 
 image::enable_auth.png[enable_auth,align="center",link=self,window=blank]
@@ -560,7 +556,7 @@ In the next step, you'll return to Red Hat Developer Hub to verify that these ch
 
 == Step 3: Validate the changes in RHDH
 
-* Click the *RHDH* tab in the Showroom. You may need to refresh the tab. 
+* Click the *RHDH* tab in the Showroom. You may need to refresh the tab.
 * If you are logged in as Guest, click the user icon in the top-right corner, select the drop-down arrow, then choose Sign out from the menu.
 +
 image::guest_sign_out.png[guest_sign_out.png,align="center",link=self,window=blank]
@@ -598,7 +594,7 @@ image::catalog_users.png[catalog_users,align="center",link=self,window=blank]
 
 == Step 4: Development Environment as Code with Devfiles
 
-The concept of Development Environment as Code represents a significant shift in the way we set up and manage development environments. By treating these configurations as code, developers can leverage automation, apply version control, and ensure consistency across various setups. 
+The concept of Development Environment as Code represents a significant shift in the way we set up and manage development environments. By treating these configurations as code, developers can leverage automation, apply version control, and ensure consistency across various setups.
 
 This approach simplifies the complex process of configuring individual environments and aligns it with modern DevOps practices. At the heart of this paradigm is the Devfile, a YAML configuration file used by OpenShift Dev Spaces, and in this step you will update a Devfile that our developer will use in his development workspace.
 
@@ -617,10 +613,10 @@ In this section you'll act as a Platform Engineer and update the Devfile in a Te
 
 ==== Projects (Optional)
 
-* The *Projects* section is used to specify source code repositories that are essential for the development environment. 
+* The *Projects* section is used to specify source code repositories that are essential for the development environment.
 * It includes details like the repository URL and the specific branch, tag, or commit to be used, ensuring that the *workspace* is pre-populated with the correct code version upon initialization.
 
-==== Components: 
+==== Components:
 
 * *Components* are the building blocks of the development environment. The can be of type:
 
@@ -629,13 +625,13 @@ In this section you'll act as a Platform Engineer and update the Devfile in a Te
 . *Volume*: Provides persistent storage necessary for certain data within the development environment.
 . *Plugin*: Extends the capabilities of the development environment by adding IDE features or integrating additional tools and services.
 
-==== Commands (Optional): 
+==== Commands (Optional):
 
-* The **Commands** section outlines specific actions that can be executed within the development environment, such as build, run, and test commands. 
-* These *commands* are defined to automate tasks and facilitate a consistent development workflow across different environments. 
+* The **Commands** section outlines specific actions that can be executed within the development environment, such as build, run, and test commands.
+* These *commands* are defined to automate tasks and facilitate a consistent development workflow across different environments.
 * Each *command* can specify a working directory, an associated container, and the actual command line to execute.
 
-==== Events (Optional): 
+==== Events (Optional):
 
 * The *Events* section in a *devfile* handles the lifecycle events of the workspace, such as pre-start, post-start, pre-stop, and post-stop events.
 * These events trigger specific commands at different stages of the workspace lifecycle, enabling the setup or teardown of services and tools necessary for the development process.
@@ -649,7 +645,7 @@ image::devfile_anatomy.png[Devfile Anatomy Diagram,link=self,window=blank]
 
 ---
 
-=== 4.1 Log Back in to GitLab Update the Devfile 
+=== 4.1 Log Back in to GitLab Update the Devfile
 
 . If you are not already logged in to *Gitlab*, click the *Gitlab* tab in the Showroom and log in using:
 +
@@ -669,7 +665,7 @@ image::devfile_anatomy.png[Devfile Anatomy Diagram,link=self,window=blank]
 
 ---
 
-=== 4.2 Update the Devfile 
+=== 4.2 Update the Devfile
 
 . At the top left click on *Gitlab Home*.
 +
@@ -720,7 +716,7 @@ image::poststart_Event.png[poststart_Event.png,align="center",link=self,window=b
 feat: Update Devfile Configuration.
 ----
 
-. Click *Commit Changes*. 
+. Click *Commit Changes*.
 
 ---
 
@@ -730,7 +726,7 @@ In this step, you will create a ConfigMap for *Dev Spaces* so that every develop
 
 Create a new ConfigMap in the openshift-devspaces namespace using this command in the Terminal:
 
-[source, role="send-to", subs="attributes"]
+[source, role="send-to-wetty", subs="attributes"]
 ----
 cat << 'EOF' | oc apply -n openshift-devspaces -f -
 apiVersion: v1
@@ -769,7 +765,7 @@ Let's get started.
 
 . Run the following command to set the TPA_SERVER_URL
 +
-[source,role="send-to"]
+[source,role="send-to-wetty"]
 ----
 export TPA_SERVER_URL="https://$(oc get route -l app.kubernetes.io/component=server -n tssc-tpa -o json \
   | jq -r '.items[0].spec.host')"
@@ -777,21 +773,21 @@ export TPA_SERVER_URL="https://$(oc get route -l app.kubernetes.io/component=ser
 +
 . Then run this command to create the secret *tpa-secret*:
 +
-[source,role="send-to"]
+[source,role="send-to-wetty"]
 ----
 envsubst < ~/lab-assets/tpa-secret.yml | oc apply -n tssc-app-ci -f -
 ----
 +
 . Next, create the GitLab authentication secret. First, retrieve the GitLab personal access token:
 +
-[source,role="send-to"]
+[source,role="send-to-wetty"]
 ----
 export GITLAB_TOKEN=$(oc get secret root-user-personal-token -n gitlab -o jsonpath='{.data.token}' | base64 -d)
 ----
 +
 . Next, create the *gitlab-auth-secret* secret:
 +
-[source,role="send-to"]
+[source,role="send-to-wetty"]
 ----
 envsubst < ~/lab-assets/gitlab-auth-secret.yml | oc apply -n tssc-app-ci -f -
 ----

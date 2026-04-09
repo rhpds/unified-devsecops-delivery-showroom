@@ -1,9 +1,5 @@
 = Module 4: Enforce Policy and Promote Safely
 
-include::common/send-to.adoc[]
-include::common/solve-button.adoc[]
-include::common/validate-button.adoc[]
-
 == Introduction
 
 * By this point in the workshop, you have established strong foundations of trust across the software supply chain. In Module 1, you made software composition visible by ingesting and analysing SBOMs, turning dependency risk from an assumption into evidence. In Module 2, you anchored trust in cryptographic provenance, ensuring every build artifact is signed, traceable, and verifiably produced by your CI pipeline. In Module 3, you reduced developer friction by centralising access to tools and security capabilities through *Red Hat Developer Hub*, using *GitOps* to configure authentication, plugins, and catalog discovery as a consistent, secure entry point for developers.
@@ -26,7 +22,7 @@ NOTE: Enterprise Contract is the policy engine that governs whether an applicati
 * You will use the ACS API to create the integration programmatically, mirroring how platform teams automate integration setup in production environments.
 * In the Showroom terminal, run the following command to create the Quay integration:
 +
-[source, role="send-to", subs="attributes"]
+[source, role="send-to-wetty", subs="attributes"]
 ----
 curl -k -X POST \
   -u "{rhacs_admin_user}:{rhacs_admin_password}" \
@@ -65,14 +61,14 @@ NOTE: For more details on configuring Quay Container Registry as a scanner integ
 * This next command retrieves vulnerability data for the image and returns a detailed scan report.
 * In the Showroom terminal, run:
 
-[source, role="send-to", subs="attributes"]
+[source, role="send-to-wetty", subs="attributes"]
 ----
 roxctl image scan --image={quay_host}/tssc/tekton-chains-test:latest
 ----
 
 * This command evaluates the image against ACS policies and reports whether it meets deployment requirements.
 
-[source, role="send-to", subs="attributes"]
+[source, role="send-to-wetty", subs="attributes"]
 ----
 roxctl image check --image={quay_host}/tssc/tekton-chains-test:latest
 ----
@@ -92,7 +88,7 @@ roxctl image check --image={quay_host}/tssc/tekton-chains-test:latest
 
 * Up to this point, you’ve been working in the role of a platform engineer.
 * Now let’s switch personas and step into the role of a developer (User1), which you created earlier.
-* As a developer, your goal is simple, get a ready-to-use development environment so you can focus on building your new feature. 
+* As a developer, your goal is simple, get a ready-to-use development environment so you can focus on building your new feature.
 * This is exactly what Software Templates, or Golden Paths, are designed to provide.
 * Under the hood, they use the link:https://backstage.spotify.com/docs/portal/core-features-and-plugins/scaffolder[*Backstage scaffolder*^] to automate the creation of repositories, configuration, and CI/CD resources based on platform-approved patterns, as you'll see in the next section.
 
@@ -153,12 +149,12 @@ image::open_component_in_catalog.png[open_component_in_catalog,align="center",li
 * Templates are defined using YAML and rendered as rich, validated forms in the Red Hat Developer Hub UI. Developers interact with a simple form. Behind the scenes, the platform does all the heavy lifting.
 * This YAML is processed by the *Scaffolder*, *RHDH*'s templating engine, which executes the steps outlined in the template.
 * This ensures that every new service is created in a standardized, automated, self-service way.
-* Let’s examine the structure of a template using 
+* Let’s examine the structure of a template using
 
 === Software Template YAML Structure
 
 * At a basic level, the Template Entity resembles a Kubernetes Custom Resource. Note, Backstage resources are stored in the Backstage instance's database and are not managed via the Kubernetes API Server.
-* Where the Template Entity differs is that it contains additional fields: 
+* Where the Template Entity differs is that it contains additional fields:
 . *Header*: Here, you provide essential information about the template.
 . *Parameters*: This section is for gathering inputs from the user.
 . *Steps*: In this section, you define the actions to be executed by the *Scaffolder*.
@@ -278,7 +274,7 @@ parameters:
       input:
         entityRef: component:default/provisioning-data
  	# other steps removed for brevity
-    
+
     - id: publish-gitlab-source
       name: Publish
       action: publish:gitlab
@@ -287,7 +283,7 @@ parameters:
           parameters.repoOwner }}&repo=${{parameters.name}}'
         repoVisibility: public
     # other steps removed for brevity
-   
+
     - id: register-source
       name: Register Source
       action: catalog:register
@@ -296,8 +292,8 @@ parameters:
         catalogInfoPath: '/catalog-info.yaml'
     # other steps removed for brevity
 ----
-+ 
-* Notice how the parameters are referenced in the input of the steps? 
++
+* Notice how the parameters are referenced in the input of the steps?
 * Another point of note is that subsequent steps can access output from prior steps.
 * To see the available actions in *RHDH* and understand their input and output parameters, go to the *Create Content* page by selecting *Create* from the left sidebar menu.
 * Next, open the *Kebab* menu at the top right of the *Create Content* page and choose *Installed Actions*.
@@ -334,7 +330,7 @@ output:
 
 == Step 3: Sign Your Code and Enter the Trusted Supply Chain
 
-* In this step, you will make a small code change from within *OpenShift Dev Spaces (VS Code)* and commit it to Git. The commit will be signed automatically using your OIDC identity, and this signed commit will trigger the CI pipeline. 
+* In this step, you will make a small code change from within *OpenShift Dev Spaces (VS Code)* and commit it to Git. The commit will be signed automatically using your OIDC identity, and this signed commit will trigger the CI pipeline.
 * Your trusted identity is now carried forward into the build, verification, and promotion stages of the software supply chain.
 
 === 3.1 Sign in to OpenShift Dev Spaces
@@ -420,7 +416,7 @@ image::open_new_terminal.png[open_new_terminal,align="center"]
 +
 Then run the following command, you may be prompted by your browser to allow paste access into the terminal. If so, approve the prompt to proceed.
 +
-[source, role="send-to"]
+[source, role="send-to-wetty"]
 ----
 git config --global --list
 ----
@@ -444,7 +440,7 @@ image::Index_Markdown_Updated.png[Updated Index Markdown File,link=self,window=b
 +
 . To begin commiting your code to the repository, run the following command to add your changes to staging and commiting your changes:
 +
-[source, role="send-to"]
+[source, role="send-to-wetty"]
 ----
 git add .
 git commit -m "feat: test secure signing."
@@ -454,7 +450,7 @@ git commit -m "feat: test secure signing."
 +
 image::xdg_error.png[xdg_error,align="center",self,window=blank]
 +
-. Hover over *the https://sso.apps<…>* URL and use  `CMD + Click` (Mac) or `CTRL + Click` (Windows/Linux) to open the Red Hat SSO login page in your local browser, where you will authenticate and obtain the verification code required to complete the signed commit. 
+. Hover over *the https://sso.apps<…>* URL and use  `CMD + Click` (Mac) or `CTRL + Click` (Windows/Linux) to open the Red Hat SSO login page in your local browser, where you will authenticate and obtain the verification code required to complete the signed commit.
 +
 . Click *Open* to allow VS Code to open the Red Hat SSO authentication page in your local browser.
 +
@@ -492,7 +488,7 @@ image::Gitsign_Commit_Signed.png[Successfully Signed Commit with Gitsign,link=se
 +
 . Push the code to the repository with the below command:
 +
-[source, role="send-to"]
+[source, role="send-to-wetty"]
 ----
 git push origin master
 ----
@@ -502,7 +498,7 @@ git push origin master
 
 ---
 
-=== 5.4 Explore the Tekton Pipeline 
+=== 5.4 Explore the Tekton Pipeline
 
 In this step, you will observe the CI pipeline that was triggered by your signed commit and follow its execution through the different verification stages.
 
@@ -544,7 +540,7 @@ image::Generated_Artifacts_Registery.png[Generated Artifacts in Quay Registry,li
 
 === 5.3 Upload SBOM to Repository
 
-* Once the SBOM has been generated, the next step is to upload it to *Red Hat Trusted Profile Analyzer (RHTPA)*. 
+* Once the SBOM has been generated, the next step is to upload it to *Red Hat Trusted Profile Analyzer (RHTPA)*.
 
 image::Upload_SBOM.png[Upload SBOM to CycloneDX Task,link=self,window=blank]
 
@@ -604,7 +600,7 @@ image::deployment_check_output.png[deployment_check_output,link=self,window=blan
 
 == Step 4: Explore the Application
 
-Now that the build is complete, let's examine the application features and how it works. 
+Now that the build is complete, let's examine the application features and how it works.
 
 === Step 4.1: Explore the Application's Source Code
 
@@ -620,7 +616,7 @@ image:gitlab-quarkus-app-repos.png[gitlab_home_page_quarkus_apps,align="center",
 
 Return to Dev Spaces and explore the source code for the Quarkus application. You'll quickly notice references to Langchain4j and Chatbot features:
 
-. Expand the my-quarkus-tkn project, navigate to src → main → resources. 
+. Expand the my-quarkus-tkn project, navigate to src → main → resources.
 .Open the *application.properties*. Note that various Langchain4j properties are set to connect the application to an LLM.
 +
 image:quarkus-langhcain-props.png[quarkus-langhcain-props,align="center",link=self,window=blank]
@@ -633,7 +629,7 @@ NOTE: The model serving and inference has been taken care of by the platform eng
 
 Next, return to Red Hat Developer Hub and learn how to access the deployed Quarkus application's dev environment:
 
-. Find open the *Topology* tab for the *my-quarkus-tkn* Component. Three Pods will be displayed, one for each of dev, staging, and production. 
+. Find open the *Topology* tab for the *my-quarkus-tkn* Component. Three Pods will be displayed, one for each of dev, staging, and production.
 . Select the *dev* Pod. You can confirm it's the *dev* Pod by checking the namespace listed when you click each Pod.
 +
 image::quarkus-tkn-dev-pod.png[quarkus-tkn-dev-pod,link=self,window=blank]
@@ -669,7 +665,7 @@ In this step you will promote the application to staging by creating this tag, a
 {gitlab_root_password}
 ----
 
-=== 5.2 Create a Release Tag 
+=== 5.2 Create a Release Tag
 
 . At the top left click on *Gitlab Home*.
 +
