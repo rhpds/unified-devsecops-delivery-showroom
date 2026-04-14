@@ -608,6 +608,15 @@ image::rhtpa_vulnerabilities_complete.png[rhtpa_vulnerabilities_complete,align="
 
 ---
 
+===  Module 1: Summary
+
+* By completing this module, you configured identity in *RHBK*, deployed *RHTPA* and validated your first SBOM, establishing a reliable source of truth for software composition. This is a good starting point for consultants implementing early-stage supply-chain controls for customers.
+* For technical sellers, when a customer says, “We cannot verify or attest to the components that make up our software,” you now know exactly where to start. *RHTPA* gives customers an auditable view of their software composition, enabling risk assessment from the very first stage of the software delivery process.
+* And now that we know what is in our software, the next question naturally follows: “How do we know these artifacts haven’t been tampered with?” That is the next trust boundary we will solve.
+* Head to Module 2 to learn how to cryptographically sign and verify artifacts using *Red Hat Trusted Artifact Signer (RHTAS)*, ensuring every image you build can be traced, trusted and validated.
+
+---
+
 == Module 1: Automation
 
 === Solve Module 1
@@ -625,14 +634,5 @@ To verify that Module 1 has been completed successfully (either manually or via 
 ++++
 <div class="validate-button-placeholder" data-module="module-01"></div>
 ++++
-
----
-
-===  Module 1: Summary
-
-* By completing this module, you configured identity in *RHBK*, deployed *RHTPA* and validated your first SBOM, establishing a reliable source of truth for software composition. This is a good starting point for consultants implementing early-stage supply-chain controls for customers.
-* For technical sellers, when a customer says, “We cannot verify or attest to the components that make up our software,” you now know exactly where to start. *RHTPA* gives customers an auditable view of their software composition, enabling risk assessment from the very first stage of the software delivery process.
-* And now that we know what is in our software, the next question naturally follows: “How do we know these artifacts haven’t been tampered with?” That is the next trust boundary we will solve.
-* Head to Module 2 to learn how to cryptographically sign and verify artifacts using *Red Hat Trusted Artifact Signer (RHTAS)*, ensuring every image you build can be traced, trusted and validated.
 
 ---
