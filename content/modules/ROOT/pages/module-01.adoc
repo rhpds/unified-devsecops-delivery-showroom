@@ -34,7 +34,7 @@ This is where *Red Hat Trusted Profile Analyzer*, or *RHTPA*, plays a critical r
 
 == Step 1: Configure identity and access management
 
-* * To begin establishing software transparency, we first install *RHTPA*. This allows organizations to build a trusted inventory of application components, helping them understand what is in their software and assess potential risk.
+* To begin establishing software transparency, we first install *RHTPA*. This allows organizations to build a trusted inventory of application components, helping them understand what is in their software and assess potential risk.
 
 === 1.1 Install and Setup RHTPA
 
@@ -89,7 +89,7 @@ tssc-tpa
 +
 image::switch_to_tpa_project.png[Switch to TPA project,align="center",link=self,window=blank]
 +
-* You should now see the *RHTPA* components running in this namespace. These services ingest SBOM documents, index their contents, and make that information available for analysis and querying.
+* You should now see the *RHTPA* components running in this namespace. These services ingest *SBOM* documents, index their contents, and make that information available for analysis and querying.
 +
 image::tpa_pods_view.png[TPA Pods View,align="center",link=self,window=blank]
 
@@ -98,7 +98,7 @@ image::tpa_pods_view.png[TPA Pods View,align="center",link=self,window=blank]
 
 == 2 Ingest and Explore Your First SBOM
 
-*With the platform in place, the next step is to upload a *Software Bill of Materials (SBOM)* into *RHTPA* so it can be analyzed and indexed.
+* With the platform in place, the next step is to upload a *Software Bill of Materials (SBOM)* into *RHTPA* so it can be analyzed and indexed.
 
 == Step 2.1: Upload an SBOM into RHTPA
 
@@ -172,7 +172,7 @@ This initial synchronization can take some time to complete, especially in new e
 +
 image::rhtpa_importers.png[rhtpa_importers,align="center",link=self,window=blank]
 +
-* Once these import jobs have completed, RHTPA is able to correlate SBOM components with known vulnerabilities and present the results in the *Vulnerabilities* tab.
+* Once these import jobs have completed, *RHTPA* is able to correlate *SBOM* components with known vulnerabilities and present the results in the *Vulnerabilities* tab.
 * An example of a fully populated vulnerability view is shown below:
 +
 image::rhtpa_vulnerabilities_complete.png[rhtpa_vulnerabilities_complete,align="center",link=self,window=blank]
