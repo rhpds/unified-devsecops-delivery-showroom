@@ -14,14 +14,12 @@
     src: "{{ commit_signing_script_template }}"
     dest: "{{ commit_signing_script }}"
     mode: '0755'
-  delegate_to: bastion
 
 - name: Run commit signing script
   ansible.builtin.shell:
     cmd: "{{ commit_signing_script }}"
   register: commit_signing_result
   changed_when: true
-  delegate_to: bastion
 
 - name: Display commit signing results
   ansible.builtin.debug:
@@ -39,4 +37,3 @@
   ansible.builtin.file:
     path: "{{ commit_signing_script }}"
     state: absent
-  delegate_to: bastion

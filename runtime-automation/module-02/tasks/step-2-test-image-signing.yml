@@ -21,7 +21,6 @@
   ansible.builtin.shell: |
     oc create sa {{ test_sa }} -n {{ app_ci_namespace }} 2>/dev/null || echo "✓ Service account already exists"
   changed_when: false
-  delegate_to: bastion
 
 - name: Grant anyuid SCC
   ansible.builtin.debug:
@@ -31,7 +30,6 @@
   ansible.builtin.shell: |
     oc adm policy add-scc-to-user anyuid -z {{ test_sa }} -n {{ app_ci_namespace }}
   changed_when: true
-  delegate_to: bastion
 
 - name: Grant privileged SCC
   ansible.builtin.debug:
@@ -41,7 +39,6 @@
   ansible.builtin.shell: |
     oc adm policy add-scc-to-user privileged -z {{ test_sa }} -n {{ app_ci_namespace }}
   changed_when: true
-  delegate_to: bastion
 
 - name: Link registry secret
   ansible.builtin.debug:
@@ -51,7 +48,6 @@
   ansible.builtin.shell: |
     oc secret link {{ test_sa }} {{ registry_secret }} -n {{ app_ci_namespace }} --for=mount 2>/dev/null || echo "✓ Secret already linked"
   changed_when: false
-  delegate_to: bastion
 
 - name: Display test permissions configured
   ansible.builtin.debug:
@@ -89,7 +85,6 @@
   ansible.builtin.shell: |
     oc get taskrun -n {{ app_ci_namespace }} --sort-by=.metadata.creationTimestamp -o jsonpath='{.items[-1].metadata.name}'
   register: taskrun_name
-  delegate_to: bastion
   changed_when: false
   failed_when: taskrun_name.stdout == ""
 
@@ -134,7 +129,6 @@
       echo "timeout"
       exit 1
   register: taskrun_result
-  delegate_to: bastion
   changed_when: false
   failed_when: taskrun_result.stdout_lines[0] != "success"
 
@@ -198,7 +192,6 @@
   ansible.builtin.shell: |
     oc adm policy remove-scc-from-user anyuid -z {{ test_sa }} -n {{ app_ci_namespace }}
   changed_when: true
-  delegate_to: bastion
 
 - name: Remove privileged SCC
   ansible.builtin.debug:
@@ -208,7 +201,6 @@
   ansible.builtin.shell: |
     oc adm policy remove-scc-from-user privileged -z {{ test_sa }} -n {{ app_ci_namespace }}
   changed_when: true
-  delegate_to: bastion
 
 - name: Delete service account
   ansible.builtin.debug:
@@ -218,7 +210,6 @@
   ansible.builtin.shell: |
     oc delete sa {{ test_sa }} -n {{ app_ci_namespace }}
   changed_when: true
-  delegate_to: bastion
 
 - name: Display cleanup complete
   ansible.builtin.debug:

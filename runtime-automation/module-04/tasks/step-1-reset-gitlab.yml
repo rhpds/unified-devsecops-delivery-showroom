@@ -15,7 +15,6 @@
   register: gitlab_group_info
   changed_when: false
   failed_when: false
-  delegate_to: bastion
   when: >
     gitlab_url is defined and
     gitlab_token.stdout is defined and
@@ -32,7 +31,6 @@
   register: gitlab_projects
   changed_when: false
   failed_when: false
-  delegate_to: bastion
   when: >
     gitlab_url is defined and
     gitlab_token.stdout is defined and
@@ -59,7 +57,6 @@
     gitlab_projects.json | length > 0
   register: gitlab_mark_results
   changed_when: true
-  delegate_to: bastion
 
 - name: Wait for projects to be marked for deletion
   ansible.builtin.pause:
@@ -79,7 +76,6 @@
   register: gitlab_projects_scheduled
   changed_when: false
   failed_when: false
-  delegate_to: bastion
   when: >
     gitlab_mark_results is defined and
     gitlab_mark_results.changed
@@ -98,7 +94,6 @@
     gitlab_projects_scheduled.json | length > 0
   register: gitlab_delete_results
   changed_when: true
-  delegate_to: bastion
 
 - name: Display GitLab cleanup results
   ansible.builtin.debug:
@@ -127,7 +122,6 @@
   ansible.builtin.file:
     path: "{{ template_repo_dir }}"
     state: absent
-  delegate_to: bastion
   when: gitlab_url is defined
 
 - name: Clone template repository
@@ -137,7 +131,6 @@
   environment:
     GIT_SSL_NO_VERIFY: "true"
   changed_when: false
-  delegate_to: bastion
   when: gitlab_url is defined
 
 - name: Reset template to clean commit
@@ -146,7 +139,6 @@
       cd {{ template_repo_dir }}
       git reset --hard {{ rhdh_template_clean_commit }}
   changed_when: true
-  delegate_to: bastion
   when: gitlab_url is defined
 
 - name: Force push clean template to GitLab
@@ -157,7 +149,6 @@
   environment:
     GIT_SSL_NO_VERIFY: "true"
   changed_when: true
-  delegate_to: bastion
   when: gitlab_url is defined
 
 - name: Display template reset result

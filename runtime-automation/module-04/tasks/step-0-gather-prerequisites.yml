@@ -27,7 +27,6 @@
   changed_when: false
   register: gitlab_token
   failed_when: false
-  delegate_to: bastion
   when: gitlab_url is defined
 
 - name: Display GitLab token retrieval status

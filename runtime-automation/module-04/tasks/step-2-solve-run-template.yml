@@ -24,7 +24,6 @@
     path: "{{ template_file }}"
     regexp: 'user\.entity\.metadata\.name'
     replace: "user.entity.metadata.name or 'user1'"
-  delegate_to: bastion
 
 - name: Verify template file changes
   ansible.builtin.shell:
@@ -158,7 +157,6 @@
       cd {{ gitlab_repo_dir }}
       git reset --hard {{ rhdh_template_clean_commit }}
   changed_when: true
-  delegate_to: bastion
   when: >
     task_status.json is defined and
     task_status.json.status == 'completed'
@@ -171,7 +169,6 @@
   environment:
     GIT_SSL_NO_VERIFY: "true"
   changed_when: true
-  delegate_to: bastion
   when: >
     task_status.json is defined and
     task_status.json.status == 'completed'

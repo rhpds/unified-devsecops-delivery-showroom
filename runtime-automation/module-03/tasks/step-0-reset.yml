@@ -4,7 +4,6 @@
   ansible.builtin.shell:
     cmd: oc get secret tpa-secret -n {{ app_ci_namespace }} 2>/dev/null
   register: tpa_secret_check
-  delegate_to: bastion
   changed_when: false
   failed_when: false
 
@@ -13,13 +12,11 @@
   ansible.builtin.shell:
     cmd: oc delete secret tpa-secret -n {{ app_ci_namespace }}
   changed_when: true
-  delegate_to: bastion
 
 - name: Check if gitlab-auth-secret exists
   ansible.builtin.shell:
     cmd: oc get secret gitlab-auth-secret -n {{ app_ci_namespace }} 2>/dev/null
   register: gitlab_secret_check
-  delegate_to: bastion
   changed_when: false
   failed_when: false
 
@@ -28,13 +25,11 @@
   ansible.builtin.shell:
     cmd: oc delete secret gitlab-auth-secret -n {{ app_ci_namespace }}
   changed_when: true
-  delegate_to: bastion
 
 - name: Check if tas-git-config ConfigMap exists
   ansible.builtin.shell:
     cmd: oc get configmap tas-git-config -n {{ devspaces_namespace }} 2>/dev/null
   register: tas_configmap_check
-  delegate_to: bastion
   changed_when: false
   failed_when: false
 
@@ -43,7 +38,6 @@
   ansible.builtin.shell:
     cmd: oc delete configmap tas-git-config -n {{ devspaces_namespace }}
   changed_when: true
-  delegate_to: bastion
 
 - name: Get Keycloak admin credentials
   ansible.builtin.shell:
@@ -52,7 +46,6 @@
       ADMIN_PASS=$(oc get secret keycloak-initial-admin -n {{ keycloak_namespace }} -o jsonpath='{.data.password}' | base64 -d)
       echo "${ADMIN_USER}:${ADMIN_PASS}"
   changed_when: false
-  delegate_to: bastion
   register: kc_reset_creds
 
 - name: Get Keycloak admin token
@@ -67,7 +60,6 @@
         -d "password=${ADMIN_PASS}" \
         -d "grant_type=password" | jq -r '.access_token'
   changed_when: false
-  delegate_to: bastion
   register: reset_admin_token
 
 - name: Check if token is valid

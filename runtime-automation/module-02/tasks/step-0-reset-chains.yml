@@ -29,7 +29,6 @@
         oc patch tektonconfig config -n {{ pipelines_namespace }} --type=json -p="[{\"op\": \"remove\", \"path\": \"/spec/chain/$field\"}]" 2>/dev/null || true
       done
   changed_when: true
-  delegate_to: bastion
 
 - name: Display Tekton Chains configuration reverted
   ansible.builtin.debug:

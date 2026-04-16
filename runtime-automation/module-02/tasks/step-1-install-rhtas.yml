@@ -21,7 +21,6 @@
         -d "grant_type=password" | jq -r '.access_token')
       echo "$ADMIN_TOKEN"
   register: kc_admin_token
-  delegate_to: bastion
   changed_when: false
   failed_when: kc_admin_token.stdout == "" or kc_admin_token.stdout == "null"
 
@@ -46,7 +45,6 @@
         "{{ keycloak_admin_console }}/admin/realms/{{ tas_chains_realm }}")
       echo "$REALM_EXISTS"
   register: check_realm
-  delegate_to: bastion
   changed_when: false
 
 - name: Create tas-chains realm if it doesn't exist
@@ -82,7 +80,6 @@
         "{{ keycloak_admin_console }}/admin/realms/{{ tas_chains_realm }}/clients?clientId={{ tas_client_id }}" | jq -r '.[0].id // empty')
       echo "$CLIENT_EXISTS"
   register: check_client
-  delegate_to: bastion
   changed_when: false
 
 - name: Create trusted-artifact-signer client if it doesn't exist
@@ -119,7 +116,6 @@
         "{{ keycloak_admin_console }}/admin/realms/{{ tas_chains_realm }}/clients?clientId={{ tas_client_id }}" | jq -r '.[0].id')
       echo "$CLIENT_ID"
   register: tas_client_uuid
-  delegate_to: bastion
   changed_when: false
 
 - name: Configure service account user
@@ -132,7 +128,6 @@
         "{{ keycloak_admin_console }}/admin/realms/{{ tas_chains_realm }}/clients/{{ tas_client_uuid.stdout }}/service-account-user" | jq -r '.id')
       echo "$SERVICE_ACCOUNT_USER"
   register: service_account_user_id
-  delegate_to: bastion
   changed_when: false
 
 - name: Update service account with email verification
@@ -148,7 +143,6 @@
         }")
       echo "$HTTP_CODE"
   register: email_update_result
-  delegate_to: bastion
   changed_when: email_update_result.stdout in ["200", "204"]
   failed_when: email_update_result.stdout not in ["200", "204"]
 
@@ -157,7 +151,6 @@
       curl -s -H "Authorization: Bearer {{ kc_admin_token.stdout }}" \
         "{{ keycloak_admin_console }}/admin/realms/{{ tas_chains_realm }}/clients/{{ tas_client_uuid.stdout }}/service-account-user" | jq -r '.emailVerified'
   register: verify_email_verified
-  delegate_to: bastion
   changed_when: false
   failed_when: verify_email_verified.stdout != "true"
 
@@ -181,7 +174,6 @@
         "{{ keycloak_admin_console }}/admin/realms/{{ tas_sso_realm }}/clients?clientId={{ tas_client_id }}" | jq -r '.[0].id // empty')
       echo "$SSO_CLIENT_EXISTS"
   register: check_sso_client
-  delegate_to: bastion
   changed_when: false
 
 - name: Create trusted-artifact-signer client in sso realm if it doesn't exist
@@ -263,7 +255,6 @@
       echo "timeout"
       exit 1
   register: rhtas_status
-  delegate_to: bastion
   changed_when: false
   failed_when: rhtas_status.stdout_lines[0] == "timeout"
 
@@ -291,7 +282,6 @@
         "{{ keycloak_admin_console }}/admin/realms/{{ tas_chains_realm }}/clients?clientId={{ tas_client_id }}" | jq -r '.[0].id')
       echo "$TAS_CHAINS_CLIENT_ID_UUID"
   register: tas_chains_client_uuid
-  delegate_to: bastion
   changed_when: false
 
 - name: Get TAS client secret
@@ -300,7 +290,6 @@
         "{{ keycloak_admin_console }}/admin/realms/{{ tas_chains_realm }}/clients/{{ tas_chains_client_uuid.stdout }}/client-secret" | jq -r '.value')
       echo "$TAS_CHAINS_CLIENT_SECRET"
   register: tas_client_secret
-  delegate_to: bastion
   changed_when: false
   failed_when: tas_client_secret.stdout == "" or tas_client_secret.stdout == "null"
 
@@ -360,7 +349,6 @@
       echo "timeout"
       exit 1
   register: refresher_status
-  delegate_to: bastion
   changed_when: false
   failed_when: refresher_status.stdout == "timeout"
 
@@ -389,7 +377,6 @@
       echo "invalid"
       exit 1
   register: oidc_token_status
-  delegate_to: bastion
   changed_when: false
   failed_when: oidc_token_status.stdout == "invalid"
 
@@ -411,7 +398,6 @@
   ansible.builtin.shell: |
     oc get pods -n {{ pipelines_namespace }} -l app=tekton-chains-controller -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "NotFound"
   register: old_chains_pod
-  delegate_to: bastion
   changed_when: false
 
 - name: Display current pod
@@ -461,7 +447,6 @@
       echo "timeout"
       exit 1
   register: new_chains_pod
-  delegate_to: bastion
   changed_when: false
   failed_when: new_chains_pod.stdout == "timeout"
 

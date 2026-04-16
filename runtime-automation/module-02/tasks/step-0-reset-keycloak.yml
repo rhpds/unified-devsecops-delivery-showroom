@@ -14,7 +14,6 @@
         -d "grant_type=password" | jq -r '.access_token')
       echo "$ADMIN_TOKEN"
   register: admin_token
-  delegate_to: bastion
   changed_when: false
 
 - name: Process Keycloak client and realm deletion
@@ -27,7 +26,6 @@
           echo "$SSO_CLIENT_ID"
       register: sso_client_id
       changed_when: false
-      delegate_to: bastion
 
     - name: Delete trusted-artifact-signer client from sso realm
       when: sso_client_id.stdout != ""
@@ -37,7 +35,6 @@
               curl -s -X DELETE "{{ keycloak_admin_console }}/admin/realms/{{ tas_sso_realm }}/clients/{{ sso_client_id.stdout }}" \
                 -H "Authorization: Bearer {{ admin_token.stdout }}"
           changed_when: true
-          delegate_to: bastion
 
         - name: Verify client deletion from sso realm
           ansible.builtin.shell: |
@@ -46,7 +43,6 @@
               echo "$VERIFY_CLIENT"
           register: verify_sso_client
           changed_when: false
-          delegate_to: bastion
 
         - name: Display client deletion result
           ansible.builtin.debug:
@@ -65,7 +61,6 @@
           echo "$REALM_EXISTS"
       register: realm_exists
       changed_when: false
-      delegate_to: bastion
 
     - name: Delete tas-chains realm
       when: realm_exists.stdout == "200"
@@ -75,7 +70,6 @@
               curl -s -X DELETE "{{ keycloak_admin_console }}/admin/realms/{{ tas_chains_realm }}" \
                 -H "Authorization: Bearer {{ admin_token.stdout }}"
           changed_when: true
-          delegate_to: bastion
 
         - name: Verify realm deletion
           ansible.builtin.shell: |
@@ -85,7 +79,6 @@
               echo "$VERIFY_REALM"
           register: verify_realm
           changed_when: false
-          delegate_to: bastion
 
         - name: Display realm deletion result
           ansible.builtin.debug:
