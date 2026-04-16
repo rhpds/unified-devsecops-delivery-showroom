@@ -16,12 +16,15 @@
   when: rox_secret_check.rc == 0
 
 - name: Check for existing ACS integration
-  ansible.builtin.shell:
-    cmd: |
-      curl -k -s -X GET "{{ acs_route }}/v1/imageintegrations" \
-        -H "Authorization: Bearer {{ acs_api_token.stdout }}" 2>/dev/null | \
-        jq -r '.integrations[] | select(.name=="{{ acs_integration_name }}") | .id' 2>/dev/null || echo ""
-  register: integration_id
+  ansible.builtin.uri:
+    url: "{{ acs_route }}/v1/imageintegrations"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ acs_api_token.stdout }}"
+    validate_certs: false
+    status_code: [200]
+    return_content: true
+  register: existing_integrations
   changed_when: false
   failed_when: false
   when: >
@@ -29,33 +32,49 @@
     acs_api_token.stdout is defined and
     acs_api_token.stdout != ""
 
+- name: Set integration ID if exists
+  ansible.builtin.set_fact:
+    reset_integration_id: "{{ (existing_integrations.json.integrations | selectattr('name', 'equalto', acs_integration_name) | list | first).id if (existing_integrations.json.integrations | selectattr('name', 'equalto', acs_integration_name) | list | length > 0) else '' }}"
+  when: >
+    existing_integrations.json is defined and
+    existing_integrations.json.integrations is defined
+
 - name: Delete ACS integration via API
-  ansible.builtin.shell:
-    cmd: |
-      curl -k -s -o /dev/null -w "%{http_code}" -X DELETE \
-        "{{ acs_route }}/v1/imageintegrations/{{ integration_id.stdout }}" \
-        -H "Authorization: Bearer {{ acs_api_token.stdout }}" 2>/dev/null || echo "000"
-  register: delete_response
-  changed_when: delete_response.stdout in ["200", "204"]
+  ansible.builtin.uri:
+    url: "{{ acs_route }}/v1/imageintegrations/{{ reset_integration_id }}"
+    method: DELETE
+    headers:
+      Authorization: "Bearer {{ acs_api_token.stdout }}"
+    validate_certs: false
+    status_code: [200, 204]
+  changed_when: true
   failed_when: false
   when: >
-    integration_id.stdout is defined and
-    integration_id.stdout != ""
+    reset_integration_id is defined and
+    reset_integration_id != ""
 
 - name: Verify ACS integration deletion
-  ansible.builtin.shell:
-    cmd: |
-      curl -k -s -X GET "{{ acs_route }}/v1/imageintegrations" \
-        -H "Authorization: Bearer {{ acs_api_token.stdout }}" 2>/dev/null | \
-        jq -r '.integrations[] | select(.name=="{{ acs_integration_name }}") | .id' 2>/dev/null || echo ""
-  register: verify_integration
+  ansible.builtin.uri:
+    url: "{{ acs_route }}/v1/imageintegrations"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ acs_api_token.stdout }}"
+    validate_certs: false
+    status_code: [200]
+    return_content: true
+  register: verify_integrations
   changed_when: false
   failed_when: false
   when: >
-    integration_id.stdout is defined and
-    integration_id.stdout != ""
+    reset_integration_id is defined and
+    reset_integration_id != ""
+
+- name: Check if integration still exists
+  ansible.builtin.set_fact:
+    integration_still_exists: "{{ (verify_integrations.json.integrations | selectattr('name', 'equalto', acs_integration_name) | list | length > 0) if verify_integrations.json is defined else false }}"
+  when: verify_integrations.json is defined
 
 - name: Display ACS integration deletion result
   ansible.builtin.debug:
-    msg: "{{ '✓ ACS-Quay integration deleted' if verify_integration.stdout is defined and verify_integration.stdout == '' else '✓ No ACS integration found' }}"
+    msg: "{{ '✓ ACS-Quay integration deleted' if integration_still_exists is defined and not integration_still_exists else '✓ No ACS integration found' }}"
   when: rox_secret_check.rc == 0

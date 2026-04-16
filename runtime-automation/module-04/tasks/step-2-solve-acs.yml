@@ -14,56 +14,74 @@
       - "Quay URL: https://{{ quay_host }}"
 
 - name: Check for existing integration
-  ansible.builtin.shell:
-    cmd: |
-      curl -k -s -X GET "{{ acs_route }}/v1/imageintegrations" \
-        -H "Authorization: Bearer {{ acs_token.stdout }}" 2>/dev/null | \
-        jq -r '.integrations[] | select(.name=="{{ acs_integration_name }}") | .id' 2>/dev/null || echo ""
-  register: existing_integration
+  ansible.builtin.uri:
+    url: "{{ acs_route }}/v1/imageintegrations"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ acs_token.stdout }}"
+    validate_certs: false
+    status_code: [200]
+    return_content: true
+  register: existing_integrations_response
   changed_when: false
 
+- name: Set existing integration ID
+  ansible.builtin.set_fact:
+    existing_integration_id: "{{ (existing_integrations_response.json.integrations | selectattr('name', 'equalto', acs_integration_name) | list | first).id if (existing_integrations_response.json.integrations | selectattr('name', 'equalto', acs_integration_name) | list | length > 0) else '' }}"
+
 - name: Delete existing integration if found
-  when: existing_integration.stdout != ""
-  ansible.builtin.shell:
-    cmd: |
-      curl -k -s -X DELETE "{{ acs_route }}/v1/imageintegrations/{{ existing_integration.stdout }}" \
-        -H "Authorization: Bearer {{ acs_token.stdout }}" > /dev/null 2>&1
+  when: existing_integration_id != ""
+  ansible.builtin.uri:
+    url: "{{ acs_route }}/v1/imageintegrations/{{ existing_integration_id }}"
+    method: DELETE
+    headers:
+      Authorization: "Bearer {{ acs_token.stdout }}"
+    validate_certs: false
+    status_code: [200, 204]
   changed_when: true
 
 - name: Create ACS-Quay integration
-  ansible.builtin.shell:
-    cmd: |
-      curl -k -s -X POST "{{ acs_route }}/v1/imageintegrations" \
-        -H "Authorization: Bearer {{ acs_token.stdout }}" \
-        -H "Content-Type: application/json" \
-        -d '{
-          "name": "{{ acs_integration_name }}",
-          "type": "quay",
-          "categories": ["REGISTRY", "SCANNER"],
-          "quay": {
-            "endpoint": "https://{{ quay_host }}",
-            "oauthToken": "{{ quay_admin_token }}",
-            "insecure": true
-          },
-          "skipTestIntegration": true
-        }' 2>/dev/null
-  register: integration_create
+  ansible.builtin.uri:
+    url: "{{ acs_route }}/v1/imageintegrations"
+    method: POST
+    headers:
+      Authorization: "Bearer {{ acs_token.stdout }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      name: "{{ acs_integration_name }}"
+      type: "quay"
+      categories:
+        - "REGISTRY"
+        - "SCANNER"
+      quay:
+        endpoint: "https://{{ quay_host }}"
+        oauthToken: "{{ quay_admin_token }}"
+        insecure: true
+      skipTestIntegration: true
+    validate_certs: false
+    status_code: [200, 201]
+    return_content: true
+  register: integration_create_response
   changed_when: true
 
-- name: Extract integration ID
+- name: Set integration ID
   ansible.builtin.set_fact:
-    integration_id: "{{ integration_create.stdout | from_json | json_query('id') }}"
+    integration_id: "{{ integration_create_response.json.id }}"
 
 - name: Verify integration created
   ansible.builtin.fail:
     msg: "Failed to create integration"
-  when: integration_id == "" or integration_id is none
+  when: integration_id is not defined or integration_id == "" or integration_id is none
 
 - name: Test ACS-Quay integration
-  ansible.builtin.shell:
-    cmd: |
-      curl -k -s -X POST "{{ acs_route }}/v1/imageintegrations/{{ integration_id }}/test" \
-        -H "Authorization: Bearer {{ acs_token.stdout }}" 2>/dev/null
+  ansible.builtin.uri:
+    url: "{{ acs_route }}/v1/imageintegrations/{{ integration_id }}/test"
+    method: POST
+    headers:
+      Authorization: "Bearer {{ acs_token.stdout }}"
+    validate_certs: false
+    status_code: [200, 204]
   changed_when: false
 
 - name: ACS configuration complete
