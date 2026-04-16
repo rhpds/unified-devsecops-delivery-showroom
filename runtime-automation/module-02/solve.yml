@@ -46,6 +46,11 @@
       ansible.builtin.debug:
         msg: "Solving Module 02: RHTAS Installation and Image Signing"
 
+    - name: Login to OpenShift cluster
+      ansible.builtin.shell: |
+        oc login {{ openshift_api_server_url }} --token={{ (lookup('file', k8s_kubeconfig) | from_yaml).users[0].user.token }} --insecure-skip-tls-verify=true
+      changed_when: false
+
     ###########################################
     # STEP 1: Reset Module 2
     ###########################################
