@@ -286,6 +286,60 @@
         msg: ""
 
   #######################################
+  # Check 5: PipelineRun Completion
+  #######################################
+  - name: "Check 5: maven-image-build PipelineRun Completion"
+    block:
+    - name: Display check header
+      ansible.builtin.debug:
+        msg:
+          - "Check 5: maven-image-build PipelineRun Completion"
+          - "---------------------------------------------------"
+
+    - name: Check for PipelineRun with label pipelinesascode.tekton.dev/original-prname=maven-image-build
+      ansible.builtin.shell: |
+        oc get pipelinerun -n {{ app_ci_namespace }} \
+          -l pipelinesascode.tekton.dev/original-prname=maven-image-build \
+          --sort-by=.metadata.creationTimestamp \
+          -o jsonpath='{.items[-1:].metadata.name}' 2>/dev/null || echo ""
+      register: pipeline_run_name
+      changed_when: false
+      failed_when: false
+
+    - name: Get PipelineRun status
+      ansible.builtin.shell: |
+        oc get pipelinerun {{ pipeline_run_name.stdout }} -n {{ app_ci_namespace }} \
+          -o jsonpath='{.status.conditions[?(@.type=="Succeeded")].status}' 2>/dev/null || echo ""
+      register: pipeline_run_status
+      changed_when: false
+      failed_when: false
+      when: pipeline_run_name.stdout != ""
+
+    - name: Validate PipelineRun completion
+      ansible.builtin.set_fact:
+        validation_failed: "{{ validation_failed | int + 1 }}"
+      when: >
+        pipeline_run_name.stdout == "" or
+        pipeline_run_status.stdout != "True"
+
+    - name: Display PipelineRun completion result
+      ansible.builtin.debug:
+        msg: >-
+          {% if pipeline_run_name.stdout != "" and pipeline_run_status.stdout == "True" %}
+          ✓ PASS: PipelineRun '{{ pipeline_run_name.stdout }}' completed successfully
+          {% elif pipeline_run_name.stdout != "" and pipeline_run_status.stdout != "" %}
+          ✗ FAIL: PipelineRun '{{ pipeline_run_name.stdout }}' failed or still running (status: {{ pipeline_run_status.stdout }})
+          {% elif pipeline_run_name.stdout != "" %}
+          ✗ FAIL: PipelineRun '{{ pipeline_run_name.stdout }}' status unknown
+          {% else %}
+          ✗ FAIL: No PipelineRun found with label pipelinesascode.tekton.dev/original-prname=maven-image-build in {{ app_ci_namespace }}
+          {% endif %}
+
+    - name: Display blank line
+      ansible.builtin.debug:
+        msg: ""
+
+  #######################################
   # Summary
   #######################################
   - name: Display validation summary
@@ -306,6 +360,7 @@
           - "Module 4 is complete:"
           - "  ✓ ACS Central is accessible"
           - "  ✓ ACS-Quay integration configured"
+          - "  ✓ maven-image-build PipelineRun completed successfully"
           - "  ✓ Ready for image scanning and policy enforcement"
           - ""
       when: validation_failed | int == 0
