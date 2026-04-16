@@ -131,36 +131,51 @@
     msg: "Configuring service account user..."
 
 - name: Get service account user ID
-  ansible.builtin.shell: |
-      SERVICE_ACCOUNT_USER=$(curl -s -H "Authorization: Bearer {{ kc_admin_token }}" \
-        "{{ keycloak_admin_console }}/admin/realms/{{ tas_chains_realm }}/clients/{{ tas_client_uuid.stdout }}/service-account-user" | jq -r '.id')
-      echo "$SERVICE_ACCOUNT_USER"
-  register: service_account_user_id
+  ansible.builtin.uri:
+    url: "{{ keycloak_admin_console }}/admin/realms/{{ tas_chains_realm }}/clients/{{ tas_client_uuid.stdout }}/service-account-user"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ kc_admin_token }}"
+    validate_certs: false
+    status_code: [200]
+    return_content: true
+  register: service_account_response
   changed_when: false
+
+- name: Set service account user ID
+  ansible.builtin.set_fact:
+    service_account_user_id: "{{ service_account_response.json.id }}"
 
 - name: Update service account with email verification
-  ansible.builtin.shell: |
-      HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X PUT "{{ keycloak_admin_console }}/admin/realms/{{ tas_chains_realm }}/users/{{ service_account_user_id.stdout }}" \
-        -H "Authorization: Bearer {{ kc_admin_token }}" \
-        -H "Content-Type: application/json" \
-        -d "{
-          \"emailVerified\": true,
-          \"email\": \"trusted-artifact-signer@demo.redhat.com\",
-          \"firstName\": \"Trusted\",
-          \"lastName\": \"Content\"
-        }")
-      echo "$HTTP_CODE"
+  ansible.builtin.uri:
+    url: "{{ keycloak_admin_console }}/admin/realms/{{ tas_chains_realm }}/users/{{ service_account_user_id }}"
+    method: PUT
+    headers:
+      Authorization: "Bearer {{ kc_admin_token }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      emailVerified: true
+      email: "trusted-artifact-signer@demo.redhat.com"
+      firstName: "Trusted"
+      lastName: "Content"
+    validate_certs: false
+    status_code: [200, 204]
   register: email_update_result
-  changed_when: email_update_result.stdout in ["200", "204"]
-  failed_when: email_update_result.stdout not in ["200", "204"]
+  changed_when: true
 
 - name: Verify email verification was set
-  ansible.builtin.shell: |
-      curl -s -H "Authorization: Bearer {{ kc_admin_token }}" \
-        "{{ keycloak_admin_console }}/admin/realms/{{ tas_chains_realm }}/clients/{{ tas_client_uuid.stdout }}/service-account-user" | jq -r '.emailVerified'
-  register: verify_email_verified
+  ansible.builtin.uri:
+    url: "{{ keycloak_admin_console }}/admin/realms/{{ tas_chains_realm }}/clients/{{ tas_client_uuid.stdout }}/service-account-user"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ kc_admin_token }}"
+    validate_certs: false
+    status_code: [200]
+    return_content: true
+  register: verify_email_response
   changed_when: false
-  failed_when: verify_email_verified.stdout != "true"
+  failed_when: not verify_email_response.json.emailVerified
 
 - name: Display service account configured
   ansible.builtin.debug:
