@@ -15,6 +15,7 @@ TAS_FULCIO_URL="{{ tas_fulcio_url }}"
 TAS_REKOR_URL="{{ tas_rekor_url }}"
 TAS_TUF_URL="{{ tas_tuf_url }}"
 TAS_CHAINS_REALM="{{ tas_chains_realm }}"
+TAS_SSO_REALM="{{ tas_sso_realm }}"
 TAS_CHAINS_CLIENT_ID="{{ tas_chains_client_id }}"
 USERNAME="{{ user }}"
 PASSWORD="{{ password }}"
@@ -27,7 +28,8 @@ echo "Configuration:"
 echo "  Username: $USERNAME"
 echo "  Keycloak: $KEYCLOAK_URL"
 echo "  Client ID: $TAS_CHAINS_CLIENT_ID"
-echo "  Realm: $TAS_CHAINS_REALM"
+echo "  SSO Realm (for auth): $TAS_SSO_REALM"
+echo "  Chains Realm (for signing): $TAS_CHAINS_REALM"
 echo "  Fulcio URL: $TAS_FULCIO_URL"
 echo "  Rekor URL: $TAS_REKOR_URL"
 echo "  TUF URL: $TAS_TUF_URL"
@@ -55,14 +57,14 @@ else
   exit 1
 fi
 
-# Build token endpoint
-TOKEN_ENDPOINT="$KEYCLOAK_URL/realms/$TAS_CHAINS_REALM/protocol/openid-connect/token"
+# Build token endpoint (use SSO realm for authentication)
+TOKEN_ENDPOINT="$KEYCLOAK_URL/realms/$TAS_SSO_REALM/protocol/openid-connect/token"
 echo ""
 echo "Token endpoint: $TOKEN_ENDPOINT"
 
 # Get access token for user
 echo ""
-echo "Authenticating $USERNAME and getting access token..."
+echo "Authenticating $USERNAME via SSO realm and getting access token..."
 TOKEN_RESPONSE=$(curl -k -s -X POST "$TOKEN_ENDPOINT" \
   -H "Content-Type: application/x-www-form-urlencoded" \
   -d "client_id=$TAS_CHAINS_CLIENT_ID" \
@@ -114,7 +116,7 @@ cd "$REPO_PATH"
 echo "✓ Repository cloned successfully"
 
 # Configure git for commit
-git config user.email "${USERNAME}@example.com"
+git config user.email "${USERNAME}@edemo.redhat.com"
 git config user.name "$USERNAME"
 
 # Configure gitsign
