@@ -108,7 +108,7 @@ video {
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 
 /* ── Solve button ───────────────────────────────────── */
-.solve-btn { padding: 0.75rem 1.5rem; font-size: 1rem; font-weight: 600; border: none; border-radius: 6px; cursor: pointer; transition: all 0.3s ease; background: #28a745; color: white; min-width: 180px; }
+.solve-btn { padding: 0.75rem 1.5rem; font-size: 1rem; font-weight: 600; border: none; border-radius: 6px; cursor: pointer; transition: all 0.3s ease; background: #28a745; color: white; }
 .solve-btn:hover:not(:disabled) { background: #218838; transform: translateY(-2px); box-shadow: 0 4px 8px rgba(40,167,69,0.3); }
 .solve-btn:disabled { background: #adb5bd; cursor: not-allowed; animation: pulse 1.5s ease-in-out infinite; }
 .btn-output:has(.solve-btn) { border: 2px solid #00ff00; box-shadow: 0 0 10px rgba(0,255,0,0.2); }
@@ -116,7 +116,7 @@ video {
 [id^="solve-output-content"] { color: #00ff00 !important; }
 
 /* ── Validate button ────────────────────────────────── */
-.validate-btn { padding: 0.75rem 1.5rem; font-size: 1rem; font-weight: 600; border: none; border-radius: 6px; cursor: pointer; transition: all 0.3s ease; background: #007bff; color: white; min-width: 180px; }
+.validate-btn { padding: 0.75rem 1.5rem; font-size: 1rem; font-weight: 600; border: none; border-radius: 6px; cursor: pointer; transition: all 0.3s ease; background: #007bff; color: white; }
 .validate-btn:hover:not(:disabled) { background: #0056b3; transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,123,255,0.3); }
 .validate-btn:disabled { background: #adb5bd; cursor: not-allowed; animation: pulse 1.5s ease-in-out infinite; }
 [id^="validate-output-content"] { color: #00bfff !important; }
