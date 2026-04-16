@@ -45,7 +45,6 @@
                   echo "$HTTP_CODE"
               register: delete_result
               changed_when: delete_result.stdout in ["204", "200"]
-              delegate_to: bastion
 
             - name: Display repository deletion result
               ansible.builtin.debug:
