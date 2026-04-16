@@ -1,0 +1,9 @@
+      delegate_to: bastion
+      block:
+        - name: Update GitOps Backstage configuration
+          ansible.builtin.shell:
+            cmd: bash {{ lab_assets_dir }}/update-gitops-backstage-config.sh update
+          changed_when: true
+
+        - name: GitOps config update complete
+          ansible.builtin.debug:

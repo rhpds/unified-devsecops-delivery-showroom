@@ -1,0 +1,77 @@
+---
+# STEP 0: Reset Module 1 (reset-module-1.sh)
+- name: Delete RHTPA instance
+  kubernetes.core.k8s:
+    api_version: rhtpa.io/v1
+    kind: TrustedProfileAnalyzer
+    name: trustedprofileanalyzer
+    namespace: "{{ tpa_namespace }}"
+    state: absent
+
+- name: Wait for RHTPA instance deletion
+  kubernetes.core.k8s_info:
+    api_version: rhtpa.io/v1
+    kind: TrustedProfileAnalyzer
+    name: trustedprofileanalyzer
+    namespace: "{{ tpa_namespace }}"
+  register: tpa_verify
+  until: tpa_verify.resources | length == 0
+  retries: 60
+  delay: 5
+  failed_when: false
+
+- name: Display RHTPA deletion result
+  ansible.builtin.debug:
+    msg: "{{ '✓ RHTPA instance deleted' if tpa_verify.resources | length == 0 else 'Warning: RHTPA instance still exists after timeout' }}"
+
+- name: Delete TPA CLI credentials secret
+  kubernetes.core.k8s:
+    api_version: v1
+    kind: Secret
+    name: tpa-cli-credentials
+    namespace: "{{ tpa_namespace }}"
+    state: absent
+
+- name: Verify TPA CLI credentials secret deletion
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Secret
+    name: tpa-cli-credentials
+    namespace: "{{ tpa_namespace }}"
+  register: secret_verify
+  until: secret_verify.resources | length == 0
+  retries: 6
+  delay: 2
+  failed_when: false
+
+- name: Display secret deletion result
+  ansible.builtin.debug:
+    msg: "{{ '✓ TPA CLI credentials secret deleted' if secret_verify.resources | length == 0 else 'Warning: TPA CLI credentials secret still exists' }}"
+
+- name: Delete TPA Realm import
+  kubernetes.core.k8s:
+    api_version: k8s.keycloak.org/v2alpha1
+    kind: KeycloakRealmImport
+    name: "{{ tpa_realm }}"
+    namespace: "{{ keycloak_namespace }}"
+    state: absent
+
+- name: Verify TPA Realm deletion
+  kubernetes.core.k8s_info:
+    api_version: k8s.keycloak.org/v2alpha1
+    kind: KeycloakRealmImport
+    name: "{{ tpa_realm }}"
+    namespace: "{{ keycloak_namespace }}"
+  register: realm_verify
+  until: realm_verify.resources | length == 0
+  retries: 12
+  delay: 5
+  failed_when: false
+
+- name: Display realm deletion result
+  ansible.builtin.debug:
+    msg: "{{ '✓ TPA Realm import deleted' if realm_verify.resources | length == 0 else 'Warning: TPA Realm import still exists' }}"
+
+- name: Reset complete
+  ansible.builtin.debug:
+    msg: "✓ Module 1 reset complete"

@@ -1,0 +1,78 @@
+---
+# STEP 0.6: Deleting Quay test repository
+- name: "Step 6: Deleting Quay test repository"
+  ansible.builtin.debug:
+    msg: "Step 6: Deleting Quay test repository..."
+
+- name: Process Quay repository deletion
+  when: quay_host is defined and quay_host != ""
+  block:
+    - name: Display Quay URL
+      ansible.builtin.debug:
+        msg:
+          - "Quay URL: https://{{ quay_host }}"
+          - "Checking repository: {{ quay_org }}/{{ quay_repo }}"
+
+    - name: Check Quay token
+      when: quay_token != "changeme" and quay_token != ""
+      block:
+        - name: Check if Quay repository exists
+          ansible.builtin.shell: |
+              CHECK_CODE=$(curl -k -s -o /dev/null -w "%{http_code}" \
+                -H "Authorization: Bearer {{ quay_token }}" \
+                "https://{{ quay_host }}/api/v1/repository/{{ quay_org }}/{{ quay_repo }}" || true)
+              echo "$CHECK_CODE"
+          register: repo_check
+          changed_when: false
+
+        - name: Display repository not found
+          when: repo_check.stdout == "404"
+          ansible.builtin.debug:
+            msg: "✓ Quay repository not found (already clean): {{ quay_org }}/{{ quay_repo }}"
+
+        - name: Delete repository if exists
+          when: repo_check.stdout == "200"
+          block:
+            - name: Display repository exists
+              ansible.builtin.debug:
+                msg: "Repository exists, deleting..."
+
+            - name: Delete Quay repository
+              ansible.builtin.shell: |
+                  HTTP_CODE=$(curl -k -s -o /dev/null -w "%{http_code}" -X DELETE \
+                    -H "Authorization: Bearer {{ quay_token }}" \
+                    "https://{{ quay_host }}/api/v1/repository/{{ quay_org }}/{{ quay_repo }}" || true)
+                  echo "$HTTP_CODE"
+              register: delete_result
+              changed_when: delete_result.stdout in ["204", "200"]
+
+            - name: Display repository deletion result
+              ansible.builtin.debug:
+                msg: "{{ '✓ Quay repository deleted: ' + quay_org + '/' + quay_repo if delete_result.stdout in ['204', '200'] else 'Warning: Failed to delete Quay repository (HTTP: ' + delete_result.stdout + ')' }}"
+
+        - name: Display auth failed
+          when: repo_check.stdout == "401"
+          ansible.builtin.debug:
+            msg:
+              - "Warning: Authentication failed for Quay (HTTP: 401)"
+              - "  Check QUAY_TOKEN is valid"
+              - "  Skipping deletion"
+
+        - name: Display check failed
+          when: repo_check.stdout not in ["404", "200", "401"]
+          ansible.builtin.debug:
+            msg:
+              - "Warning: Could not check Quay repository (HTTP: {{ repo_check.stdout }})"
+              - "  Skipping deletion"
+
+    - name: Display missing token warning
+      when: quay_token == "changeme" or quay_token == ""
+      ansible.builtin.debug:
+        msg:
+          - "Warning: QUAY_TOKEN not set, skipping repository deletion"
+          - "  Set QUAY_TOKEN environment variable before running this script"
+
+- name: Display Quay host not provided
+  when: quay_host is not defined or quay_host == ""
+  ansible.builtin.debug:
+    msg: "Warning: Quay host not provided, skipping repository deletion"

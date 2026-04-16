@@ -1,0 +1,133 @@
+---
+# STEP 0.2: Deleting OIDC refresher app
+- name: "Step 2: Deleting OIDC refresher app"
+  ansible.builtin.debug:
+    msg: "Step 2: Deleting OIDC refresher app..."
+
+- name: Check if OIDC refresher deployment exists
+  ansible.builtin.shell: |
+    oc get deployment oidc-token-refresher -n {{ pipelines_namespace }}
+  register: oidc_deployment_check
+  changed_when: false
+  failed_when: false
+
+- name: Delete OIDC refresher deployment
+  when: oidc_deployment_check.rc == 0
+  block:
+    - name: Delete deployment
+      ansible.builtin.shell: |
+        oc delete deployment oidc-token-refresher -n {{ pipelines_namespace }}
+      changed_when: true
+
+    - name: Verify deployment deletion
+      ansible.builtin.shell: |
+        oc get deployment oidc-token-refresher -n {{ pipelines_namespace }}
+      register: verify_deployment
+      changed_when: false
+      failed_when: false
+
+    - name: Display deployment deletion result
+      ansible.builtin.debug:
+        msg: "{{ '✓ OIDC refresher deployment deleted' if verify_deployment.rc != 0 else 'Warning: OIDC refresher deployment still exists' }}"
+
+- name: Display deployment not found
+  when: oidc_deployment_check.rc != 0
+  ansible.builtin.debug:
+    msg: "✓ OIDC refresher deployment not found (already clean)"
+
+- name: Check if OIDC refresher service exists
+  ansible.builtin.shell: |
+    oc get service oidc-token-refresher -n {{ pipelines_namespace }}
+  register: oidc_service_check
+  changed_when: false
+  failed_when: false
+
+- name: Delete OIDC refresher service
+  when: oidc_service_check.rc == 0
+  block:
+    - name: Delete service
+      ansible.builtin.shell: |
+        oc delete service oidc-token-refresher -n {{ pipelines_namespace }}
+      changed_when: true
+
+    - name: Verify service deletion
+      ansible.builtin.shell: |
+        oc get service oidc-token-refresher -n {{ pipelines_namespace }}
+      register: verify_service
+      changed_when: false
+      failed_when: false
+
+    - name: Display service deletion result
+      ansible.builtin.debug:
+        msg: "{{ '✓ OIDC refresher service deleted' if verify_service.rc != 0 else 'Warning: OIDC refresher service still exists' }}"
+
+- name: Display service not found
+  when: oidc_service_check.rc != 0
+  ansible.builtin.debug:
+    msg: "✓ OIDC refresher service not found (already clean)"
+
+- name: Check if oidc-info secret exists
+  ansible.builtin.shell: |
+    oc get secret oidc-info -n {{ pipelines_namespace }}
+  register: oidc_info_check
+  changed_when: false
+  failed_when: false
+
+- name: Delete oidc-info secret
+  when: oidc_info_check.rc == 0
+  block:
+    - name: Delete oidc-info secret
+      ansible.builtin.shell: |
+        oc delete secret oidc-info -n {{ pipelines_namespace }}
+      changed_when: true
+
+    - name: Verify oidc-info deletion
+      ansible.builtin.shell: |
+        oc get secret oidc-info -n {{ pipelines_namespace }}
+      register: verify_oidc_info
+      changed_when: false
+      failed_when: false
+
+    - name: Display oidc-info deletion result
+      ansible.builtin.debug:
+        msg: "{{ '✓ OIDC info secret deleted' if verify_oidc_info.rc != 0 else 'Warning: OIDC info secret still exists' }}"
+
+- name: Display oidc-info not found
+  when: oidc_info_check.rc != 0
+  ansible.builtin.debug:
+    msg: "✓ OIDC info secret not found (already clean)"
+
+- name: Check if oidc-token secret exists
+  ansible.builtin.shell: |
+    oc get secret oidc-token -n {{ pipelines_namespace }}
+  register: oidc_token_check
+  changed_when: false
+  failed_when: false
+
+- name: Delete oidc-token secret
+  when: oidc_token_check.rc == 0
+  block:
+    - name: Delete oidc-token secret
+      ansible.builtin.shell: |
+        oc delete secret oidc-token -n {{ pipelines_namespace }}
+      changed_when: true
+
+    - name: Verify oidc-token deletion
+      ansible.builtin.shell: |
+        oc get secret oidc-token -n {{ pipelines_namespace }}
+      register: verify_oidc_token
+      changed_when: false
+      failed_when: false
+
+    - name: Display oidc-token deletion result
+      ansible.builtin.debug:
+        msg: "{{ '✓ OIDC token secret deleted' if verify_oidc_token.rc != 0 else 'Warning: OIDC token secret still exists' }}"
+
+- name: Display oidc-token not found
+  when: oidc_token_check.rc != 0
+  ansible.builtin.debug:
+    msg: "✓ OIDC token secret not found (already clean)"
+
+- name: Display OIDC refresher app removed
+  ansible.builtin.debug:
+    msg: "✓ OIDC refresher app removed"

@@ -1,0 +1,115 @@
+---
+# STEP 0.3: Deleting RHTAS instance
+- name: "Step 3: Deleting RHTAS instance"
+  ansible.builtin.debug:
+    msg: "Step 3: Deleting RHTAS instance..."
+
+- name: Check if SecureSign instance exists
+  ansible.builtin.shell: |
+    oc get securesign trusted-artifact-signer -n {{ tas_namespace }}
+  register: securesign_check
+  changed_when: false
+  failed_when: false
+
+- name: Delete SecureSign instance
+  when: securesign_check.rc == 0
+  block:
+    - name: Delete RHTAS SecureSign instance
+      ansible.builtin.shell: |
+        oc delete securesign trusted-artifact-signer -n {{ tas_namespace }}
+      changed_when: true
+
+    - name: Wait for RHTAS instance to be fully deleted
+      ansible.builtin.debug:
+        msg: "Waiting for RHTAS instance to be fully deleted..."
+
+    - name: Wait for SecureSign deletion
+      ansible.builtin.shell: |
+        oc wait --for=delete securesign/trusted-artifact-signer -n {{ tas_namespace }} --timeout=300s
+      changed_when: false
+      failed_when: false
+
+    - name: Verify SecureSign deletion with timeout
+      ansible.builtin.shell: |
+          TIMEOUT=60
+          ELAPSED=0
+          while [ $ELAPSED -lt $TIMEOUT ]; do
+            if ! oc get securesign trusted-artifact-signer -n {{ tas_namespace }} 2>/dev/null; then
+              echo "deleted"
+              exit 0
+            fi
+            sleep 5
+            ELAPSED=$((ELAPSED + 5))
+          done
+          echo "still_exists"
+      register: verify_securesign
+      changed_when: false
+
+    - name: Display SecureSign deletion result
+      ansible.builtin.debug:
+        msg: "{{ '✓ RHTAS instance deleted' if verify_securesign.stdout == 'deleted' else 'Warning: RHTAS instance still exists after timeout' }}"
+
+- name: Display SecureSign not found
+  when: securesign_check.rc != 0
+  ansible.builtin.debug:
+    msg: "✓ RHTAS instance not found (already clean)"
+
+- name: Wait for all pods to terminate
+  ansible.builtin.debug:
+    msg: "Checking for remaining pods in {{ tas_namespace }}..."
+
+- name: Check and wait for pods to terminate
+  ansible.builtin.shell: |
+      TIMEOUT=120
+      ELAPSED=0
+      while [ $ELAPSED -lt $TIMEOUT ]; do
+        POD_COUNT=$(oc get pods -n {{ tas_namespace }} --no-headers 2>/dev/null | wc -l)
+        if [ "$POD_COUNT" -eq 0 ]; then
+          echo "all_deleted"
+          exit 0
+        fi
+        echo "Pods still present ($POD_COUNT), waiting..."
+        sleep 5
+        ELAPSED=$((ELAPSED + 5))
+      done
+      POD_COUNT=$(oc get pods -n {{ tas_namespace }} --no-headers 2>/dev/null | wc -l)
+      echo "timeout:$POD_COUNT"
+  register: pods_termination
+  changed_when: false
+
+- name: Display pod termination result
+  ansible.builtin.debug:
+    msg: "{{ 'Warning: ' + pods_termination.stdout.split(':')[-1].strip() + ' pod(s) still exist after timeout' }}"
+  when: "'timeout' in pods_termination.stdout"
+
+- name: Display all pods deleted
+  ansible.builtin.debug:
+    msg: "✓ All pods deleted"
+  when: "'all_deleted' in pods_termination.stdout"
+
+- name: Delete all PVCs in TAS namespace
+  ansible.builtin.debug:
+    msg: "Deleting PVCs in {{ tas_namespace }}..."
+
+- name: Get PVC count
+  ansible.builtin.shell: |
+    oc get pvc -n {{ tas_namespace }} --no-headers 2>/dev/null | wc -l || echo 0
+  register: pvc_count
+  changed_when: false
+
+- name: Delete PVCs if they exist
+  when: pvc_count.stdout | int > 0
+  block:
+    - name: Delete all PVCs
+      ansible.builtin.shell: |
+        oc delete pvc --all -n {{ tas_namespace }}
+      changed_when: true
+
+    - name: Display PVC deletion result
+      ansible.builtin.debug:
+        msg: "✓ Deleted {{ pvc_count.stdout }} PVC(s)"
+
+- name: Display no PVCs found
+  when: pvc_count.stdout | int == 0
+  ansible.builtin.debug:
+    msg: "✓ No PVCs found"

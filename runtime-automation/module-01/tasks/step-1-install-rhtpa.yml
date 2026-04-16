@@ -1,0 +1,76 @@
+---
+# STEP 1: Install RHTPA (install-rhtpa.sh)
+- name: Import TPA Realm to Keycloak
+  ansible.builtin.shell:
+    cmd: |
+      envsubst '${TPA_REALM} ${TPA_CLI_CLIENT_SECRET} ${TPA_ADMIN_USERNAME} ${TPA_ADMIN_PASSWORD}' \
+        < {{ lab_assets_dir }}/keycloak-tpa-realm.yml | oc apply -n {{ keycloak_namespace }} -f -
+  environment:
+    TPA_REALM: "{{ tpa_realm }}"
+    TPA_CLI_CLIENT_SECRET: "{{ tpa_cli_client_secret }}"
+    TPA_ADMIN_USERNAME: "{{ tpa_admin_username }}"
+    TPA_ADMIN_PASSWORD: "{{ tpa_admin_password }}"
+  changed_when: true
+  delegate_to: bastion
+
+- name: Wait for TPA Realm import completion
+  kubernetes.core.k8s_info:
+    api_version: k8s.keycloak.org/v2alpha1
+    kind: KeycloakRealmImport
+    name: "{{ tpa_realm }}"
+    namespace: "{{ keycloak_namespace }}"
+  register: realm_status
+  until: >
+    realm_status.resources | length > 0 and
+    realm_status.resources[0].status.conditions | selectattr('type', 'equalto', 'Done') | selectattr('status', 'equalto', 'True') | list | length > 0
+  retries: 60
+  delay: 5
+
+- name: Display TPA Realm import result
+  ansible.builtin.debug:
+    msg: "✓ TPA Realm imported successfully"
+
+- name: Configure TPA Client Secret
+  ansible.builtin.shell:
+    cmd: |
+      envsubst < {{ lab_assets_dir }}/tpa-cli-credentials.yml | oc apply -n {{ tpa_namespace }} -f -
+  environment:
+    TPA_CLI_CLIENT_SECRET: "{{ tpa_cli_client_secret }}"
+  changed_when: true
+  delegate_to: bastion
+
+- name: Display client secret configuration result
+  ansible.builtin.debug:
+    msg: "✓ Client secret configured"
+
+- name: Deploy RHTPA Instance
+  ansible.builtin.shell:
+    cmd: |
+      envsubst < {{ lab_assets_dir }}/tpa-instance.yml | oc apply -n {{ tpa_namespace }} -f -
+  environment:
+    KEYCLOAK_URL: "{{ keycloak_admin_console }}"
+    TPA_REALM: "{{ tpa_realm }}"
+  changed_when: true
+  delegate_to: bastion
+
+- name: Wait for RHTPA server to be ready
+  ansible.builtin.uri:
+    url: "https://server-{{ tpa_namespace }}.{{ cluster_domain }}"
+    validate_certs: false
+    status_code:
+      - 200
+      - 302
+      - 401
+  register: rhtpa_ready
+  until: rhtpa_ready.status in [200, 302, 401]
+  retries: 60
+  delay: 10
+  changed_when: false
+  delegate_to: localhost
+
+- name: Display RHTPA installation result
+  ansible.builtin.debug:
+    msg:
+      - "✓ RHTPA installed successfully"
+      - "Console: https://server-{{ tpa_namespace }}.{{ cluster_domain }}"
+      - "Username: {{ tpa_admin_username }}"

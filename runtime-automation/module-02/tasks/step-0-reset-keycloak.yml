@@ -1,0 +1,95 @@
+---
+# STEP 0.4: Deleting Keycloak clients and realm
+- name: "Step 4: Deleting Keycloak clients and realm"
+  ansible.builtin.debug:
+    msg: "Step 4: Deleting Keycloak clients and realm..."
+
+- name: Get Keycloak admin token
+  ansible.builtin.shell: |
+      ADMIN_TOKEN=$(curl -s -X POST "{{ keycloak_admin_console }}/realms/master/protocol/openid-connect/token" \
+        -H "Content-Type: application/x-www-form-urlencoded" \
+        -d "client_id=admin-cli" \
+        -d "username={{ keycloak_admin_user }}" \
+        -d "password={{ keycloak_admin_password }}" \
+        -d "grant_type=password" | jq -r '.access_token')
+      echo "$ADMIN_TOKEN"
+  register: admin_token
+  changed_when: false
+
+- name: Process Keycloak client and realm deletion
+  when: admin_token.stdout != "" and admin_token.stdout != "null"
+  block:
+    - name: Get trusted-artifact-signer client ID from sso realm
+      ansible.builtin.shell: |
+          SSO_CLIENT_ID=$(curl -s -H "Authorization: Bearer {{ admin_token.stdout }}" \
+            "{{ keycloak_admin_console }}/admin/realms/{{ tas_sso_realm }}/clients?clientId={{ tas_client_id }}" | jq -r '.[0].id // empty')
+          echo "$SSO_CLIENT_ID"
+      register: sso_client_id
+      changed_when: false
+
+    - name: Delete trusted-artifact-signer client from sso realm
+      when: sso_client_id.stdout != ""
+      block:
+        - name: Delete client from sso realm
+          ansible.builtin.shell: |
+              curl -s -X DELETE "{{ keycloak_admin_console }}/admin/realms/{{ tas_sso_realm }}/clients/{{ sso_client_id.stdout }}" \
+                -H "Authorization: Bearer {{ admin_token.stdout }}"
+          changed_when: true
+
+        - name: Verify client deletion from sso realm
+          ansible.builtin.shell: |
+              VERIFY_CLIENT=$(curl -s -H "Authorization: Bearer {{ admin_token.stdout }}" \
+                "{{ keycloak_admin_console }}/admin/realms/{{ tas_sso_realm }}/clients?clientId={{ tas_client_id }}" | jq -r '.[0].id // empty')
+              echo "$VERIFY_CLIENT"
+          register: verify_sso_client
+          changed_when: false
+
+        - name: Display client deletion result
+          ansible.builtin.debug:
+            msg: "{{ '✓ Deleted ' + tas_client_id + ' client from ' + tas_sso_realm + ' realm' if verify_sso_client.stdout == '' else 'Warning: ' + tas_client_id + ' client still exists in ' + tas_sso_realm + ' realm' }}"
+
+    - name: Display client not found in sso realm
+      when: sso_client_id.stdout == ""
+      ansible.builtin.debug:
+        msg: "✓ {{ tas_client_id }} client not found in {{ tas_sso_realm }} realm"
+
+    - name: Check if tas-chains realm exists
+      ansible.builtin.shell: |
+          REALM_EXISTS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Authorization: Bearer {{ admin_token.stdout }}" \
+            "{{ keycloak_admin_console }}/admin/realms/{{ tas_chains_realm }}")
+          echo "$REALM_EXISTS"
+      register: realm_exists
+      changed_when: false
+
+    - name: Delete tas-chains realm
+      when: realm_exists.stdout == "200"
+      block:
+        - name: Delete realm
+          ansible.builtin.shell: |
+              curl -s -X DELETE "{{ keycloak_admin_console }}/admin/realms/{{ tas_chains_realm }}" \
+                -H "Authorization: Bearer {{ admin_token.stdout }}"
+          changed_when: true
+
+        - name: Verify realm deletion
+          ansible.builtin.shell: |
+              VERIFY_REALM=$(curl -s -o /dev/null -w "%{http_code}" \
+                -H "Authorization: Bearer {{ admin_token.stdout }}" \
+                "{{ keycloak_admin_console }}/admin/realms/{{ tas_chains_realm }}")
+              echo "$VERIFY_REALM"
+          register: verify_realm
+          changed_when: false
+
+        - name: Display realm deletion result
+          ansible.builtin.debug:
+            msg: "{{ '✓ Deleted ' + tas_chains_realm + ' realm' if verify_realm.stdout != '200' else 'Warning: ' + tas_chains_realm + ' realm still exists' }}"
+
+    - name: Display realm not found
+      when: realm_exists.stdout != "200"
+      ansible.builtin.debug:
+        msg: "✓ {{ tas_chains_realm }} realm not found"
+
+- name: Display warning if Keycloak auth failed
+  when: admin_token.stdout == "" or admin_token.stdout == "null"
+  ansible.builtin.debug:
+    msg: "Warning: Failed to authenticate with Keycloak, skipping client/realm deletion"
