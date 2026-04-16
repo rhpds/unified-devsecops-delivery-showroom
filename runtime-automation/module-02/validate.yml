@@ -41,7 +41,7 @@
 
   - name: Login to OpenShift cluster
     ansible.builtin.shell:
-      cmd: oc login --token={{ (lookup('file', k8s_kubeconfig) | from_yaml).users[0].user.token }} --server={{ openshift_api_url }} --insecure-skip-tls-verify=true
+      cmd: oc login --token={{ (lookup('file', k8s_kubeconfig) | from_yaml).users[0].user.token }} --server={{ openshift_api_server_url }} --insecure-skip-tls-verify=true
     changed_when: false
 
   #######################################
