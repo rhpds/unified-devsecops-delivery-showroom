@@ -20,11 +20,10 @@
   changed_when: true
 
 - name: Add fallback for user.entity.metadata.name
-  ansible.builtin.shell:
-    cmd: |
-      {% raw %}
-      sed -i 's|owner: user:default/\${{ user.entity.metadata.name }}|owner: user:default/\${{ user.entity.metadata.name || '"'"'user1'"'"' }}|g' {% endraw %}{{ template_file }}
-  changed_when: true
+  ansible.builtin.replace:
+    path: "{{ template_file }}"
+    regexp: 'user\.entity\.metadata\.name'
+    replace: "user.entity.metadata.name || 'user1'"
   delegate_to: bastion
 
 - name: Verify template file changes
