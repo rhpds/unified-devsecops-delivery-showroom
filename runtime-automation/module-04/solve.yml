@@ -100,6 +100,12 @@
           block:
             - include_tasks: steps/step-2-solve-run-template.yml
 
+        - name: "STEP 2.4: Test Commit Signing with RHTAS"
+          delegate_to: bastion
+          when: gitlab_url is defined
+          block:
+            - include_tasks: steps/step-2-solve-commit-signing.yml
+
         - name: Module 4 completion summary
           ansible.builtin.debug:
             msg:
@@ -112,5 +118,6 @@
               - "  ✓ Policy checks verified"
               - "  ✓ RHDH template updated and executed"
               - "  ✓ Template executed with verify commits enabled"
+              - "  ✓ Commit signing tested with RHTAS and gitsign"
               - "  ✓ Ready for supply chain policy enforcement"
 

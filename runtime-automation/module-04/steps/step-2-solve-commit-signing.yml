@@ -1,0 +1,42 @@
+---
+# STEP 2.4: Test Commit Signing with RHTAS
+- name: Get current timestamp
+  ansible.builtin.setup:
+    filter: ansible_date_time
+
+- name: Set commit signing script paths
+  ansible.builtin.set_fact:
+    commit_signing_script_template: "{{ playbook_dir }}/commit-signing.sh.j2"
+    commit_signing_script: "/tmp/commit-signing-{{ ansible_date_time.epoch }}.sh"
+
+- name: Template commit signing script
+  ansible.builtin.template:
+    src: "{{ commit_signing_script_template }}"
+    dest: "{{ commit_signing_script }}"
+    mode: '0755'
+  delegate_to: bastion
+
+- name: Run commit signing script
+  ansible.builtin.shell:
+    cmd: "{{ commit_signing_script }}"
+  register: commit_signing_result
+  changed_when: true
+  delegate_to: bastion
+
+- name: Display commit signing results
+  ansible.builtin.debug:
+    msg: "{{ commit_signing_result.stdout_lines }}"
+
+- name: Check if commit signing succeeded
+  ansible.builtin.assert:
+    that:
+      - commit_signing_result.rc == 0
+      - "'SUCCESS: Commit signing works!' in commit_signing_result.stdout"
+    fail_msg: "Commit signing failed"
+    success_msg: "✓ Commit signing completed successfully"
+
+- name: Cleanup commit signing script
+  ansible.builtin.file:
+    path: "{{ commit_signing_script }}"
+    state: absent
+  delegate_to: bastion
