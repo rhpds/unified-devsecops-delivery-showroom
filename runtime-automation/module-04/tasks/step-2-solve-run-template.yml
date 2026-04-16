@@ -75,7 +75,17 @@
 
 - name: Display template refresh result
   ansible.builtin.debug:
-    msg: "✓ RHDH template refreshed"
+    msg: "✓ RHDH template refresh triggered"
+  when: template_refresh.status is defined and template_refresh.status in [200, 202]
+
+- name: Wait for RHDH to process template refresh
+  ansible.builtin.pause:
+    seconds: 10
+  when: template_refresh.status is defined and template_refresh.status in [200, 202]
+
+- name: Display waiting complete
+  ansible.builtin.debug:
+    msg: "✓ RHDH template refresh complete"
   when: template_refresh.status is defined and template_refresh.status in [200, 202]
 
 - name: Run template with verify commits enabled
