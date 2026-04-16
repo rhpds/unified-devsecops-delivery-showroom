@@ -95,14 +95,6 @@
     developer_hub_url is defined and
     rhdh_api_token is defined
 
-- name: Display template update confirmation
-  ansible.builtin.debug:
-    msg: "✓ RHDH template updated with user1 reference (owner: {{ template_entity.json.spec.steps[1].input.values.owner }})"
-  when: >
-    template_entity.json is defined and
-    template_entity.json.spec.steps is defined and
-    template_entity.json.spec.steps | length > 1
-
 - name: Run template with verify commits enabled
   ansible.builtin.uri:
     url: "{{ developer_hub_url }}/api/scaffolder/v2/tasks"
