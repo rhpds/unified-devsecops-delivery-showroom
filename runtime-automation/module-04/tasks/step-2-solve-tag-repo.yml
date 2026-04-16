@@ -1,24 +1,24 @@
 ---
 # STEP 2: Tag Repository (tag-repo)
 - name: Wait for maven-image-build PipelineRun to be created and complete
-  ansible.builtin.shell: |
-    oc get pipelinerun -n {{ app_ci_namespace }} \
-      -l pipelinesascode.tekton.dev/original-prname=maven-image-build \
-      --sort-by=.metadata.creationTimestamp \
-      -o jsonpath='{.items[-1:].metadata.name},{.items[-1:].status.conditions[?(@.type=="Succeeded")].status},{.items[-1:].status.conditions[?(@.type=="Succeeded")].reason}' 2>/dev/null || echo ",,"
+  kubernetes.core.k8s_info:
+    api_version: tekton.dev/v1
+    kind: PipelineRun
+    namespace: "{{ app_ci_namespace }}"
+    label_selectors:
+      - pipelinesascode.tekton.dev/original-prname=maven-image-build
   register: pipeline_check
-  changed_when: false
   until: >
-    pipeline_check.stdout.split(',')[0] != '' and
-    pipeline_check.stdout.split(',')[1] in ['True', 'False']
+    pipeline_check.resources | length > 0 and
+    (pipeline_check.resources | sort(attribute='metadata.creationTimestamp') | last).status.conditions | selectattr('type', 'equalto', 'Succeeded') | map(attribute='status') | first | default('') in ['True', 'False']
   retries: 120
   delay: 10
 
 - name: Set PipelineRun name and status
   ansible.builtin.set_fact:
-    pipeline_run_name: "{{ pipeline_check.stdout.split(',')[0] }}"
-    pipeline_status: "{{ pipeline_check.stdout.split(',')[1] }}"
-    pipeline_reason: "{{ pipeline_check.stdout.split(',')[2] | default('') }}"
+    pipeline_run_name: "{{ (pipeline_check.resources | sort(attribute='metadata.creationTimestamp') | last).metadata.name }}"
+    pipeline_status: "{{ (pipeline_check.resources | sort(attribute='metadata.creationTimestamp') | last).status.conditions | selectattr('type', 'equalto', 'Succeeded') | map(attribute='status') | first }}"
+    pipeline_reason: "{{ (pipeline_check.resources | sort(attribute='metadata.creationTimestamp') | last).status.conditions | selectattr('type', 'equalto', 'Succeeded') | map(attribute='reason') | first | default('') }}"
 
 - name: Check if PipelineRun succeeded
   ansible.builtin.fail:
