@@ -166,7 +166,7 @@
   ansible.builtin.replace:
     path: "{{ template_file }}"
     regexp: '(^\s*owner:\s*user:default/).*$'
-    replace: '\1${{ '{{' }} user.entity.metadata.name {{ '}}' }}'
+    replace: '\1${{ "{{" }} user.entity.metadata.name {{ "}}" }}'
   when: gitlab_url is defined
 
 - name: Configure git user for commit
