@@ -136,9 +136,22 @@
 - name: Reset template owner to dynamic user reference
   ansible.builtin.replace:
     path: "{{ template_file }}"
-    regexp: '(^\s*owner:\s*user:default/).*$'
-    replace: '\1${{ "{{" }} user.entity.metadata.name {{ "}}" }}'
+    regexp: '^(\s*)owner:\s*user:default/.*$'
+    replace: '\1owner: user:default/${% raw %}{{ user.entity.metadata.name }}{% endraw %}'
   when: gitlab_url is defined
+
+- name: Verify template changes
+  ansible.builtin.shell:
+    cmd: |
+      grep -n "owner: user:default" {{ template_file }}
+  register: owner_lines
+  changed_when: false
+  when: gitlab_url is defined
+
+- name: Display owner lines
+  ansible.builtin.debug:
+    msg: "{{ owner_lines.stdout_lines }}"
+  when: gitlab_url is defined and owner_lines.stdout_lines is defined
 
 - name: Configure git user for commit
   ansible.builtin.shell:
@@ -172,5 +185,5 @@
 
 - name: Display template reset result
   ansible.builtin.debug:
-    msg: "✓ RHDH template reset to use dynamic user reference (${{ '{{' }} user.entity.metadata.name {{ '}}' }})"
+    msg: "✓ RHDH template reset to use dynamic user reference (${% raw %}{{ user.entity.metadata.name }}{% endraw %})"
   when: gitlab_url is defined

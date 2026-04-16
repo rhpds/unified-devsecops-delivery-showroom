@@ -140,8 +140,8 @@
 - name: Reset template owner to dynamic user reference
   ansible.builtin.replace:
     path: "{{ template_file }}"
-    regexp: '(^\s*owner:\s*user:default/).*$'
-    replace: '\1${{ "{{" }} user.entity.metadata.name {{ "}}" }}'
+    regexp: '^(\s*)owner:\s*user:default/.*$'
+    replace: '\1owner: user:default/${% raw %}{{ user.entity.metadata.name }}{% endraw %}'
   when: task_status.json is defined
 
 - name: Commit template reset to dynamic reference
@@ -169,7 +169,7 @@
 
 - name: Display reset push result
   ansible.builtin.debug:
-    msg: "✓ Template reset to dynamic user reference (${{ '{{' }} user.entity.metadata.name {{ '}}' }}) and pushed to GitLab"
+    msg: "✓ Template reset to dynamic user reference (${% raw %}{{ user.entity.metadata.name }}{% endraw %}) and pushed to GitLab"
   when: task_status.json is defined
 
 - name: Refresh template in Developer Hub after reset
@@ -204,6 +204,6 @@
       - "✓ Changes committed and pushed to GitLab"
       - "✓ RHDH template catalog refreshed"
       - "✓ Template executed with verify commits enabled"
-      - "✓ Template reset to dynamic user reference (${{ '{{' }} user.entity.metadata.name {{ '}}' }})"
+      - "✓ Template reset to dynamic user reference (${% raw %}{{ user.entity.metadata.name }}{% endraw %})"
       - "✓ Dynamic reference committed and pushed to GitLab"
       - "✓ RHDH template refreshed with clean content"
