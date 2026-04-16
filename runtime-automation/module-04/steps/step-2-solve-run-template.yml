@@ -22,18 +22,7 @@
 - name: Add fallback for user.entity.metadata.name
   ansible.builtin.shell:
     cmd: |
-      python3 -c '
-      import sys
-      with open(sys.argv[1], "r") as f:
-          content = f.read()
-
-      old_text = "owner: user:default/$" + "{{ user.entity.metadata.name }}"
-      new_text = "owner: user:default/$" + "{{ user.entity.metadata.name || \"user1\" }}"
-      content = content.replace(old_text, new_text)
-
-      with open(sys.argv[1], "w") as f:
-          f.write(content)
-      ' "{{ template_file }}"
+      sed -i.bak "s/owner: user:default\/\${{ '{{' }} user.entity.metadata.name {{ '}}' }}/owner: user:default\/\${{ '{{' }} user.entity.metadata.name || 'user1' {{ '}}' }}/g" {{ template_file }}
   changed_when: true
   delegate_to: bastion
 
