@@ -1,8 +1,8 @@
 ---
 # STEP 1: Reset - Clean up GitLab Repositories
-- name: Debug GitLab token status
+- name: Debug GitLab credentials status
   ansible.builtin.debug:
-    msg: "GitLab token available: {{ gitlab_token is defined and gitlab_token.stdout is defined and gitlab_token.stdout != '' }}"
+    msg: "GitLab credentials available: {{ gitlab_root_user is defined and gitlab_root_password is defined }}"
 
 - name: Get GitLab group ID for development group
   ansible.builtin.uri:
@@ -10,15 +10,15 @@
     method: GET
     validate_certs: false
     headers:
-      PRIVATE-TOKEN: "{{ gitlab_token.stdout }}"
+      PRIVATE-TOKEN: "{{ gitlab_root_password }}"
     status_code: [200, 404]
   register: gitlab_group_info
   changed_when: false
   failed_when: false
   when: >
     gitlab_url is defined and
-    gitlab_token.stdout is defined and
-    gitlab_token.stdout != ""
+    gitlab_root_password is defined and
+    gitlab_root_password != ""
 
 - name: Get all projects in development group
   ansible.builtin.uri:
@@ -26,15 +26,15 @@
     method: GET
     validate_certs: false
     headers:
-      PRIVATE-TOKEN: "{{ gitlab_token.stdout }}"
+      PRIVATE-TOKEN: "{{ gitlab_root_password }}"
     status_code: [200]
   register: gitlab_projects
   changed_when: false
   failed_when: false
   when: >
     gitlab_url is defined and
-    gitlab_token.stdout is defined and
-    gitlab_token.stdout != "" and
+    gitlab_root_password is defined and
+    gitlab_root_password != "" and
     gitlab_group_info.status is defined and
     gitlab_group_info.status == 200
 
@@ -49,7 +49,7 @@
     method: DELETE
     validate_certs: false
     headers:
-      PRIVATE-TOKEN: "{{ gitlab_token.stdout }}"
+      PRIVATE-TOKEN: "{{ gitlab_root_password }}"
     status_code: [202, 204]
   loop: "{{ gitlab_projects.json | default([]) }}"
   when: >
@@ -71,7 +71,7 @@
     method: GET
     validate_certs: false
     headers:
-      PRIVATE-TOKEN: "{{ gitlab_token.stdout }}"
+      PRIVATE-TOKEN: "{{ gitlab_root_password }}"
     status_code: [200, 404]
   register: gitlab_projects_scheduled
   changed_when: false
@@ -86,7 +86,7 @@
     method: DELETE
     validate_certs: false
     headers:
-      PRIVATE-TOKEN: "{{ gitlab_token.stdout }}"
+      PRIVATE-TOKEN: "{{ gitlab_root_password }}"
     status_code: [202, 204]
   loop: "{{ gitlab_projects_scheduled.json | default([]) }}"
   when: >
@@ -159,7 +159,7 @@
 - name: Clone template repository
   ansible.builtin.shell:
     cmd: |
-      git clone https://{{ gitlab_username.stdout }}:{{ gitlab_token.stdout }}@{{ gitlab_url.split('//')[1] }}/rhdh/build-secured-dev-workflows-idp-configuration.git {{ template_repo_dir }}
+      git clone https://{{ gitlab_root_user }}:{{ gitlab_root_password }}@{{ gitlab_url.split('//')[1] }}/rhdh/build-secured-dev-workflows-idp-configuration.git {{ template_repo_dir }}
   environment:
     GIT_SSL_NO_VERIFY: "true"
   changed_when: false
