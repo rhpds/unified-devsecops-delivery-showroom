@@ -74,16 +74,6 @@
     msg: "Failed to create integration"
   when: integration_id is not defined or integration_id == "" or integration_id is none
 
-- name: Test ACS-Quay integration
-  ansible.builtin.uri:
-    url: "{{ acs_route }}/v1/imageintegrations/{{ integration_id }}/test"
-    method: POST
-    headers:
-      Authorization: "Bearer {{ acs_token.stdout }}"
-    validate_certs: false
-    status_code: [200, 204]
-  changed_when: false
-
 - name: ACS configuration complete
   ansible.builtin.debug:
     msg:
