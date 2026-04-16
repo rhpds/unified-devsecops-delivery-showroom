@@ -68,3 +68,52 @@
     gitlab_url is defined and
     gitlab_group_info.status is defined and
     gitlab_group_info.status == 404
+
+# Reset RHDH template to clean commit
+- name: Set GitLab template repo details
+  ansible.builtin.set_fact:
+    template_repo_url: "{{ gitlab_url }}/rhdh/build-secured-dev-workflows-idp-configuration.git"
+    template_repo_dir: "/tmp/reset-template-repo"
+  when: gitlab_url is defined
+
+- name: Remove existing template repo directory
+  ansible.builtin.file:
+    path: "{{ template_repo_dir }}"
+    state: absent
+  delegate_to: bastion
+  when: gitlab_url is defined
+
+- name: Clone template repository
+  ansible.builtin.shell:
+    cmd: |
+      git clone {{ template_repo_url }} {{ template_repo_dir }}
+  environment:
+    GIT_SSL_NO_VERIFY: "true"
+  changed_when: false
+  delegate_to: bastion
+  when: gitlab_url is defined
+
+- name: Reset template to clean commit
+  ansible.builtin.shell:
+    cmd: |
+      cd {{ template_repo_dir }}
+      git reset --hard {{ rhdh_template_clean_commit }}
+  changed_when: true
+  delegate_to: bastion
+  when: gitlab_url is defined
+
+- name: Force push clean template to GitLab
+  ansible.builtin.shell:
+    cmd: |
+      cd {{ template_repo_dir }}
+      git push --force https://root:{{ gitlab_token.stdout }}@{{ gitlab_url.split('//')[1] }}/rhdh/build-secured-dev-workflows-idp-configuration.git
+  environment:
+    GIT_SSL_NO_VERIFY: "true"
+  changed_when: true
+  delegate_to: bastion
+  when: gitlab_url is defined
+
+- name: Display template reset result
+  ansible.builtin.debug:
+    msg: "✓ RHDH template reset to clean commit {{ rhdh_template_clean_commit }}"
+  when: gitlab_url is defined
