@@ -8,6 +8,7 @@
   ansible.builtin.shell: |
     oc get securesign trusted-artifact-signer -n {{ tas_namespace }}
   register: securesign_check
+  delegate_to: bastion
   changed_when: false
   failed_when: false
 
@@ -75,6 +76,7 @@
       POD_COUNT=$(oc get pods -n {{ tas_namespace }} --no-headers 2>/dev/null | wc -l)
       echo "timeout:$POD_COUNT"
   register: pods_termination
+  delegate_to: bastion
   changed_when: false
 
 - name: Display pod termination result
@@ -95,6 +97,7 @@
   ansible.builtin.shell: |
     oc get pvc -n {{ tas_namespace }} --no-headers 2>/dev/null | wc -l || echo 0
   register: pvc_count
+  delegate_to: bastion
   changed_when: false
 
 - name: Delete PVCs if they exist

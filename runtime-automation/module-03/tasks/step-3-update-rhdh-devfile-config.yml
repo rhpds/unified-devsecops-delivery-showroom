@@ -4,6 +4,7 @@
   ansible.builtin.shell:
     cmd: bash {{ lab_assets_dir }}/update-rhdh-devfile-config.sh update
   changed_when: true
+  delegate_to: bastion
 
 - name: RHDH devfile config update complete
   ansible.builtin.debug:

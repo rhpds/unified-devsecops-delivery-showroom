@@ -8,6 +8,7 @@
   ansible.builtin.shell: |
     oc get taskrun -n {{ app_ci_namespace }} --no-headers 2>/dev/null | wc -l || echo 0
   register: taskrun_count
+  delegate_to: bastion
   changed_when: false
 
 - name: Delete all TaskRuns
@@ -31,6 +32,7 @@
   ansible.builtin.shell: |
     oc get pipelinerun -n {{ app_ci_namespace }} --no-headers 2>/dev/null | wc -l || echo 0
   register: pipelinerun_count
+  delegate_to: bastion
   changed_when: false
 
 - name: Delete all PipelineRuns

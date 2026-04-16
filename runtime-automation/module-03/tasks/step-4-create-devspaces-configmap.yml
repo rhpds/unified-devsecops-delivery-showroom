@@ -26,6 +26,7 @@
         TAS_CLIENT_ID: "{{ tas_sso_client_id }}"
       EOF
   changed_when: true
+  delegate_to: bastion
 
 - name: Dev Spaces ConfigMap created
   ansible.builtin.debug:

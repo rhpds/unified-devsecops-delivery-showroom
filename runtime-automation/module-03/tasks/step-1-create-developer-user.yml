@@ -7,6 +7,7 @@
       ADMIN_PASS=$(oc get secret keycloak-initial-admin -n {{ keycloak_namespace }} -o jsonpath='{.data.password}' | base64 -d)
       echo "${ADMIN_USER}:${ADMIN_PASS}"
   changed_when: false
+  delegate_to: bastion
   register: kc_create_creds
 
 - name: Get Keycloak admin token for user creation
@@ -21,6 +22,7 @@
         -d "password=${ADMIN_PASS}" \
         -d "grant_type=password" | jq -r '.access_token'
   changed_when: false
+  delegate_to: bastion
   register: create_admin_token
 
 - name: Verify admin token
@@ -34,6 +36,7 @@
       curl -s -H "Authorization: Bearer {{ create_admin_token.stdout }}" \
         "{{ keycloak_admin_console }}/admin/realms/{{ sso_realm }}/users?username={{ developer_username }}" | jq -r '.[0].id // empty'
   changed_when: false
+  delegate_to: bastion
   register: existing_user_id
 
 - name: Create developer user
@@ -52,6 +55,7 @@
           \"enabled\": true
         }"
   changed_when: true
+  delegate_to: bastion
 
 - name: Wait for user creation
   when: existing_user_id.stdout == ""
@@ -64,6 +68,7 @@
       curl -s -H "Authorization: Bearer {{ create_admin_token.stdout }}" \
         "{{ keycloak_admin_console }}/admin/realms/{{ sso_realm }}/users?username={{ developer_username }}" | jq -r '.[0].id'
   changed_when: false
+  delegate_to: bastion
   register: user_id
 
 - name: Verify user ID exists
@@ -77,6 +82,7 @@
       curl -s -H "Authorization: Bearer {{ create_admin_token.stdout }}" \
         "{{ keycloak_admin_console }}/admin/realms/{{ sso_realm }}/groups?search=tssc" | jq -r '.[0].id // empty'
   changed_when: false
+  delegate_to: bastion
   register: tssc_group_id
 
 - name: Get users group ID
@@ -85,6 +91,7 @@
       curl -s -H "Authorization: Bearer {{ create_admin_token.stdout }}" \
         "{{ keycloak_admin_console }}/admin/realms/{{ sso_realm }}/groups?search=users" | jq -r '.[0].id // empty'
   changed_when: false
+  delegate_to: bastion
   register: users_group_id
 
 - name: Check if user is member of tssc group
@@ -94,6 +101,7 @@
       curl -s -H "Authorization: Bearer {{ create_admin_token.stdout }}" \
         "{{ keycloak_admin_console }}/admin/realms/{{ sso_realm }}/users/{{ user_id.stdout }}/groups" | jq -r ".[] | select(.id==\"{{ tssc_group_id.stdout }}\") | .id"
   register: tssc_member_check
+  delegate_to: bastion
   changed_when: false
 
 - name: Add user to tssc group
@@ -103,6 +111,7 @@
       curl -s -X PUT "{{ keycloak_admin_console }}/admin/realms/{{ sso_realm }}/users/{{ user_id.stdout }}/groups/{{ tssc_group_id.stdout }}" \
         -H "Authorization: Bearer {{ create_admin_token.stdout }}"
   changed_when: true
+  delegate_to: bastion
 
 - name: Check if user is member of users group
   when: users_group_id.stdout != ""
@@ -111,6 +120,7 @@
       curl -s -H "Authorization: Bearer {{ create_admin_token.stdout }}" \
         "{{ keycloak_admin_console }}/admin/realms/{{ sso_realm }}/users/{{ user_id.stdout }}/groups" | jq -r ".[] | select(.id==\"{{ users_group_id.stdout }}\") | .id"
   register: users_member_check
+  delegate_to: bastion
   changed_when: false
 
 - name: Add user to users group
@@ -120,6 +130,7 @@
       curl -s -X PUT "{{ keycloak_admin_console }}/admin/realms/{{ sso_realm }}/users/{{ user_id.stdout }}/groups/{{ users_group_id.stdout }}" \
         -H "Authorization: Bearer {{ create_admin_token.stdout }}"
   changed_when: true
+  delegate_to: bastion
 
 - name: Set user password
   ansible.builtin.shell:
@@ -133,6 +144,7 @@
           \"temporary\": false
         }"
   changed_when: true
+  delegate_to: bastion
 
 - name: Developer user creation complete
   ansible.builtin.debug:
