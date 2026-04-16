@@ -19,6 +19,41 @@
     GIT_SSL_NO_VERIFY: "true"
   changed_when: true
 
+- name: Check if template already contains user1 fallback
+  ansible.builtin.shell:
+    cmd: grep -q "user.entity.metadata.name | default('user1')" {{ template_file }}
+  register: has_user1_fallback
+  changed_when: false
+  failed_when: false
+  delegate_to: bastion
+
+- name: Reset template if it already has user1 fallback
+  when: has_user1_fallback.rc == 0
+  block:
+    - name: Revert last commit
+      ansible.builtin.shell:
+        cmd: |
+          cd {{ gitlab_repo_dir }}
+          git revert --no-edit HEAD
+      changed_when: true
+      delegate_to: bastion
+      failed_when: false
+
+    - name: Force push reset to GitLab
+      ansible.builtin.shell:
+        cmd: |
+          cd {{ gitlab_repo_dir }}
+          git push --force https://root:{{ gitlab_token.stdout }}@{{ gitlab_url.split('//')[1] }}/rhdh/build-secured-dev-workflows-idp-configuration.git
+      environment:
+        GIT_SSL_NO_VERIFY: "true"
+      changed_when: true
+      delegate_to: bastion
+      failed_when: false
+
+    - name: Display reset result
+      ansible.builtin.debug:
+        msg: "✓ Template reset to remove previous user1 fallback"
+
 - name: Add fallback for user.entity.metadata.name
   ansible.builtin.replace:
     path: "{{ template_file }}"
