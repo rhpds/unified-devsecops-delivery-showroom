@@ -21,6 +21,9 @@
     backstage_namespace: "backstage"
     gitlab_namespace: "gitlab"
     gitlab_group: "development"
+    # Template clean commit - use rhdh_devfile_commit_id from user_data.yml if available
+    # This is the commit created during provisioning with devfile configuration
+    rhdh_template_clean_commit: "{{ rhdh_devfile_commit_id | default('9468649cc2fad7f950b20461bf4afdbeaa6bf9b7') }}"
 
   module_defaults:
     group/kubernetes.core.k8s:

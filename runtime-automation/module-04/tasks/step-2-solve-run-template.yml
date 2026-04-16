@@ -156,7 +156,7 @@
   ansible.builtin.shell:
     cmd: |
       cd {{ gitlab_repo_dir }}
-      git reset --hard {{ rhdh_devfile_commit_id }}
+      git reset --hard {{ rhdh_template_clean_commit }}
   changed_when: true
   delegate_to: bastion
   when: >
@@ -217,5 +217,5 @@
       - "✓ Changes committed and pushed to GitLab"
       - "✓ RHDH template catalog refreshed"
       - "✓ Template executed with verify commits enabled"
-      - "✓ Template reset to commit {{ rhdh_devfile_commit_id }}"
+      - "✓ Template reset to commit {{ rhdh_template_clean_commit }}"
       - "✓ Clean template restored in GitLab and RHDH"

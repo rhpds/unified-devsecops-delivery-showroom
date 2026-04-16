@@ -144,7 +144,7 @@
   ansible.builtin.shell:
     cmd: |
       cd {{ template_repo_dir }}
-      git reset --hard {{ rhdh_devfile_commit_id }}
+      git reset --hard {{ rhdh_template_clean_commit }}
   changed_when: true
   delegate_to: bastion
   when: gitlab_url is defined
@@ -162,5 +162,5 @@
 
 - name: Display template reset result
   ansible.builtin.debug:
-    msg: "✓ RHDH template reset to commit {{ rhdh_devfile_commit_id }}"
+    msg: "✓ RHDH template reset to commit {{ rhdh_template_clean_commit }}"
   when: gitlab_url is defined
