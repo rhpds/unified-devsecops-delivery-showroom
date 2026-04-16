@@ -286,12 +286,18 @@
   // ── Finalize status banner ────────────────────────────────────────────────
 
   function finalize(stage, statusEl, stepList, logEl) {
-    var hasFail = stepList.querySelector('.sp-step-fail');
-    var hasPending = stepList.querySelector('.sp-step-pending');
-    if (hasPending) { hasPending.className = 'sp-step sp-step-fail'; }
-    hasFail = stepList.querySelector('.sp-step-fail');
+    // FIX #2: Check PLAY RECAP statistics for actual failures instead of marking pending as failed
+    // Parse the Ansible PLAY RECAP line to determine true success/failure
+    var logText = logEl.textContent;
+    var recapMatch = logText.match(/failed=(\d+)/);
+    var actualFailed = recapMatch ? parseInt(recapMatch[1], 10) : 0;
 
-    var passed = !hasFail;
+    // Also check if there were any fatal errors in the output
+    var hasFatalError = /fatal:|ERROR:/.test(logText) && !/ERROR: Playbook not found/.test(logText);
+
+    // Determine pass/fail based on Ansible statistics, not pending task state
+    var passed = (actualFailed === 0) && !hasFatalError;
+
     var text = stage === 'solve'
       ? (passed ? 'Solve completed' : 'Solve failed')
       : (passed ? 'All checks passed' : 'Validation failed');
