@@ -280,9 +280,125 @@
               - ""
 
     ###########################################
-    # STEP 1: Configure ACS (configure-acs.sh)
+    # STEP 1: Fix RHDH Template User Reference
     ###########################################
-    - name: "STEP 1: Configure ACS-Quay Integration"
+    - name: "STEP 1: Fix RHDH Template User Reference"
+      delegate_to: bastion
+      when: gitlab_url is defined
+      block:
+        - name: Set GitLab repo details
+          ansible.builtin.set_fact:
+            gitlab_repo_url: "{{ gitlab_url }}/rhdh/build-secured-dev-workflows-idp-configuration.git"
+            gitlab_repo_dir: "/tmp/build-secured-dev-workflows-idp-configuration"
+            template_file: "/tmp/build-secured-dev-workflows-idp-configuration/scaffolder-templates/quarkus-stssc-template/template.yaml"
+
+        - name: Remove existing repo directory
+          ansible.builtin.file:
+            path: "{{ gitlab_repo_dir }}"
+            state: absent
+
+        - name: Clone GitLab repository
+          ansible.builtin.shell:
+            cmd: |
+              git clone {{ gitlab_repo_url }} {{ gitlab_repo_dir }}
+          environment:
+            GIT_SSL_NO_VERIFY: "true"
+          changed_when: true
+
+        - name: Create backup of template file
+          ansible.builtin.copy:
+            src: "{{ template_file }}"
+            dest: "{{ template_file }}.backup"
+            remote_src: true
+            force: true
+
+        - name: Display backup created
+          ansible.builtin.debug:
+            msg: "✓ Backup created: {{ template_file }}.backup"
+
+        - name: Fix lines 110 and 144 - Add fallback for user.entity.metadata.name
+          ansible.builtin.shell:
+            cmd: |
+              sed -i.bak 's|owner: user:default/\${{ user\.entity\.metadata\.name }}|owner: user:default/\${{ user.entity.metadata.name \|\| '"'"'user1'"'"' }}|g' {{ template_file }}
+          changed_when: true
+
+        - name: Verify template file changes
+          ansible.builtin.shell:
+            cmd: grep -n "owner: user:default" {{ template_file }}
+          register: template_changes
+          changed_when: false
+
+        - name: Display template changes
+          ansible.builtin.debug:
+            msg: "{{ template_changes.stdout_lines }}"
+
+        - name: Configure git user for commit
+          ansible.builtin.shell:
+            cmd: |
+              cd {{ gitlab_repo_dir }}
+              git config user.email "automation@redhat.com"
+              git config user.name "Automation"
+          changed_when: false
+
+        - name: Commit template changes
+          ansible.builtin.shell:
+            cmd: |
+              cd {{ gitlab_repo_dir }}
+              git add scaffolder-templates/quarkus-stssc-template/template.yaml
+              git commit -m "Fix template user reference fallback"
+          changed_when: true
+          register: git_commit
+          failed_when: git_commit.rc != 0 and 'nothing to commit' not in git_commit.stdout
+
+        - name: Push changes to GitLab
+          ansible.builtin.shell:
+            cmd: |
+              cd {{ gitlab_repo_dir }}
+              git push https://root:{{ gitlab_token.stdout }}@{{ gitlab_url.split('//')[1] }}/rhdh/build-secured-dev-workflows-idp-configuration.git
+          environment:
+            GIT_SSL_NO_VERIFY: "true"
+          changed_when: true
+          when: git_commit.rc == 0
+
+        - name: Display git push result
+          ansible.builtin.debug:
+            msg: "✓ Template changes pushed to GitLab"
+          when: git_commit.rc == 0
+
+        - name: Refresh template in Developer Hub
+          ansible.builtin.uri:
+            url: "{{ developer_hub_url }}/api/catalog/refresh"
+            method: POST
+            validate_certs: false
+            headers:
+              Authorization: "Bearer {{ rhdh_api_token }}"
+              Content-Type: "application/json"
+            body_format: json
+            body:
+              entityRef: "template:default/quarkus-stssc-template"
+            status_code: [200, 202]
+          register: template_refresh
+          delegate_to: localhost
+          when: >
+            developer_hub_url is defined and
+            rhdh_api_token is defined
+
+        - name: Display template refresh result
+          ansible.builtin.debug:
+            msg: "✓ RHDH template refreshed"
+          when: template_refresh.status is defined and template_refresh.status in [200, 202]
+
+        - name: Template fix complete
+          ansible.builtin.debug:
+            msg:
+              - "✓ Template user reference fixed"
+              - "✓ Changes committed and pushed to GitLab"
+              - "✓ RHDH template catalog refreshed"
+
+    ###########################################
+    # STEP 2: Configure ACS (configure-acs.sh)
+    ###########################################
+    - name: "STEP 2: Configure ACS-Quay Integration"
       delegate_to: bastion
       block:
         - name: Get ACS API token from rox-api-token secret
@@ -361,9 +477,9 @@
               - "Type: Registry + Scanner"
 
     ###########################################
-    # STEP 2: Test Image Scanning (test-image-scanning.sh)
+    # STEP 3: Test Image Scanning (test-image-scanning.sh)
     ###########################################
-    - name: "STEP 2: Test Image Scanning"
+    - name: "STEP 3: Test Image Scanning"
       delegate_to: bastion
       block:
         - name: Get ROX API token from rox-api-token secret
@@ -439,6 +555,7 @@
           - "Module 4 Complete!"
           - "========================================="
           - "Summary:"
+          - "  ✓ RHDH template user reference fixed"
           - "  ✓ ACS-Quay integration configured"
           - "  ✓ Image scanning tested with roxctl"
           - "  ✓ Policy checks verified"
