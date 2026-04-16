@@ -38,6 +38,11 @@
         - "========================================="
         - ""
 
+  - name: Login to OpenShift cluster
+    ansible.builtin.shell:
+      cmd: oc login --token={{ openshift_cluster_admin_token }} --server={{ openshift_api_url }} --insecure-skip-tls-verify=true
+    changed_when: false
+
   #######################################
   # Get Keycloak admin token
   #######################################
