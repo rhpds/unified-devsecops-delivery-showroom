@@ -21,7 +21,6 @@
     backstage_namespace: "backstage"
     gitlab_namespace: "gitlab"
     gitlab_group: "development"
-    rhdh_template_clean_commit: "9468649cc2fad7f950b20461bf4afdbeaa6bf9b7"
 
   module_defaults:
     group/kubernetes.core.k8s:
