@@ -23,7 +23,7 @@
   ansible.builtin.replace:
     path: "{{ template_file }}"
     regexp: 'user\.entity\.metadata\.name'
-    replace: "user.entity.metadata.name || 'user1'"
+    replace: "user.entity.metadata.name | default('user1')"
   delegate_to: bastion
 
 - name: Verify template file changes
