@@ -159,7 +159,7 @@
 - name: Clone template repository
   ansible.builtin.shell:
     cmd: |
-      git clone https://root:{{ gitlab_token.stdout }}@{{ gitlab_url.split('//')[1] }}/rhdh/build-secured-dev-workflows-idp-configuration.git {{ template_repo_dir }}
+      git clone https://{{ gitlab_username.stdout }}:{{ gitlab_token.stdout }}@{{ gitlab_url.split('//')[1] }}/rhdh/build-secured-dev-workflows-idp-configuration.git {{ template_repo_dir }}
   environment:
     GIT_SSL_NO_VERIFY: "true"
   changed_when: false

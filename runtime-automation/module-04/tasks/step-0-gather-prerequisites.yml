@@ -20,6 +20,15 @@
   ansible.builtin.debug:
     msg: "{{ '✓ RHDH API token retrieved' if rhdh_api_token is defined else '⚠ WARNING: Could not retrieve RHDH API token' }}"
 
+- name: Get GitLab username from secret
+  ansible.builtin.shell:
+    cmd: |
+      oc get secret root-user-personal-token -n {{ gitlab_namespace }} -o jsonpath='{.data.username}' | base64 -d
+  changed_when: false
+  register: gitlab_username
+  failed_when: false
+  when: gitlab_url is defined
+
 - name: Get GitLab personal access token
   ansible.builtin.shell:
     cmd: |
@@ -29,7 +38,7 @@
   failed_when: false
   when: gitlab_url is defined
 
-- name: Display GitLab token retrieval status
+- name: Display GitLab credentials retrieval status
   ansible.builtin.debug:
-    msg: "{{ '✓ GitLab token retrieved' if gitlab_token.stdout is defined and gitlab_token.stdout != '' else '⚠ WARNING: Could not retrieve GitLab token' }}"
+    msg: "{{ '✓ GitLab credentials retrieved (user: ' + gitlab_username.stdout + ')' if gitlab_token.stdout is defined and gitlab_token.stdout != '' and gitlab_username.stdout is defined and gitlab_username.stdout != '' else '⚠ WARNING: Could not retrieve GitLab credentials' }}"
   when: gitlab_url is defined
