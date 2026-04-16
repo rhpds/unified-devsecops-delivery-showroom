@@ -108,6 +108,11 @@
           block:
             - include_tasks: tasks/step-2-solve-commit-signing.yml
 
+        - name: "STEP 2.5: Tag Repository"
+          when: gitlab_url is defined
+          block:
+            - include_tasks: tasks/step-2-solve-tag-repo.yml
+
         - name: Module 4 completion summary
           ansible.builtin.debug:
             msg:
@@ -121,5 +126,6 @@
               - "  ✓ RHDH template updated and executed"
               - "  ✓ Template executed with verify commits enabled"
               - "  ✓ Commit signing tested with RHTAS and gitsign"
+              - "  ✓ Repository tagged with v1.0"
               - "  ✓ Ready for supply chain policy enforcement"
 

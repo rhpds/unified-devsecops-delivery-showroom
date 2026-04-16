@@ -1,0 +1,116 @@
+---
+# STEP 2: Tag Repository (tag-repo)
+- name: Wait for maven-image-build PipelineRun to complete
+  ansible.builtin.debug:
+    msg: "Waiting for maven-image-build PipelineRun to complete..."
+
+- name: Check for PipelineRun with label pipelinesascode.tekton.dev/original-prname=maven-image-build
+  ansible.builtin.shell: |
+    oc get pipelinerun -n {{ app_ci_namespace }} \
+      -l pipelinesascode.tekton.dev/original-prname=maven-image-build \
+      --sort-by=.metadata.creationTimestamp \
+      -o jsonpath='{.items[-1:].metadata.name}' 2>/dev/null || echo ""
+  register: pipeline_run_name
+  changed_when: false
+  failed_when: pipeline_run_name.stdout == ""
+
+- name: Display PipelineRun being monitored
+  ansible.builtin.debug:
+    msg: "Monitoring PipelineRun: {{ pipeline_run_name.stdout }}"
+
+- name: Wait for PipelineRun to complete
+  ansible.builtin.shell: |
+    TIMEOUT=600
+    ELAPSED=0
+    while [ $ELAPSED -lt $TIMEOUT ]; do
+      STATUS=$(oc get pipelinerun {{ pipeline_run_name.stdout }} -n {{ app_ci_namespace }} \
+        -o jsonpath='{.status.conditions[?(@.type=="Succeeded")].status}' 2>/dev/null || echo "Unknown")
+      REASON=$(oc get pipelinerun {{ pipeline_run_name.stdout }} -n {{ app_ci_namespace }} \
+        -o jsonpath='{.status.conditions[?(@.type=="Succeeded")].reason}' 2>/dev/null || echo "")
+
+      if [ "$STATUS" == "True" ]; then
+        echo "success"
+        exit 0
+      elif [ "$STATUS" == "False" ]; then
+        echo "failed:$REASON"
+        exit 1
+      fi
+
+      # Show progress every 30 seconds
+      if [ $((ELAPSED % 30)) -eq 0 ]; then
+        echo "  Status: ${STATUS} (${ELAPSED}s elapsed)" >&2
+      fi
+
+      sleep 10
+      ELAPSED=$((ELAPSED + 10))
+    done
+    echo "timeout"
+    exit 1
+  register: pipeline_result
+  changed_when: false
+  failed_when: pipeline_result.stdout != "success"
+
+- name: Display PipelineRun completed
+  ansible.builtin.debug:
+    msg: "✓ PipelineRun {{ pipeline_run_name.stdout }} completed successfully"
+
+- name: Create temporary directory for repo clone
+  ansible.builtin.tempfile:
+    state: directory
+    suffix: -my-quarkus-tkn
+  register: temp_repo_dir
+
+- name: Clone my-quarkus-tkn repository
+  ansible.builtin.debug:
+    msg: "Cloning my-quarkus-tkn repository..."
+
+- name: Git clone my-quarkus-tkn
+  ansible.builtin.shell: |
+    cd {{ temp_repo_dir.path }}
+    GIT_URL=$(echo "{{ gitlab_url }}" | sed "s|https://|https://{{ gitlab_root_user }}:{{ gitlab_root_password }}@|")/development/my-quarkus-tkn.git
+    git clone "$GIT_URL"
+  changed_when: true
+  no_log: true
+
+- name: Configure git user for tagging
+  ansible.builtin.shell: |
+    cd {{ temp_repo_dir.path }}/my-quarkus-tkn
+    git config user.name "Lab Automation"
+    git config user.email "automation@demo.redhat.com"
+  changed_when: false
+
+- name: Tag repository with v1.0
+  ansible.builtin.debug:
+    msg: "Tagging repository with v1.0..."
+
+- name: Create and push v1.0 tag
+  ansible.builtin.shell: |
+    cd {{ temp_repo_dir.path }}/my-quarkus-tkn
+    git tag v1.0
+    GIT_URL=$(echo "{{ gitlab_url }}" | sed "s|https://|https://{{ gitlab_root_user }}:{{ gitlab_root_password }}@|")/development/my-quarkus-tkn.git
+    git push "$GIT_URL" v1.0
+  changed_when: true
+  no_log: true
+  register: tag_result
+
+- name: Display tag creation result
+  ansible.builtin.debug:
+    msg: "✓ Repository tagged with v1.0 and pushed to GitLab"
+
+- name: Clean up temporary directory
+  ansible.builtin.file:
+    path: "{{ temp_repo_dir.path }}"
+    state: absent
+
+- name: Tag repository complete
+  ansible.builtin.debug:
+    msg:
+      - "========================================="
+      - "Repository Tagging Complete!"
+      - "========================================="
+      - ""
+      - "  ✓ PipelineRun completed successfully"
+      - "  ✓ Repository cloned: development/my-quarkus-tkn"
+      - "  ✓ Tag created: v1.0"
+      - "  ✓ Tag pushed to GitLab"
+      - ""
