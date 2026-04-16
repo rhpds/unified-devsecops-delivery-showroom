@@ -11,7 +11,7 @@
   until: >
     pipeline_check.stdout.split(',')[0] != '' and
     pipeline_check.stdout.split(',')[1] in ['True', 'False']
-  retries: 60
+  retries: 120
   delay: 10
 
 - name: Set PipelineRun name and status
