@@ -120,20 +120,20 @@
             gitlab_group_info.status is defined and
             gitlab_group_info.status == 200
 
-        - name: Delete all projects in development group
+        - name: Delete all projects in development group (immediate deletion)
           ansible.builtin.uri:
-            url: "{{ gitlab_url }}/api/v4/projects/{{ item.id }}"
+            url: "{{ gitlab_url }}/api/v4/projects/{{ item.id }}?permanently_remove=true&full_path={{ item.path_with_namespace | urlencode }}"
             method: DELETE
             validate_certs: false
             headers:
               PRIVATE-TOKEN: "{{ gitlab_token.stdout }}"
-            status_code: [202, 204, 400]
+            status_code: [202, 204]
           loop: "{{ gitlab_projects.json | default([]) }}"
           when: >
             gitlab_projects.json is defined and
             gitlab_projects.json | length > 0
           register: gitlab_delete_results
-          changed_when: item.status | default(202) in [202, 204]
+          changed_when: true
           failed_when: false
           delegate_to: bastion
 
