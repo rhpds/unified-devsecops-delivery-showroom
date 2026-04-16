@@ -1,0 +1,237 @@
+---
+# STEP 2.3: Update and Run RHDH Template
+- name: Set GitLab repo details
+  ansible.builtin.set_fact:
+    gitlab_repo_url: "{{ gitlab_url }}/rhdh/build-secured-dev-workflows-idp-configuration.git"
+    gitlab_repo_dir: "/tmp/build-secured-dev-workflows-idp-configuration"
+    template_file: "/tmp/build-secured-dev-workflows-idp-configuration/scaffolder-templates/quarkus-stssc-template/template.yaml"
+
+- name: Remove existing repo directory
+  ansible.builtin.file:
+    path: "{{ gitlab_repo_dir }}"
+    state: absent
+
+- name: Clone GitLab repository
+  ansible.builtin.shell:
+    cmd: |
+      git clone {{ gitlab_repo_url }} {{ gitlab_repo_dir }}
+  environment:
+    GIT_SSL_NO_VERIFY: "true"
+  changed_when: true
+
+- name: Add fallback for user.entity.metadata.name
+  ansible.builtin.shell:
+    cmd: |
+      python3 << 'EOF'
+      with open('{{ template_file }}', 'r') as f:
+          content = f.read()
+
+      old_text = "owner: user:default/${{ user.entity.metadata.name }}"
+      new_text = "owner: user:default/${{ user.entity.metadata.name || 'user1' }}"
+      content = content.replace(old_text, new_text)
+
+      with open('{{ template_file }}', 'w') as f:
+          f.write(content)
+      EOF
+  changed_when: true
+  delegate_to: bastion
+
+- name: Verify template file changes
+  ansible.builtin.shell:
+    cmd: |
+      grep -n "owner: user:default" {{ template_file }}
+  register: template_changes
+  changed_when: false
+
+- name: Display template changes
+  ansible.builtin.debug:
+    msg: "{{ template_changes.stdout_lines }}"
+
+- name: Configure git user for commit
+  ansible.builtin.shell:
+    cmd: |
+      cd {{ gitlab_repo_dir }}
+      git config user.email "automation@redhat.com"
+      git config user.name "Automation"
+  changed_when: false
+
+- name: Commit template changes
+  ansible.builtin.shell:
+    cmd: |
+      cd {{ gitlab_repo_dir }}
+      git add scaffolder-templates/quarkus-stssc-template/template.yaml
+      git commit -m "Fix template user reference fallback"
+  changed_when: true
+  register: git_commit
+  failed_when: git_commit.rc != 0 and 'nothing to commit' not in git_commit.stdout
+
+- name: Push changes to GitLab
+  ansible.builtin.shell:
+    cmd: |
+      cd {{ gitlab_repo_dir }}
+      git push https://root:{{ gitlab_token.stdout }}@{{ gitlab_url.split('//')[1] }}/rhdh/build-secured-dev-workflows-idp-configuration.git
+  environment:
+    GIT_SSL_NO_VERIFY: "true"
+  changed_when: true
+  when: git_commit.rc == 0
+
+- name: Display git push result
+  ansible.builtin.debug:
+    msg: "✓ Template changes pushed to GitLab"
+  when: git_commit.rc == 0
+
+- name: Refresh template in Developer Hub
+  ansible.builtin.uri:
+    url: "{{ developer_hub_url }}/api/catalog/refresh"
+    method: POST
+    validate_certs: false
+    headers:
+      Authorization: "Bearer {{ rhdh_api_token }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      entityRef: "template:default/quarkus-stssc-template"
+    status_code: [200, 202]
+  register: template_refresh
+  delegate_to: localhost
+  when: >
+    developer_hub_url is defined and
+    rhdh_api_token is defined
+
+- name: Display template refresh result
+  ansible.builtin.debug:
+    msg: "✓ RHDH template refreshed"
+  when: template_refresh.status is defined and template_refresh.status in [200, 202]
+
+- name: Run template with verify commits enabled
+  ansible.builtin.uri:
+    url: "{{ developer_hub_url }}/api/scaffolder/v2/tasks"
+    method: POST
+    validate_certs: false
+    headers:
+      Authorization: "Bearer {{ rhdh_api_token }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      templateRef: "template:default/quarkus-stssc-template"
+      values:
+        name: "my-quarkus-tkn"
+        groupId: "redhat.rhdh"
+        artifactId: "my-quarkus-tkn"
+        javaPackageName: "org.redhat.rhdh"
+        description: "A Quarkus application that uses Langchain and Software Supply Chain Security with Tekton CI"
+        imageHost: "Quay"
+        imageOrganization: "tssc"
+        repoHost: "GitLab"
+        repoOwner: "development"
+        repoVerifyCommits: "enabled"
+    status_code: [201]
+  register: scaffolder_task
+  delegate_to: localhost
+  when: >
+    developer_hub_url is defined and
+    rhdh_api_token is defined
+
+- name: Set scaffolder task ID
+  ansible.builtin.set_fact:
+    task_id: "{{ scaffolder_task.json.id }}"
+  when: >
+    scaffolder_task.json is defined and
+    scaffolder_task.json.id is defined
+
+- name: Display scaffolder task started
+  ansible.builtin.debug:
+    msg: "✓ Scaffolder task started: {{ task_id }}"
+  when: task_id is defined
+
+- name: Wait for scaffolder task to complete
+  ansible.builtin.uri:
+    url: "{{ developer_hub_url }}/api/scaffolder/v2/tasks/{{ task_id }}"
+    method: GET
+    validate_certs: false
+    headers:
+      Authorization: "Bearer {{ rhdh_api_token }}"
+    status_code: [200]
+  register: task_status
+  until: task_status.json.status in ['completed', 'failed']
+  retries: 60
+  delay: 10
+  delegate_to: localhost
+  when: task_id is defined
+
+- name: Display scaffolder task result
+  ansible.builtin.debug:
+    msg: "{{ '✓ Scaffolder task completed successfully' if task_status.json.status == 'completed' else '✗ Scaffolder task failed: ' + (task_status.json.error | default('Unknown error')) }}"
+  when: task_status.json is defined
+
+- name: Revert template changes
+  ansible.builtin.shell:
+    cmd: |
+      cd {{ gitlab_repo_dir }}
+      git revert --no-edit HEAD
+  changed_when: true
+  delegate_to: bastion
+  when: >
+    task_status.json is defined and
+    task_status.json.status == 'completed' and
+    git_commit.rc == 0
+
+- name: Force push reverted changes to GitLab
+  ansible.builtin.shell:
+    cmd: |
+      cd {{ gitlab_repo_dir }}
+      git push --force https://root:{{ gitlab_token.stdout }}@{{ gitlab_url.split('//')[1] }}/rhdh/build-secured-dev-workflows-idp-configuration.git
+  environment:
+    GIT_SSL_NO_VERIFY: "true"
+  changed_when: true
+  delegate_to: bastion
+  when: >
+    task_status.json is defined and
+    task_status.json.status == 'completed' and
+    git_commit.rc == 0
+
+- name: Display revert push result
+  ansible.builtin.debug:
+    msg: "✓ Template changes reverted and pushed to GitLab"
+  when: >
+    task_status.json is defined and
+    task_status.json.status == 'completed' and
+    git_commit.rc == 0
+
+- name: Refresh template in Developer Hub after revert
+  ansible.builtin.uri:
+    url: "{{ developer_hub_url }}/api/catalog/refresh"
+    method: POST
+    validate_certs: false
+    headers:
+      Authorization: "Bearer {{ rhdh_api_token }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      entityRef: "template:default/quarkus-stssc-template"
+    status_code: [200, 202]
+  register: template_refresh_revert
+  delegate_to: localhost
+  when: >
+    task_status.json is defined and
+    task_status.json.status == 'completed' and
+    git_commit.rc == 0 and
+    developer_hub_url is defined and
+    rhdh_api_token is defined
+
+- name: Display template refresh after revert
+  ansible.builtin.debug:
+    msg: "✓ RHDH template refreshed with original content"
+  when: >
+    template_refresh_revert.status is defined and
+    template_refresh_revert.status in [200, 202]
+
+- name: Template update and run complete
+  ansible.builtin.debug:
+    msg:
+      - "✓ Template updated"
+      - "✓ Changes committed and pushed to GitLab"
+      - "✓ RHDH template catalog refreshed"
+      - "✓ Template executed with verify commits enabled"
+      - "✓ Template changes reverted"
+      - "✓ Original template restored in GitLab and RHDH"

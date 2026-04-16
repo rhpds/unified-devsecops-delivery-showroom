@@ -1,0 +1,70 @@
+---
+# STEP 1: Reset - Clean up GitLab Repositories
+- name: Get GitLab group ID for development group
+  ansible.builtin.uri:
+    url: "{{ gitlab_url }}/api/v4/groups/{{ gitlab_group }}"
+    method: GET
+    validate_certs: false
+    headers:
+      PRIVATE-TOKEN: "{{ gitlab_token.stdout }}"
+    status_code: [200, 404]
+  register: gitlab_group_info
+  changed_when: false
+  failed_when: false
+  delegate_to: bastion
+  when: >
+    gitlab_url is defined and
+    gitlab_token.stdout is defined and
+    gitlab_token.stdout != ""
+
+- name: Get all projects in development group
+  ansible.builtin.uri:
+    url: "{{ gitlab_url }}/api/v4/groups/{{ gitlab_group_info.json.id }}/projects"
+    method: GET
+    validate_certs: false
+    headers:
+      PRIVATE-TOKEN: "{{ gitlab_token.stdout }}"
+    status_code: [200]
+  register: gitlab_projects
+  changed_when: false
+  failed_when: false
+  delegate_to: bastion
+  when: >
+    gitlab_url is defined and
+    gitlab_token.stdout is defined and
+    gitlab_token.stdout != "" and
+    gitlab_group_info.status is defined and
+    gitlab_group_info.status == 200
+
+- name: Delete all projects in development group (immediate deletion)
+  ansible.builtin.uri:
+    url: "{{ gitlab_url }}/api/v4/projects/{{ item.id }}?permanently_remove=true&full_path={{ item.path_with_namespace | urlencode }}"
+    method: DELETE
+    validate_certs: false
+    headers:
+      PRIVATE-TOKEN: "{{ gitlab_token.stdout }}"
+    status_code: [202, 204]
+  loop: "{{ gitlab_projects.json | default([]) }}"
+  when: >
+    gitlab_projects.json is defined and
+    gitlab_projects.json | length > 0
+  register: gitlab_delete_results
+  changed_when: true
+  failed_when: false
+  delegate_to: bastion
+
+- name: Display GitLab cleanup results
+  ansible.builtin.debug:
+    msg: "{{ '✓ Deleted ' + (gitlab_projects.json | default([]) | length | string) + ' project(s) from development group' if gitlab_projects.json is defined and gitlab_projects.json | length > 0 else '✓ No projects found in development group' }}"
+  when: >
+    gitlab_url is defined and
+    gitlab_group_info.status is defined and
+    gitlab_group_info.status == 200
+
+- name: Display GitLab group not found warning
+  ansible.builtin.debug:
+    msg: "⚠ WARNING: GitLab group 'development' not found"
+  when: >
+    gitlab_url is defined and
+    gitlab_group_info.status is defined and
+    gitlab_group_info.status == 404

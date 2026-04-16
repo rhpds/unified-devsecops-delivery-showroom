@@ -1,0 +1,49 @@
+---
+# STEP 0.3: Clean up Developer Hub Components
+- name: Get component entities from Developer Hub
+  ansible.builtin.uri:
+    url: "{{ developer_hub_url }}/api/catalog/entities?filter=kind=component"
+    method: GET
+    validate_certs: false
+    headers:
+      Authorization: "Bearer {{ rhdh_api_token }}"
+    status_code: [200]
+  register: rhdh_entities
+  changed_when: false
+  failed_when: false
+  delegate_to: localhost
+  when: >
+    developer_hub_url is defined and
+    rhdh_api_token is defined
+
+- name: Filter components to delete (my-quarkus-tkn*)
+  ansible.builtin.set_fact:
+    components_to_delete: "{{ rhdh_entities.json | default([]) | selectattr('metadata.name', 'match', '^my-quarkus-tkn.*$') | list }}"
+  when: >
+    rhdh_entities.json is defined
+
+- name: Display components found
+  ansible.builtin.debug:
+    msg: "Found {{ components_to_delete | default([]) | length }} component(s) to delete: {{ components_to_delete | default([]) | map(attribute='metadata.name') | list }}"
+  when: components_to_delete is defined
+
+- name: Delete my-quarkus-tkn components from Developer Hub
+  ansible.builtin.uri:
+    url: "{{ developer_hub_url }}/api/catalog/entities/by-name/{{ item.kind | lower }}/{{ item.metadata.namespace | default('default') }}/{{ item.metadata.name }}"
+    method: DELETE
+    validate_certs: false
+    headers:
+      Authorization: "Bearer {{ rhdh_api_token }}"
+    status_code: [204, 404]
+  loop: "{{ components_to_delete | default([]) }}"
+  when: >
+    components_to_delete is defined and
+    components_to_delete | length > 0
+  register: rhdh_delete_results
+  changed_when: true
+  delegate_to: localhost
+
+- name: Display RHDH cleanup results
+  ansible.builtin.debug:
+    msg: "{{ '✓ Deleted ' + (components_to_delete | default([]) | length | string) + ' component(s) from Developer Hub' if components_to_delete is defined and components_to_delete | length > 0 else '✓ No matching components found in Developer Hub' }}"
+  when: developer_hub_url is defined
