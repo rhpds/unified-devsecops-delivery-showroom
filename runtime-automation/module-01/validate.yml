@@ -203,7 +203,6 @@
         status_code: [200, 302, 401]
         timeout: 10
       register: tpa_server_check
-      delegate_to: localhost
       changed_when: false
       failed_when: false
 
@@ -243,7 +242,6 @@
         validate_certs: false
         return_content: true
       register: openid_config
-      delegate_to: localhost
       changed_when: false
       failed_when: false
 
@@ -259,7 +257,6 @@
           client_secret: "{{ tpa_cli_client_secret }}"
         return_content: true
       register: oauth_token
-      delegate_to: localhost
       changed_when: false
       failed_when: false
       when: openid_config.json is defined and (openid_config.json.token_endpoint | default('')) != ''
@@ -295,7 +292,6 @@
           Authorization: "Bearer {{ oauth_token.json.access_token }}"
         return_content: true
       register: sbom_check
-      delegate_to: localhost
       changed_when: false
       failed_when: false
       when: >

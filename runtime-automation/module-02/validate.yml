@@ -56,7 +56,6 @@
           grant_type: password
         return_content: true
       register: admin_token_result
-      delegate_to: bastion
       changed_when: false
       failed_when: false
       when: >
@@ -93,7 +92,6 @@
           Authorization: "Bearer {{ admin_token }}"
         status_code: [200, 404]
       register: realm_exists_check
-      delegate_to: bastion
       changed_when: false
       failed_when: false
       when: >
@@ -145,7 +143,6 @@
           Authorization: "Bearer {{ admin_token }}"
         return_content: true
       register: tas_chains_client_check
-      delegate_to: bastion
       changed_when: false
       failed_when: false
       when: >
@@ -169,7 +166,6 @@
           Authorization: "Bearer {{ admin_token }}"
         return_content: true
       register: service_account_check
-      delegate_to: bastion
       changed_when: false
       failed_when: false
       when: >
@@ -235,7 +231,6 @@
           Authorization: "Bearer {{ admin_token }}"
         return_content: true
       register: sso_client_check
-      delegate_to: bastion
       changed_when: false
       failed_when: false
       when: >
@@ -297,7 +292,6 @@
       ansible.builtin.command:
         cmd: "oc get securesign trusted-artifact-signer -n {{ tas_namespace }}"
       register: rhtas_instance_check
-      delegate_to: bastion
       changed_when: false
       failed_when: false
 
@@ -310,7 +304,6 @@
       ansible.builtin.command:
         cmd: "oc get pods -n {{ tas_namespace }} -l app.kubernetes.io/component=tuf -o jsonpath='{.items[0].status.phase}'"
       register: tuf_status_check
-      delegate_to: bastion
       changed_when: false
       failed_when: false
       when: rhtas_instance_check.rc == 0
@@ -361,7 +354,6 @@
       ansible.builtin.command:
         cmd: "oc get secret oidc-info -n {{ pipelines_namespace }}"
       register: oidc_secret_check
-      delegate_to: bastion
       changed_when: false
       failed_when: false
 
@@ -383,7 +375,6 @@
       ansible.builtin.command:
         cmd: "oc get deployment oidc-token-refresher -n {{ pipelines_namespace }}"
       register: oidc_deployment_check
-      delegate_to: bastion
       changed_when: false
       failed_when: false
 
@@ -396,7 +387,6 @@
       ansible.builtin.command:
         cmd: "oc get pods -n {{ pipelines_namespace }} -l app=oidc-token-refresher -o jsonpath='{.items[0].status.phase}'"
       register: refresher_status_check
-      delegate_to: bastion
       changed_when: false
       failed_when: false
       when: oidc_deployment_check.rc == 0
@@ -447,7 +437,6 @@
       ansible.builtin.command:
         cmd: "oc get tektonconfig config -n {{ pipelines_namespace }} -o jsonpath='{.spec.chain.artifacts\\.oci\\.storage}'"
       register: oci_storage_check
-      delegate_to: bastion
       changed_when: false
       failed_when: false
 
@@ -473,7 +462,6 @@
       ansible.builtin.command:
         cmd: "oc get tektonconfig config -n {{ pipelines_namespace }} -o jsonpath='{.spec.chain.artifacts\\.taskrun\\.format}'"
       register: taskrun_format_check
-      delegate_to: bastion
       changed_when: false
       failed_when: false
 
@@ -499,7 +487,6 @@
       ansible.builtin.command:
         cmd: "oc get tektonconfig config -n {{ pipelines_namespace }} -o jsonpath='{.spec.chain.artifacts\\.taskrun\\.storage}'"
       register: taskrun_storage_check
-      delegate_to: bastion
       changed_when: false
       failed_when: false
 
@@ -525,7 +512,6 @@
       ansible.builtin.command:
         cmd: "oc get tektonconfig config -n {{ pipelines_namespace }} -o jsonpath='{.spec.chain.transparency\\.enabled}'"
       register: transparency_check
-      delegate_to: bastion
       changed_when: false
       failed_when: false
 
@@ -566,7 +552,6 @@
       ansible.builtin.shell:
         cmd: "oc get pipelinerun -n {{ app_ci_namespace }} --no-headers 2>/dev/null | grep '^chains-signing-image-test-' | head -1 | awk '{print $1}'"
       register: test_pipelinerun_check
-      delegate_to: bastion
       changed_when: false
       failed_when: false
 
@@ -574,7 +559,6 @@
       ansible.builtin.command:
         cmd: "oc get pipelinerun {{ test_pipelinerun_check.stdout }} -n {{ app_ci_namespace }} -o jsonpath='{.status.conditions[?(@.type==\"Succeeded\")].status}'"
       register: pipelinerun_status
-      delegate_to: bastion
       changed_when: false
       failed_when: false
       when: test_pipelinerun_check.stdout != ""
@@ -621,7 +605,6 @@
           Authorization: "Bearer {{ quay_admin_token }}"
         status_code: [200, 404]
       register: quay_repo_check
-      delegate_to: localhost
       changed_when: false
       failed_when: false
 

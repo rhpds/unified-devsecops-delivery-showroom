@@ -50,7 +50,6 @@
     # STEP 0: Reset Module 2
     ###########################################
     - name: "STEP 0: Reset Module 2"
-      delegate_to: bastion
       block:
         - name: Reset Tekton Chains configuration
           include_tasks: tasks/step-0-reset-chains.yml
@@ -91,7 +90,6 @@
     # STEP 1: Install RHTAS
     ###########################################
     - name: "STEP 1: Install RHTAS"
-      delegate_to: bastion
       block:
         - include_tasks: tasks/step-1-install-rhtas.yml
 
@@ -99,7 +97,6 @@
     # STEP 2: Test Image Signing
     ###########################################
     - name: "STEP 2: Test Image Signing"
-      delegate_to: bastion
       block:
         - include_tasks: tasks/step-2-test-image-signing.yml
 

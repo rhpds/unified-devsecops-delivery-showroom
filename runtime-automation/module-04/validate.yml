@@ -47,7 +47,6 @@
       ansible.builtin.command:
         cmd: "oc get secret rox-api-token -n {{ app_ci_namespace }}"
       register: token_secret_check
-      delegate_to: bastion
       changed_when: false
       failed_when: false
 
@@ -55,7 +54,6 @@
       ansible.builtin.command:
         cmd: "oc get secret rox-api-token -n {{ app_ci_namespace }} -o jsonpath='{.data.rox-api-token}'"
       register: token_b64
-      delegate_to: bastion
       changed_when: false
       failed_when: false
       when: token_secret_check.rc == 0
@@ -106,7 +104,6 @@
         status_code: [200, 302, 401]
         timeout: 10
       register: acs_central_check
-      delegate_to: bastion
       changed_when: false
       failed_when: false
       when: acs_route is defined and acs_route != ''
@@ -160,7 +157,6 @@
           Authorization: "Bearer {{ acs_api_token }}"
         return_content: true
       register: integrations_response
-      delegate_to: bastion
       changed_when: false
       failed_when: false
       when: acs_credentials_available | bool
@@ -190,7 +186,6 @@
           Authorization: "Bearer {{ acs_api_token }}"
         return_content: true
       register: integration_details
-      delegate_to: bastion
       changed_when: false
       failed_when: false
       when: >
@@ -260,7 +255,6 @@
       ansible.builtin.command:
         cmd: command -v roxctl
       register: roxctl_check
-      delegate_to: bastion
       changed_when: false
       failed_when: false
 
@@ -268,7 +262,6 @@
       ansible.builtin.command:
         cmd: roxctl version
       register: roxctl_version
-      delegate_to: bastion
       changed_when: false
       failed_when: false
       when: roxctl_check.rc == 0

@@ -49,7 +49,6 @@
     # STEP 0: Reset Module 3
     ###########################################
     - name: "STEP 0: Reset Module 3"
-      delegate_to: bastion
       block:
         - include_tasks: tasks/step-0-reset.yml
 
@@ -57,7 +56,6 @@
     # STEP 1: Create Developer User
     ###########################################
     - name: "STEP 1: Create Developer User"
-      delegate_to: bastion
       block:
         - include_tasks: tasks/step-1-create-developer-user.yml
 
@@ -65,7 +63,6 @@
     # STEP 2: Update GitOps Backstage Config
     ###########################################
     - name: "STEP 2: Update GitOps Backstage Configuration"
-      delegate_to: bastion
       block:
         - include_tasks: tasks/step-2-update-gitops-backstage-config.yml
 
@@ -73,7 +70,6 @@
     # STEP 3: Update RHDH Devfile Config
     ###########################################
     - name: "STEP 3: Update RHDH Devfile Configuration"
-      delegate_to: bastion
       block:
         - include_tasks: tasks/step-3-update-rhdh-devfile-config.yml
 
@@ -81,7 +77,6 @@
     # STEP 4: Create Dev Spaces ConfigMap
     ###########################################
     - name: "STEP 4: Create Dev Spaces ConfigMap"
-      delegate_to: bastion
       block:
         - include_tasks: tasks/step-4-create-devspaces-configmap.yml
 
@@ -89,7 +84,6 @@
     # STEP 5: Create Pipeline Secrets
     ###########################################
     - name: "STEP 5: Create Pipeline Secrets"
-      delegate_to: bastion
       block:
         - include_tasks: tasks/step-5-create-pipeline-secrets.yml
 

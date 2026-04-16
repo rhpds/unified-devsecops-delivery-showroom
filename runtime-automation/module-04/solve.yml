@@ -87,23 +87,19 @@
     - name: "STEP 2: Solve Module 4"
       block:
         - name: "STEP 2.1: Configure ACS-Quay Integration"
-          delegate_to: bastion
           block:
             - include_tasks: tasks/step-2-solve-acs.yml
 
         - name: "STEP 2.2: Test Image Scanning"
-          delegate_to: bastion
           block:
             - include_tasks: tasks/step-2-solve-image-scanning.yml
 
         - name: "STEP 2.3: Update and Run RHDH Template"
-          delegate_to: bastion
           when: gitlab_url is defined
           block:
             - include_tasks: tasks/step-2-solve-run-template.yml
 
         - name: "STEP 2.4: Test Commit Signing with RHTAS"
-          delegate_to: bastion
           when: gitlab_url is defined
           block:
             - include_tasks: tasks/step-2-solve-commit-signing.yml

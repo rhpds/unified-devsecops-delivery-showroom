@@ -13,7 +13,6 @@
   retries: 30
   delay: 10
   changed_when: false
-  delegate_to: localhost
 
 - name: Display TPA endpoint status
   ansible.builtin.debug:
@@ -31,7 +30,6 @@
   retries: 24
   delay: 5
   changed_when: false
-  delegate_to: localhost
 
 - name: Display token endpoint status
   ansible.builtin.debug:
@@ -56,7 +54,6 @@
   retries: 12
   delay: 5
   changed_when: false
-  delegate_to: localhost
 
 - name: Set OAuth token fact
   ansible.builtin.set_fact:

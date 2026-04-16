@@ -80,7 +80,6 @@
       entityRef: "template:default/quarkus-stssc-template"
     status_code: [200, 202]
   register: template_refresh
-  delegate_to: localhost
   when: >
     developer_hub_url is defined and
     rhdh_api_token is defined
@@ -114,7 +113,6 @@
         repoVerifyCommits: "enabled"
     status_code: [201]
   register: scaffolder_task
-  delegate_to: localhost
   when: >
     developer_hub_url is defined and
     rhdh_api_token is defined
@@ -143,7 +141,6 @@
   until: task_status.json.status in ['completed', 'failed']
   retries: 60
   delay: 10
-  delegate_to: localhost
   when: task_id is defined
 
 - name: Display scaffolder task result
@@ -193,7 +190,6 @@
       entityRef: "template:default/quarkus-stssc-template"
     status_code: [200, 202]
   register: template_refresh_revert
-  delegate_to: localhost
   when: >
     task_status.json is defined and
     task_status.json.status == 'completed' and

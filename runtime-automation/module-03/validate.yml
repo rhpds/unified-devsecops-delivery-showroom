@@ -42,7 +42,6 @@
       ansible.builtin.command:
         cmd: "oc get secret keycloak-initial-admin -n {{ keycloak_namespace }} -o jsonpath='{.data.username}'"
       register: keycloak_admin_user_b64
-      delegate_to: bastion
       changed_when: false
       failed_when: false
 
@@ -50,7 +49,6 @@
       ansible.builtin.command:
         cmd: "oc get secret keycloak-initial-admin -n {{ keycloak_namespace }} -o jsonpath='{.data.password}'"
       register: keycloak_admin_password_b64
-      delegate_to: bastion
       changed_when: false
       failed_when: false
 
@@ -77,7 +75,6 @@
           grant_type: password
         return_content: true
       register: admin_token_result
-      delegate_to: bastion
       changed_when: false
       failed_when: false
       when: >
@@ -114,7 +111,6 @@
           Authorization: "Bearer {{ admin_token }}"
         return_content: true
       register: user_exists_check
-      delegate_to: bastion
       changed_when: false
       failed_when: false
       when: >
@@ -145,7 +141,6 @@
           Authorization: "Bearer {{ admin_token }}"
         return_content: true
       register: user_data_check
-      delegate_to: bastion
       changed_when: false
       failed_when: false
       when: >
@@ -250,7 +245,6 @@
           Authorization: "Bearer {{ admin_token }}"
         return_content: true
       register: user_groups_check
-      delegate_to: bastion
       changed_when: false
       failed_when: false
       when: >
@@ -339,7 +333,6 @@
       ansible.builtin.command:
         cmd: "oc get configmap tas-git-config -n {{ devspaces_namespace }}"
       register: configmap_check
-      delegate_to: bastion
       changed_when: false
       failed_when: false
 
@@ -352,7 +345,6 @@
       ansible.builtin.command:
         cmd: "oc get configmap tas-git-config -n {{ devspaces_namespace }} -o jsonpath='{.data.TAS_FULCIO_URL}'"
       register: tas_fulcio_url_check
-      delegate_to: bastion
       changed_when: false
       failed_when: false
       when: configmap_check.rc == 0
@@ -383,7 +375,6 @@
       ansible.builtin.command:
         cmd: "oc get configmap tas-git-config -n {{ devspaces_namespace }} -o jsonpath='{.data.TAS_REKOR_URL}'"
       register: tas_rekor_url_check
-      delegate_to: bastion
       changed_when: false
       failed_when: false
       when: configmap_check.rc == 0
@@ -413,7 +404,6 @@
       ansible.builtin.command:
         cmd: "oc get configmap tas-git-config -n {{ devspaces_namespace }} -o jsonpath='{.data.TAS_ISSUER_URL}'"
       register: tas_issuer_url_check
-      delegate_to: bastion
       changed_when: false
       failed_when: false
       when: configmap_check.rc == 0
@@ -443,7 +433,6 @@
       ansible.builtin.command:
         cmd: "oc get configmap tas-git-config -n {{ devspaces_namespace }} -o jsonpath='{.data.TAS_CLIENT_ID}'"
       register: tas_client_id_check
-      delegate_to: bastion
       changed_when: false
       failed_when: false
       when: configmap_check.rc == 0
@@ -473,7 +462,6 @@
       ansible.builtin.command:
         cmd: "oc get configmap tas-git-config -n {{ devspaces_namespace }} -o jsonpath='{.metadata.annotations.controller\\.devfile\\.io/mount-as}'"
       register: cm_annotation_check
-      delegate_to: bastion
       changed_when: false
       failed_when: false
       when: configmap_check.rc == 0
@@ -523,7 +511,6 @@
       ansible.builtin.command:
         cmd: "oc get secret tpa-secret -n {{ app_ci_namespace }}"
       register: tpa_secret_check
-      delegate_to: bastion
       changed_when: false
       failed_when: false
 
@@ -536,7 +523,6 @@
       ansible.builtin.command:
         cmd: "oc get secret tpa-secret -n {{ app_ci_namespace }} -o jsonpath='{.data}'"
       register: tpa_secret_data_check
-      delegate_to: bastion
       changed_when: false
       failed_when: false
       when: tpa_secret_check.rc == 0
@@ -572,7 +558,6 @@
       ansible.builtin.command:
         cmd: "oc get secret gitlab-auth-secret -n {{ app_ci_namespace }}"
       register: gitlab_secret_check
-      delegate_to: bastion
       changed_when: false
       failed_when: false
 
@@ -585,7 +570,6 @@
       ansible.builtin.command:
         cmd: "oc get secret gitlab-auth-secret -n {{ app_ci_namespace }} -o jsonpath='{.data}'"
       register: gitlab_secret_data_check
-      delegate_to: bastion
       changed_when: false
       failed_when: false
       when: gitlab_secret_check.rc == 0
@@ -638,7 +622,6 @@
           cd /tmp
           rm -rf gitops-backstage
           git clone {{ gitlab_url }}/gitops/build-secured-dev-workflows-idp-gitops.git gitops-backstage
-      delegate_to: bastion
       changed_when: false
       failed_when: false
       when: >
@@ -662,7 +645,6 @@
             echo "invalid:lines_172_175=$lines_172_175_commented,uncommented_remaining=$uncommented_remaining/$remaining_lines"
           fi
       register: gitops_file_check
-      delegate_to: bastion
       changed_when: false
       failed_when: false
 
@@ -688,7 +670,6 @@
           cd /tmp
           rm -rf rhdh-devfile
           git clone {{ gitlab_url }}/rhdh/build-secured-dev-workflows-idp-configuration.git rhdh-devfile
-      delegate_to: bastion
       changed_when: false
       failed_when: false
       when: >
@@ -711,7 +692,6 @@
             echo "file_not_found"
           fi
       register: devfile_file_check
-      delegate_to: bastion
       changed_when: false
       failed_when: false
 
