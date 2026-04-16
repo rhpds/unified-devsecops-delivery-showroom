@@ -116,7 +116,39 @@
   ansible.builtin.set_fact:
     template_repo_url: "{{ gitlab_url }}/rhdh/build-secured-dev-workflows-idp-configuration.git"
     template_repo_dir: "/tmp/reset-template-repo"
+    commit_reset_file: "/tmp/module-4-commit-reset"
   when: gitlab_url is defined
+
+- name: Check if commit reset file exists
+  ansible.builtin.stat:
+    path: "{{ commit_reset_file }}"
+  register: commit_file_stat
+  when: gitlab_url is defined
+
+- name: Read existing commit ID from file
+  ansible.builtin.slurp:
+    src: "{{ commit_reset_file }}"
+  register: existing_commit_id
+  when: >
+    gitlab_url is defined and
+    commit_file_stat.stat.exists
+  failed_when: false
+
+- name: Set commit ID from file
+  ansible.builtin.set_fact:
+    reset_commit_id: "{{ existing_commit_id.content | b64decode | trim }}"
+  when: >
+    gitlab_url is defined and
+    commit_file_stat.stat.exists and
+    existing_commit_id.content is defined
+
+- name: Display using existing commit ID
+  ansible.builtin.debug:
+    msg: "Using existing commit ID from file: {{ reset_commit_id }}"
+  when: >
+    gitlab_url is defined and
+    commit_file_stat.stat.exists and
+    reset_commit_id is defined
 
 - name: Remove existing template repo directory
   ansible.builtin.file:
@@ -133,11 +165,38 @@
   changed_when: false
   when: gitlab_url is defined
 
+- name: Get latest commit ID and save to file (first time only)
+  ansible.builtin.shell:
+    cmd: |
+      cd {{ template_repo_dir }}
+      COMMIT_ID=$(git rev-parse HEAD)
+      echo "$COMMIT_ID" > {{ commit_reset_file }}
+      echo "$COMMIT_ID"
+  register: new_commit_id
+  changed_when: true
+  when: >
+    gitlab_url is defined and
+    not commit_file_stat.stat.exists
+
+- name: Set commit ID from repository (first time)
+  ansible.builtin.set_fact:
+    reset_commit_id: "{{ new_commit_id.stdout | trim }}"
+  when: >
+    gitlab_url is defined and
+    not commit_file_stat.stat.exists
+
+- name: Display saved new commit ID
+  ansible.builtin.debug:
+    msg: "Saved new commit ID to file: {{ reset_commit_id }}"
+  when: >
+    gitlab_url is defined and
+    not commit_file_stat.stat.exists
+
 - name: Reset template to clean commit
   ansible.builtin.shell:
     cmd: |
       cd {{ template_repo_dir }}
-      git reset --hard {{ rhdh_template_clean_commit }}
+      git reset --hard {{ reset_commit_id }}
   changed_when: true
   when: gitlab_url is defined
 
@@ -153,5 +212,5 @@
 
 - name: Display template reset result
   ansible.builtin.debug:
-    msg: "✓ RHDH template reset to commit {{ rhdh_template_clean_commit }}"
+    msg: "✓ RHDH template reset to commit {{ reset_commit_id }}"
   when: gitlab_url is defined
