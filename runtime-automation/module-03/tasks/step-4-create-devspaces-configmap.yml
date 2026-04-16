@@ -1,31 +1,32 @@
-      delegate_to: bastion
-      block:
-        - name: Set TAS service URLs
-          ansible.builtin.set_fact:
-            fulcio_url: "https://fulcio-server-{{ tas_namespace }}.{{ cluster_domain }}"
-            rekor_url: "https://rekor-server-{{ tas_namespace }}.{{ cluster_domain }}"
-            issuer_url: "{{ keycloak_admin_console }}/realms/{{ sso_realm }}"
+---
+# STEP 4: Create Dev Spaces ConfigMap (create-devspaces-configmap.sh)
+- name: Set TAS service URLs
+  ansible.builtin.set_fact:
+    fulcio_url: "https://fulcio-server-{{ tas_namespace }}.{{ cluster_domain }}"
+    rekor_url: "https://rekor-server-{{ tas_namespace }}.{{ cluster_domain }}"
+    issuer_url: "{{ keycloak_admin_console }}/realms/{{ sso_realm }}"
 
-        - name: Create Dev Spaces ConfigMap
-          ansible.builtin.shell:
-            cmd: |
-              cat <<EOF | oc apply -n {{ devspaces_namespace }} -f -
-              apiVersion: v1
-              kind: ConfigMap
-              metadata:
-                name: tas-git-config
-                annotations:
-                  controller.devfile.io/mount-as: env
-                labels:
-                  app.kubernetes.io/part-of: che.eclipse.org
-                  app.kubernetes.io/component: workspaces-config
-              data:
-                TAS_FULCIO_URL: "{{ fulcio_url }}"
-                TAS_REKOR_URL: "{{ rekor_url }}"
-                TAS_ISSUER_URL: "{{ issuer_url }}"
-                TAS_CLIENT_ID: "{{ tas_sso_client_id }}"
-              EOF
-          changed_when: true
+- name: Create Dev Spaces ConfigMap
+  ansible.builtin.shell:
+    cmd: |
+      cat <<EOF | oc apply -n {{ devspaces_namespace }} -f -
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: tas-git-config
+        annotations:
+          controller.devfile.io/mount-as: env
+        labels:
+          app.kubernetes.io/part-of: che.eclipse.org
+          app.kubernetes.io/component: workspaces-config
+      data:
+        TAS_FULCIO_URL: "{{ fulcio_url }}"
+        TAS_REKOR_URL: "{{ rekor_url }}"
+        TAS_ISSUER_URL: "{{ issuer_url }}"
+        TAS_CLIENT_ID: "{{ tas_sso_client_id }}"
+      EOF
+  changed_when: true
 
-        - name: Dev Spaces ConfigMap created
-          ansible.builtin.debug:
+- name: Dev Spaces ConfigMap created
+  ansible.builtin.debug:
+    msg: "✓ Dev Spaces ConfigMap created with TAS configuration"
