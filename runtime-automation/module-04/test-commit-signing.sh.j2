@@ -134,6 +134,8 @@ export GITSIGN_FULCIO_URL="$TAS_FULCIO_URL"
 export GITSIGN_REKOR_URL="$TAS_REKOR_URL"
 
 # The key part - provide the ID token to gitsign
+# Gitsign looks for SIGSTORE_ID_TOKEN or uses interactive flow
+export SIGSTORE_ID_TOKEN="$ID_TOKEN"
 export GITSIGN_OIDC_TOKEN="$ID_TOKEN"
 
 echo "GITSIGN_CONNECTOR_ID: $GITSIGN_CONNECTOR_ID"
@@ -141,6 +143,7 @@ echo "GITSIGN_OIDC_ISSUER: $GITSIGN_OIDC_ISSUER"
 echo "GITSIGN_OIDC_CLIENT_ID: $GITSIGN_OIDC_CLIENT_ID"
 echo "GITSIGN_FULCIO_URL: $GITSIGN_FULCIO_URL"
 echo "GITSIGN_REKOR_URL: $GITSIGN_REKOR_URL"
+echo "SIGSTORE_ID_TOKEN set: ${SIGSTORE_ID_TOKEN:0:20}..."
 
 # Create a test file and commit
 echo ""
