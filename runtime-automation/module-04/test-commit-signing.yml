@@ -1,0 +1,44 @@
+---
+# Test playbook for commit signing script
+# Run with: ansible-playbook test-commit-signing.yml -e @/user_data/user_data.yml
+- name: Test Commit Signing Script
+  hosts: localhost
+  gather_facts: false
+
+  vars:
+    test_script_template: "{{ playbook_dir }}/test-commit-signing.sh.j2"
+    test_script: "/tmp/test-commit-signing-{{ ansible_date_time.epoch }}.sh"
+
+  tasks:
+    - name: Display test information
+      ansible.builtin.debug:
+        msg: "Testing commit signing with user: {{ user | default('user1') }}"
+
+    - name: Get current time for script name
+      ansible.builtin.setup:
+        filter: ansible_date_time
+
+    - name: Template commit signing test script
+      ansible.builtin.template:
+        src: "{{ test_script_template }}"
+        dest: "{{ test_script }}"
+        mode: '0755'
+
+    - name: Run commit signing test script
+      ansible.builtin.shell:
+        cmd: "{{ test_script }}"
+      register: signing_test
+      changed_when: false
+
+    - name: Display test results
+      ansible.builtin.debug:
+        msg: "{{ signing_test.stdout_lines }}"
+
+    - name: Display test status
+      ansible.builtin.debug:
+        msg: "✓ Commit signing test {{ 'PASSED' if signing_test.rc == 0 else 'FAILED' }}"
+
+    - name: Cleanup test script
+      ansible.builtin.file:
+        path: "{{ test_script }}"
+        state: absent

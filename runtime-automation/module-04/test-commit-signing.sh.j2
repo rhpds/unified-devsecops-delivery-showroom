@@ -2,67 +2,42 @@
 set -e
 
 # Test script for programmatic git commit signing with RHTAS and Keycloak
-# This script authenticates user1 and signs a commit using gitsign
+# This script authenticates user and signs a commit using gitsign
+# Template variables are substituted by Ansible
 
 echo "========================================="
 echo "Testing Programmatic Commit Signing"
 echo "========================================="
 
-# Load provisioned data
-USER_DATA_FILE="/user_data/user_data.yml"
-if [ ! -f "$USER_DATA_FILE" ]; then
-  echo "ERROR: User data file not found: $USER_DATA_FILE"
-  exit 1
-fi
+# Configuration from Ansible variables
+KEYCLOAK_URL="{{ keycloak_admin_console }}"
+TAS_FULCIO_URL="{{ tas_fulcio_url }}"
+TAS_REKOR_URL="{{ tas_rekor_url }}"
+TAS_TUF_URL="{{ tas_tuf_url }}"
+TAS_CHAINS_REALM="{{ tas_chains_realm }}"
+TAS_CHAINS_CLIENT_ID="{{ tas_chains_client_id }}"
+USERNAME="{{ user }}"
+PASSWORD="{{ password }}"
 
-echo "Loading provisioned data from $USER_DATA_FILE"
-
-# Extract values from user_data.yml (JSON format)
-KEYCLOAK_URL=$(grep '"keycloak_admin_console"' $USER_DATA_FILE | cut -d'"' -f4 | sed 's|https://||')
-USERNAME=$(grep '"openshift_cluster_account_name"' $USER_DATA_FILE | cut -d'"' -f4)
-PASSWORD=$(grep '"openshift_cluster_account_password"' $USER_DATA_FILE | cut -d'"' -f4)
-CLUSTER_DOMAIN=$(grep '"openshift_cluster_ingress_domain"' $USER_DATA_FILE | cut -d'"' -f4)
-CLIENT_ID=$(grep '"tas_chains_client_id"' $USER_DATA_FILE | cut -d'"' -f4)
-
-# Static variables
-TAS_NAMESPACE="tssc-tas"
-KEYCLOAK_REALM="tas-chains"
-
-echo "Loaded configuration:"
+echo "Configuration:"
 echo "  Username: $USERNAME"
-echo "  Keycloak: https://$KEYCLOAK_URL"
-echo "  Client ID: $CLIENT_ID"
-echo "  Cluster domain: $CLUSTER_DOMAIN"
-
-# Get RHTAS service URLs
-echo ""
-echo "Getting RHTAS service URLs..."
-FULCIO_URL=$(oc get securesign trusted-artifact-signer -n $TAS_NAMESPACE -o jsonpath='{.status.fulcio.url}' 2>/dev/null || echo "")
-REKOR_URL=$(oc get securesign trusted-artifact-signer -n $TAS_NAMESPACE -o jsonpath='{.status.rekor.url}' 2>/dev/null || echo "")
-TUF_URL=$(oc get securesign trusted-artifact-signer -n $TAS_NAMESPACE -o jsonpath='{.status.tuf.url}' 2>/dev/null || echo "")
-
-echo "Fulcio URL: $FULCIO_URL"
-echo "Rekor URL: $REKOR_URL"
-echo "TUF URL: $TUF_URL"
-
-# Validate Keycloak URL
-echo ""
-if [ -z "$KEYCLOAK_URL" ]; then
-  echo "ERROR: Could not get Keycloak URL from user data"
-  exit 1
-fi
-echo "Keycloak URL: https://$KEYCLOAK_URL"
+echo "  Keycloak: $KEYCLOAK_URL"
+echo "  Client ID: $TAS_CHAINS_CLIENT_ID"
+echo "  Realm: $TAS_CHAINS_REALM"
+echo "  Fulcio URL: $TAS_FULCIO_URL"
+echo "  Rekor URL: $TAS_REKOR_URL"
+echo "  TUF URL: $TAS_TUF_URL"
 
 # Build token endpoint
-TOKEN_ENDPOINT="https://$KEYCLOAK_URL/realms/$KEYCLOAK_REALM/protocol/openid-connect/token"
+TOKEN_ENDPOINT="$KEYCLOAK_URL/realms/$TAS_CHAINS_REALM/protocol/openid-connect/token"
 echo "Token endpoint: $TOKEN_ENDPOINT"
 
-# Get access token for user1
+# Get access token for user
 echo ""
-echo "Authenticating user1 and getting access token..."
+echo "Authenticating $USERNAME and getting access token..."
 TOKEN_RESPONSE=$(curl -k -s -X POST "$TOKEN_ENDPOINT" \
   -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "client_id=$CLIENT_ID" \
+  -d "client_id=$TAS_CHAINS_CLIENT_ID" \
   -d "username=$USERNAME" \
   -d "password=$PASSWORD" \
   -d "grant_type=password" \
@@ -99,8 +74,8 @@ cd $TEST_REPO
 git init
 
 # Configure git for test
-git config user.email "user1@example.com"
-git config user.name "User 1"
+git config user.email "${USERNAME}@example.com"
+git config user.name "$USERNAME"
 
 # Configure gitsign
 echo ""
@@ -111,11 +86,11 @@ git config --local gpg.x509.program gitsign
 git config --local gpg.format x509
 
 # Set gitsign environment variables
-export GITSIGN_CONNECTOR_ID="https://$KEYCLOAK_URL/realms/$KEYCLOAK_REALM"
-export GITSIGN_OIDC_ISSUER="https://$KEYCLOAK_URL/realms/$KEYCLOAK_REALM"
-export GITSIGN_OIDC_CLIENT_ID="$CLIENT_ID"
-export GITSIGN_FULCIO_URL="$FULCIO_URL"
-export GITSIGN_REKOR_URL="$REKOR_URL"
+export GITSIGN_CONNECTOR_ID="$KEYCLOAK_URL/realms/$TAS_CHAINS_REALM"
+export GITSIGN_OIDC_ISSUER="$KEYCLOAK_URL/realms/$TAS_CHAINS_REALM"
+export GITSIGN_OIDC_CLIENT_ID="$TAS_CHAINS_CLIENT_ID"
+export GITSIGN_FULCIO_URL="$TAS_FULCIO_URL"
+export GITSIGN_REKOR_URL="$TAS_REKOR_URL"
 
 # The key part - provide the ID token to gitsign
 export GITSIGN_OIDC_TOKEN="$ID_TOKEN"
@@ -123,7 +98,7 @@ export GITSIGN_OIDC_TOKEN="$ID_TOKEN"
 echo "GITSIGN_CONNECTOR_ID: $GITSIGN_CONNECTOR_ID"
 echo "GITSIGN_OIDC_ISSUER: $GITSIGN_OIDC_ISSUER"
 echo "GITSIGN_FULCIO_URL: $GITSIGN_FULCIO_URL"
-echo "GITSIGN_REKOR_URL: $REKOR_URL"
+echo "GITSIGN_REKOR_URL: $GITSIGN_REKOR_URL"
 
 # Create a test file and commit
 echo ""
