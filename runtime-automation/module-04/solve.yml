@@ -69,6 +69,9 @@
         - name: Reset ACS Integration
           include_tasks: tasks/step-1-reset-acs.yml
 
+        - name: Clean up PipelineRuns and TaskRuns
+          include_tasks: tasks/step-1-reset-pipelines.yml
+
         - name: Reset complete
           ansible.builtin.debug:
             msg:
@@ -79,6 +82,7 @@
               - "  ✓ GitLab development group repositories cleaned"
               - "  ✓ Developer Hub components deleted"
               - "  ✓ ACS integration reset"
+              - "  ✓ PipelineRuns and TaskRuns cleaned up"
               - ""
 
     ###########################################
