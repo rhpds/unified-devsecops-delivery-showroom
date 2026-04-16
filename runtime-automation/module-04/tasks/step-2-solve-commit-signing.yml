@@ -1,5 +1,23 @@
 ---
 # STEP 2.4: Test Commit Signing with RHTAS
+- name: Wait for maven-image-build PipelineRun to be created and complete successfully
+  kubernetes.core.k8s_info:
+    api_version: tekton.dev/v1
+    kind: PipelineRun
+    namespace: "{{ app_ci_namespace }}"
+    label_selectors:
+      - pipelinesascode.tekton.dev/original-prname=maven-image-build
+  register: pipeline_check
+  until: >
+    pipeline_check.resources | length > 0 and
+    (pipeline_check.resources | sort(attribute='metadata.creationTimestamp') | last).status.conditions | selectattr('type', 'equalto', 'Succeeded') | map(attribute='status') | first | default('') == 'True'
+  retries: 120
+  delay: 10
+
+- name: Display PipelineRun completed
+  ansible.builtin.debug:
+    msg: "✓ PipelineRun {{ (pipeline_check.resources | sort(attribute='metadata.creationTimestamp') | last).metadata.name }} completed successfully"
+
 - name: Get current timestamp
   ansible.builtin.setup:
     filter: ansible_date_time
