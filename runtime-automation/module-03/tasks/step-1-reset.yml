@@ -96,7 +96,7 @@
 
     - name: Set user ID
       ansible.builtin.set_fact:
-        reset_user_id: "{{ reset_user_id_response.json[0].id | default('') }}"
+        reset_user_id: "{{ (reset_user_id_response.json | first).id if reset_user_id_response.json | length > 0 else '' }}"
 
     - name: Delete user if exists
       when: reset_user_id != ""

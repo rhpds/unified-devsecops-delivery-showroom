@@ -49,7 +49,7 @@
 
 - name: Set existing user ID
   ansible.builtin.set_fact:
-    existing_user_id: "{{ existing_user_id_response.json[0].id | default('') }}"
+    existing_user_id: "{{ (existing_user_id_response.json | first).id if existing_user_id_response.json | length > 0 else '' }}"
 
 - name: Create developer user
   when: existing_user_id == ""
@@ -90,8 +90,8 @@
 
 - name: Set user ID
   ansible.builtin.set_fact:
-    user_id: "{{ user_id_response.json[0].id }}"
-  failed_when: user_id_response.json[0].id is not defined or user_id_response.json[0].id == ""
+    user_id: "{{ (user_id_response.json | first).id if user_id_response.json | length > 0 else '' }}"
+  failed_when: user_id_response.json | length == 0 or user_id == ""
 
 - name: Get tssc group ID
   ansible.builtin.uri:
@@ -107,7 +107,7 @@
 
 - name: Set tssc group ID
   ansible.builtin.set_fact:
-    tssc_group_id: "{{ tssc_group_id_response.json[0].id | default('') }}"
+    tssc_group_id: "{{ (tssc_group_id_response.json | first).id if tssc_group_id_response.json | length > 0 else '' }}"
 
 - name: Get users group ID
   ansible.builtin.uri:
@@ -123,7 +123,7 @@
 
 - name: Set users group ID
   ansible.builtin.set_fact:
-    users_group_id: "{{ users_group_id_response.json[0].id | default('') }}"
+    users_group_id: "{{ (users_group_id_response.json | first).id if users_group_id_response.json | length > 0 else '' }}"
 
 - name: Check if user is member of tssc group
   when: tssc_group_id != ""
