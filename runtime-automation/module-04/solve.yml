@@ -48,7 +48,7 @@
     ###########################################
     - name: "STEP 0: Gather Prerequisites"
       block:
-        - include_tasks: steps/step-0-gather-prerequisites.yml
+        - include_tasks: tasks/step-0-gather-prerequisites.yml
 
     ###########################################
     # STEP 1: Reset Module 4
@@ -56,16 +56,16 @@
     - name: "STEP 1: Reset Module 4"
       block:
         - name: Clean up ArgoCD Applications
-          include_tasks: steps/step-1-reset-argocd.yml
+          include_tasks: tasks/step-1-reset-argocd.yml
 
         - name: Clean up GitLab Repositories
-          include_tasks: steps/step-1-reset-gitlab.yml
+          include_tasks: tasks/step-1-reset-gitlab.yml
 
         - name: Clean up Developer Hub Components
-          include_tasks: steps/step-1-reset-devhub.yml
+          include_tasks: tasks/step-1-reset-devhub.yml
 
         - name: Reset ACS Integration
-          include_tasks: steps/step-1-reset-acs.yml
+          include_tasks: tasks/step-1-reset-acs.yml
 
         - name: Reset complete
           ansible.builtin.debug:
@@ -87,24 +87,24 @@
         - name: "STEP 2.1: Configure ACS-Quay Integration"
           delegate_to: bastion
           block:
-            - include_tasks: steps/step-2-solve-acs.yml
+            - include_tasks: tasks/step-2-solve-acs.yml
 
         - name: "STEP 2.2: Test Image Scanning"
           delegate_to: bastion
           block:
-            - include_tasks: steps/step-2-solve-image-scanning.yml
+            - include_tasks: tasks/step-2-solve-image-scanning.yml
 
         - name: "STEP 2.3: Update and Run RHDH Template"
           delegate_to: bastion
           when: gitlab_url is defined
           block:
-            - include_tasks: steps/step-2-solve-run-template.yml
+            - include_tasks: tasks/step-2-solve-run-template.yml
 
         - name: "STEP 2.4: Test Commit Signing with RHTAS"
           delegate_to: bastion
           when: gitlab_url is defined
           block:
-            - include_tasks: steps/step-2-solve-commit-signing.yml
+            - include_tasks: tasks/step-2-solve-commit-signing.yml
 
         - name: Module 4 completion summary
           ansible.builtin.debug:

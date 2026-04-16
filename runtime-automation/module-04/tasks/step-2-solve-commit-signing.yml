@@ -6,7 +6,7 @@
 
 - name: Set commit signing script paths
   ansible.builtin.set_fact:
-    commit_signing_script_template: "{{ playbook_dir }}/commit-signing.sh.j2"
+    commit_signing_script_template: "{{ playbook_dir }}/templates/commit-signing.sh.j2"
     commit_signing_script: "/tmp/commit-signing-{{ ansible_date_time.epoch }}.sh"
 
 - name: Template commit signing script
