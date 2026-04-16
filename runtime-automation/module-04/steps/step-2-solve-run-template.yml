@@ -21,7 +21,7 @@
 
 - name: Check if template already has user1 fallback
   ansible.builtin.shell:
-    cmd: grep -q "user.entity.metadata.name | default('user1')" {{ template_file }}
+    cmd: grep -q "user.entity.metadata.name or 'user1'" {{ template_file }}
   register: has_user1_fallback
   changed_when: false
   failed_when: false
@@ -34,7 +34,7 @@
       ansible.builtin.replace:
         path: "{{ template_file }}"
         regexp: 'user\.entity\.metadata\.name'
-        replace: "user.entity.metadata.name | default('user1')"
+        replace: "user.entity.metadata.name or 'user1'"
       delegate_to: bastion
 
     - name: Verify template file changes
