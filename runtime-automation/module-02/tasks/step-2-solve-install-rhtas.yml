@@ -83,15 +83,23 @@
     msg: "Creating {{ tas_client_id }} client in {{ tas_chains_realm }} realm..."
 
 - name: Check if client exists in tas-chains realm
-  ansible.builtin.shell: |
-      CLIENT_EXISTS=$(curl -s -H "Authorization: Bearer {{ kc_admin_token }}" \
-        "{{ keycloak_admin_console }}/admin/realms/{{ tas_chains_realm }}/clients?clientId={{ tas_client_id }}" | jq -r '.[0].id // empty')
-      echo "$CLIENT_EXISTS"
-  register: check_client
+  ansible.builtin.uri:
+    url: "{{ keycloak_admin_console }}/admin/realms/{{ tas_chains_realm }}/clients?clientId={{ tas_client_id }}"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ kc_admin_token }}"
+    validate_certs: false
+    status_code: [200]
+    return_content: true
+  register: check_client_response
   changed_when: false
 
+- name: Set client exists fact
+  ansible.builtin.set_fact:
+    check_client: "{{ check_client_response.json[0].id | default('') }}"
+
 - name: Create trusted-artifact-signer client if it doesn't exist
-  when: check_client.stdout == ""
+  when: check_client == ""
   block:
     - name: Create client
       ansible.builtin.shell: |
@@ -114,17 +122,25 @@
         msg: "✓ Created {{ tas_client_id }} client"
 
 - name: Display client already exists
-  when: check_client.stdout != ""
+  when: check_client != ""
   ansible.builtin.debug:
     msg: "✓ {{ tas_client_id }} client already exists"
 
 - name: Get client ID for service account configuration
-  ansible.builtin.shell: |
-      CLIENT_ID=$(curl -s -H "Authorization: Bearer {{ kc_admin_token }}" \
-        "{{ keycloak_admin_console }}/admin/realms/{{ tas_chains_realm }}/clients?clientId={{ tas_client_id }}" | jq -r '.[0].id')
-      echo "$CLIENT_ID"
-  register: tas_client_uuid
+  ansible.builtin.uri:
+    url: "{{ keycloak_admin_console }}/admin/realms/{{ tas_chains_realm }}/clients?clientId={{ tas_client_id }}"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ kc_admin_token }}"
+    validate_certs: false
+    status_code: [200]
+    return_content: true
+  register: tas_client_uuid_response
   changed_when: false
+
+- name: Set TAS client UUID
+  ansible.builtin.set_fact:
+    tas_client_uuid: "{{ tas_client_uuid_response.json[0].id }}"
 
 - name: Configure service account user
   ansible.builtin.debug:
@@ -132,7 +148,7 @@
 
 - name: Get service account user ID
   ansible.builtin.uri:
-    url: "{{ keycloak_admin_console }}/admin/realms/{{ tas_chains_realm }}/clients/{{ tas_client_uuid.stdout }}/service-account-user"
+    url: "{{ keycloak_admin_console }}/admin/realms/{{ tas_chains_realm }}/clients/{{ tas_client_uuid }}/service-account-user"
     method: GET
     headers:
       Authorization: "Bearer {{ kc_admin_token }}"
@@ -166,7 +182,7 @@
 
 - name: Verify email verification was set
   ansible.builtin.uri:
-    url: "{{ keycloak_admin_console }}/admin/realms/{{ tas_chains_realm }}/clients/{{ tas_client_uuid.stdout }}/service-account-user"
+    url: "{{ keycloak_admin_console }}/admin/realms/{{ tas_chains_realm }}/clients/{{ tas_client_uuid }}/service-account-user"
     method: GET
     headers:
       Authorization: "Bearer {{ kc_admin_token }}"
@@ -192,15 +208,23 @@
     msg: "Creating {{ tas_client_id }} client in {{ tas_sso_realm }} realm..."
 
 - name: Check if client exists in sso realm
-  ansible.builtin.shell: |
-      SSO_CLIENT_EXISTS=$(curl -s -H "Authorization: Bearer {{ kc_admin_token }}" \
-        "{{ keycloak_admin_console }}/admin/realms/{{ tas_sso_realm }}/clients?clientId={{ tas_client_id }}" | jq -r '.[0].id // empty')
-      echo "$SSO_CLIENT_EXISTS"
-  register: check_sso_client
+  ansible.builtin.uri:
+    url: "{{ keycloak_admin_console }}/admin/realms/{{ tas_sso_realm }}/clients?clientId={{ tas_client_id }}"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ kc_admin_token }}"
+    validate_certs: false
+    status_code: [200]
+    return_content: true
+  register: check_sso_client_response
   changed_when: false
 
+- name: Set SSO client exists fact
+  ansible.builtin.set_fact:
+    check_sso_client: "{{ check_sso_client_response.json[0].id | default('') }}"
+
 - name: Create trusted-artifact-signer client in sso realm if it doesn't exist
-  when: check_sso_client.stdout == ""
+  when: check_sso_client == ""
   block:
     - name: Create client in sso realm
       ansible.builtin.shell: |
@@ -223,7 +247,7 @@
         msg: "✓ Created {{ tas_client_id }} client in {{ tas_sso_realm }} realm"
 
 - name: Display sso client already exists
-  when: check_sso_client.stdout != ""
+  when: check_sso_client != ""
   ansible.builtin.debug:
     msg: "✓ {{ tas_client_id }} client already exists in {{ tas_sso_realm }} realm"
 
@@ -300,21 +324,37 @@
     msg: "Retrieving client secret..."
 
 - name: Get TAS client UUID
-  ansible.builtin.shell: |
-      TAS_CHAINS_CLIENT_ID_UUID=$(curl -s -H "Authorization: Bearer {{ kc_admin_token }}" \
-        "{{ keycloak_admin_console }}/admin/realms/{{ tas_chains_realm }}/clients?clientId={{ tas_client_id }}" | jq -r '.[0].id')
-      echo "$TAS_CHAINS_CLIENT_ID_UUID"
-  register: tas_chains_client_uuid
+  ansible.builtin.uri:
+    url: "{{ keycloak_admin_console }}/admin/realms/{{ tas_chains_realm }}/clients?clientId={{ tas_client_id }}"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ kc_admin_token }}"
+    validate_certs: false
+    status_code: [200]
+    return_content: true
+  register: tas_chains_client_uuid_response
   changed_when: false
 
+- name: Set TAS chains client UUID
+  ansible.builtin.set_fact:
+    tas_chains_client_uuid: "{{ tas_chains_client_uuid_response.json[0].id }}"
+
 - name: Get TAS client secret
-  ansible.builtin.shell: |
-      TAS_CHAINS_CLIENT_SECRET=$(curl -s -H "Authorization: Bearer {{ kc_admin_token }}" \
-        "{{ keycloak_admin_console }}/admin/realms/{{ tas_chains_realm }}/clients/{{ tas_chains_client_uuid.stdout }}/client-secret" | jq -r '.value')
-      echo "$TAS_CHAINS_CLIENT_SECRET"
-  register: tas_client_secret
+  ansible.builtin.uri:
+    url: "{{ keycloak_admin_console }}/admin/realms/{{ tas_chains_realm }}/clients/{{ tas_chains_client_uuid }}/client-secret"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ kc_admin_token }}"
+    validate_certs: false
+    status_code: [200]
+    return_content: true
+  register: tas_client_secret_response
   changed_when: false
-  failed_when: tas_client_secret.stdout == "" or tas_client_secret.stdout == "null"
+
+- name: Set TAS client secret
+  ansible.builtin.set_fact:
+    tas_client_secret: "{{ tas_client_secret_response.json.value }}"
+  failed_when: tas_client_secret is not defined or tas_client_secret == "" or tas_client_secret == "null"
 
 - name: Display client secret retrieved
   ansible.builtin.debug:
@@ -327,8 +367,7 @@
 - name: Create OIDC info secret
   ansible.builtin.shell: |
       export TAS_CHAINS_CLIENT_ID="{{ tas_client_id }}"
-      export TAS_CHAINS_CLIENT_SECRET=$(curl -s -H "Authorization: Bearer {{ kc_admin_token }}" \
-        "{{ keycloak_admin_console }}/admin/realms/{{ tas_chains_realm }}/clients/{{ tas_chains_client_uuid.stdout }}/client-secret" | jq -r '.value')
+      export TAS_CHAINS_CLIENT_SECRET="{{ tas_client_secret }}"
       export TAS_CHAINS_REALM="{{ tas_chains_realm }}"
       envsubst '${TAS_CHAINS_CLIENT_ID} ${TAS_CHAINS_CLIENT_SECRET} ${TAS_CHAINS_REALM}' < {{ lab_assets_dir }}/oidc-info-secret.yml | oc apply -n {{ pipelines_namespace }} -f -
   changed_when: true
