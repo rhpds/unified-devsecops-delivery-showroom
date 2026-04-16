@@ -1,5 +1,5 @@
 ---
-# STEP 0.3: Deleting RHTAS instance
+# STEP 1.3: Deleting RHTAS instance
 - name: "Step 3: Deleting RHTAS instance"
   ansible.builtin.debug:
     msg: "Step 3: Deleting RHTAS instance..."

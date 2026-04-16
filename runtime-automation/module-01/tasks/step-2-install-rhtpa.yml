@@ -1,5 +1,5 @@
 ---
-# STEP 1: Install RHTPA (install-rhtpa.sh)
+# STEP 2: Install RHTPA (install-rhtpa.sh)
 - name: Import TPA Realm to Keycloak
   ansible.builtin.shell:
     cmd: |

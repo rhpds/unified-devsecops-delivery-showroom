@@ -1,5 +1,5 @@
 ---
-# STEP 0.1: Reverting Tekton Chains configuration
+# STEP 1.1: Reverting Tekton Chains configuration
 - name: "Step 1: Reverting Tekton Chains configuration"
   ansible.builtin.debug:
     msg: "Step 1: Reverting Tekton Chains configuration..."

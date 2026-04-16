@@ -47,27 +47,27 @@
         msg: "Solving Module 02: RHTAS Installation and Image Signing"
 
     ###########################################
-    # STEP 0: Reset Module 2
+    # STEP 1: Reset Module 2
     ###########################################
-    - name: "STEP 0: Reset Module 2"
+    - name: "STEP 1: Reset Module 2"
       block:
         - name: Reset Tekton Chains configuration
-          include_tasks: tasks/step-0-reset-chains.yml
+          include_tasks: tasks/step-1-reset-chains.yml
 
         - name: Delete OIDC refresher app
-          include_tasks: tasks/step-0-reset-oidc.yml
+          include_tasks: tasks/step-1-reset-oidc.yml
 
         - name: Delete RHTAS instance
-          include_tasks: tasks/step-0-reset-rhtas.yml
+          include_tasks: tasks/step-1-reset-rhtas.yml
 
         - name: Delete Keycloak clients and realm
-          include_tasks: tasks/step-0-reset-keycloak.yml
+          include_tasks: tasks/step-1-reset-keycloak.yml
 
         - name: Clean up TaskRuns and PipelineRuns
-          include_tasks: tasks/step-0-reset-pipelines.yml
+          include_tasks: tasks/step-1-reset-pipelines.yml
 
         - name: Delete Quay test repository
-          include_tasks: tasks/step-0-reset-quay.yml
+          include_tasks: tasks/step-1-reset-quay.yml
 
         - name: Reset Module 2 complete
           ansible.builtin.debug:
@@ -87,11 +87,11 @@
               - "  ✓ Quay test repository removed (tssc/tekton-chains-test)"
 
     ###########################################
-    # STEP 1: Install RHTAS
+    # STEP 2: Install RHTAS
     ###########################################
-    - name: "STEP 1: Install RHTAS"
+    - name: "STEP 2: Install RHTAS"
       block:
-        - include_tasks: tasks/step-1-install-rhtas.yml
+        - include_tasks: tasks/step-2-install-rhtas.yml
 
     ###########################################
     # STEP 2: Test Image Signing

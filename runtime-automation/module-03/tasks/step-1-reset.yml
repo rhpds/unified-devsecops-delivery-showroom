@@ -1,5 +1,5 @@
 ---
-# STEP 0: Reset Module 3 (reset-module-3.sh)
+# STEP 1: Reset Module 3 (reset-module-3.sh)
 - name: Check if tpa-secret exists
   ansible.builtin.shell:
     cmd: oc get secret tpa-secret -n {{ app_ci_namespace }} 2>/dev/null

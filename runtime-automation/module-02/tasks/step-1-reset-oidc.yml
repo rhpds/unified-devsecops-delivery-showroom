@@ -1,5 +1,5 @@
 ---
-# STEP 0.2: Deleting OIDC refresher app
+# STEP 1.2: Deleting OIDC refresher app
 - name: "Step 2: Deleting OIDC refresher app"
   ansible.builtin.debug:
     msg: "Step 2: Deleting OIDC refresher app..."

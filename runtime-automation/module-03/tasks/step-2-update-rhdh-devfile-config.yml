@@ -1,5 +1,5 @@
 ---
-# STEP 3: Update RHDH Devfile Config (update-rhdh-devfile-config.sh)
+# STEP 2: Update RHDH Devfile Config (update-rhdh-devfile-config.sh)
 - name: Update RHDH Devfile configuration
   ansible.builtin.shell:
     cmd: bash {{ lab_assets_dir }}/update-rhdh-devfile-config.sh update

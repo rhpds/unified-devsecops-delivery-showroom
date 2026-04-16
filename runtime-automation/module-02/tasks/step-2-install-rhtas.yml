@@ -1,5 +1,5 @@
 ---
-# STEP 1: Install RHTAS (install-rhtas.sh)
+# STEP 2: Install RHTAS (install-rhtas.sh)
 - name: Display RHTAS installation start
   ansible.builtin.debug:
     msg:

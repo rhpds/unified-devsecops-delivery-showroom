@@ -37,18 +37,18 @@
         ansible_ssh_common_args: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
 
     ###########################################
-    # STEP 0: Reset Module 1
+    # STEP 1: Reset Module 1
     ###########################################
-    - name: "STEP 0: Reset Module 1"
+    - name: "STEP 1: Reset Module 1"
       block:
-        - include_tasks: tasks/step-0-reset.yml
+        - include_tasks: tasks/step-1-reset.yml
 
     ###########################################
-    # STEP 1: Install RHTPA
+    # STEP 2: Install RHTPA
     ###########################################
-    - name: "STEP 1: Install RHTPA"
+    - name: "STEP 2: Install RHTPA"
       block:
-        - include_tasks: tasks/step-1-install-rhtpa.yml
+        - include_tasks: tasks/step-2-install-rhtpa.yml
 
     ###########################################
     # STEP 2: Upload SBOM

@@ -1,5 +1,5 @@
 ---
-# STEP 1: Create Developer User (create-developer-user.sh)
+# STEP 2: Create Developer User (create-developer-user.sh)
 - name: Get Keycloak admin credentials for user creation
   ansible.builtin.shell:
     cmd: |

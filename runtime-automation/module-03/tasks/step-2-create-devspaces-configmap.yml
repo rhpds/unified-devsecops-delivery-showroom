@@ -1,5 +1,5 @@
 ---
-# STEP 4: Create Dev Spaces ConfigMap (create-devspaces-configmap.sh)
+# STEP 2: Create Dev Spaces ConfigMap (create-devspaces-configmap.sh)
 - name: Set TAS service URLs
   ansible.builtin.set_fact:
     fulcio_url: "https://fulcio-server-{{ tas_namespace }}.{{ cluster_domain }}"

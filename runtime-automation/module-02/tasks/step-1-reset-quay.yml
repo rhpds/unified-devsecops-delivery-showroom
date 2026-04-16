@@ -1,5 +1,5 @@
 ---
-# STEP 0.6: Deleting Quay test repository
+# STEP 1.6: Deleting Quay test repository
 - name: "Step 6: Deleting Quay test repository"
   ansible.builtin.debug:
     msg: "Step 6: Deleting Quay test repository..."

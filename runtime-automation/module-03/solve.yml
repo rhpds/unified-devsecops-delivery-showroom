@@ -46,18 +46,18 @@
         msg: "Solving Module 03: Developer Setup and Platform Configuration"
 
     ###########################################
-    # STEP 0: Reset Module 3
+    # STEP 1: Reset Module 3
     ###########################################
-    - name: "STEP 0: Reset Module 3"
+    - name: "STEP 1: Reset Module 3"
       block:
-        - include_tasks: tasks/step-0-reset.yml
+        - include_tasks: tasks/step-1-reset.yml
 
     ###########################################
-    # STEP 1: Create Developer User
+    # STEP 2: Create Developer User
     ###########################################
-    - name: "STEP 1: Create Developer User"
+    - name: "STEP 2: Create Developer User"
       block:
-        - include_tasks: tasks/step-1-create-developer-user.yml
+        - include_tasks: tasks/step-2-create-developer-user.yml
 
     ###########################################
     # STEP 2: Update GitOps Backstage Config
@@ -67,25 +67,25 @@
         - include_tasks: tasks/step-2-update-gitops-backstage-config.yml
 
     ###########################################
-    # STEP 3: Update RHDH Devfile Config
+    # STEP 2: Update RHDH Devfile Config
     ###########################################
-    - name: "STEP 3: Update RHDH Devfile Configuration"
+    - name: "STEP 2: Update RHDH Devfile Configuration"
       block:
-        - include_tasks: tasks/step-3-update-rhdh-devfile-config.yml
+        - include_tasks: tasks/step-2-update-rhdh-devfile-config.yml
 
     ###########################################
-    # STEP 4: Create Dev Spaces ConfigMap
+    # STEP 2: Create Dev Spaces ConfigMap
     ###########################################
-    - name: "STEP 4: Create Dev Spaces ConfigMap"
+    - name: "STEP 2: Create Dev Spaces ConfigMap"
       block:
-        - include_tasks: tasks/step-4-create-devspaces-configmap.yml
+        - include_tasks: tasks/step-2-create-devspaces-configmap.yml
 
     ###########################################
-    # STEP 5: Create Pipeline Secrets
+    # STEP 2: Create Pipeline Secrets
     ###########################################
-    - name: "STEP 5: Create Pipeline Secrets"
+    - name: "STEP 2: Create Pipeline Secrets"
       block:
-        - include_tasks: tasks/step-5-create-pipeline-secrets.yml
+        - include_tasks: tasks/step-2-create-pipeline-secrets.yml
 
     ###########################################
     # Module Summary

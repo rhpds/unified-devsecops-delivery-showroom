@@ -1,5 +1,5 @@
 ---
-# STEP 0.4: Deleting Keycloak clients and realm
+# STEP 1.4: Deleting Keycloak clients and realm
 - name: "Step 4: Deleting Keycloak clients and realm"
   ansible.builtin.debug:
     msg: "Step 4: Deleting Keycloak clients and realm..."

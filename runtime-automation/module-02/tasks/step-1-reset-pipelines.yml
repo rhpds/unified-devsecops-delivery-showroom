@@ -1,5 +1,5 @@
 ---
-# STEP 0.5: Cleaning up TaskRuns and PipelineRuns
+# STEP 1.5: Cleaning up TaskRuns and PipelineRuns
 - name: "Step 5: Cleaning up TaskRuns and PipelineRuns"
   ansible.builtin.debug:
     msg: "Step 5: Cleaning up TaskRuns and PipelineRuns..."
