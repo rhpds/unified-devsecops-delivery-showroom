@@ -78,15 +78,27 @@
     msg: "✓ RHDH template refresh triggered"
   when: template_refresh.status is defined and template_refresh.status in [200, 202]
 
-- name: Wait for RHDH to process template refresh
-  ansible.builtin.pause:
-    seconds: 10
-  when: template_refresh.status is defined and template_refresh.status in [200, 202]
+- name: Wait for template to be updated with user1 reference
+  ansible.builtin.uri:
+    url: "{{ developer_hub_url }}/api/catalog/entities/by-name/template/default/quarkus-stssc-template"
+    method: GET
+    validate_certs: false
+    headers:
+      Authorization: "Bearer {{ rhdh_api_token }}"
+    status_code: [200]
+    return_content: true
+  register: template_entity
+  until: template_entity.json.spec.owner is defined and 'user1' in template_entity.json.spec.owner
+  retries: 30
+  delay: 2
+  when: >
+    developer_hub_url is defined and
+    rhdh_api_token is defined
 
-- name: Display waiting complete
+- name: Display template update confirmation
   ansible.builtin.debug:
-    msg: "✓ RHDH template refresh complete"
-  when: template_refresh.status is defined and template_refresh.status in [200, 202]
+    msg: "✓ RHDH template updated with user1 reference (owner: {{ template_entity.json.spec.owner }})"
+  when: template_entity.json is defined and template_entity.json.spec.owner is defined
 
 - name: Run template with verify commits enabled
   ansible.builtin.uri:
