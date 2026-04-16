@@ -148,15 +148,35 @@
     msg: "{{ '✓ Scaffolder task completed successfully' if task_status.json.status == 'completed' else '✗ Scaffolder task failed: ' + (task_status.json.error | default('Unknown error')) }}"
   when: task_status.json is defined
 
+- name: Read commit ID from reset file
+  ansible.builtin.slurp:
+    src: "/tmp/module-4-commit-reset"
+  register: reset_commit_file
+  when: task_status.json is defined
+
+- name: Set reset commit ID from file
+  ansible.builtin.set_fact:
+    template_reset_commit_id: "{{ reset_commit_file.content | b64decode | trim }}"
+  when: >
+    task_status.json is defined and
+    reset_commit_file.content is defined
+
+- name: Display commit ID being used for reset
+  ansible.builtin.debug:
+    msg: "Using commit ID from file for reset: {{ template_reset_commit_id }}"
+  when: >
+    task_status.json is defined and
+    template_reset_commit_id is defined
+
 - name: Reset template to clean commit
   ansible.builtin.shell:
     cmd: |
       cd {{ gitlab_repo_dir }}
-      git reset --hard {{ rhdh_template_clean_commit }}
+      git reset --hard {{ template_reset_commit_id }}
   changed_when: true
   when: >
     task_status.json is defined and
-    task_status.json.status == 'completed'
+    template_reset_commit_id is defined
 
 - name: Force push clean template to GitLab
   ansible.builtin.shell:
@@ -168,14 +188,14 @@
   changed_when: true
   when: >
     task_status.json is defined and
-    task_status.json.status == 'completed'
+    template_reset_commit_id is defined
 
 - name: Display reset push result
   ansible.builtin.debug:
-    msg: "✓ Template reset to clean commit and pushed to GitLab"
+    msg: "✓ Template reset to commit {{ template_reset_commit_id }} and pushed to GitLab"
   when: >
     task_status.json is defined and
-    task_status.json.status == 'completed'
+    template_reset_commit_id is defined
 
 - name: Refresh template in Developer Hub after reset
   ansible.builtin.uri:
@@ -192,7 +212,6 @@
   register: template_refresh_revert
   when: >
     task_status.json is defined and
-    task_status.json.status == 'completed' and
     developer_hub_url is defined and
     rhdh_api_token is defined
 
@@ -210,5 +229,5 @@
       - "✓ Changes committed and pushed to GitLab"
       - "✓ RHDH template catalog refreshed"
       - "✓ Template executed with verify commits enabled"
-      - "✓ Template reset to commit {{ rhdh_template_clean_commit }}"
+      - "✓ Template reset to commit {{ template_reset_commit_id | default('stored commit') }}"
       - "✓ Clean template restored in GitLab and RHDH"
