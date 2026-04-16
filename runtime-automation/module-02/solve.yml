@@ -91,14 +91,14 @@
     ###########################################
     - name: "STEP 2: Install RHTAS"
       block:
-        - include_tasks: tasks/step-2-install-rhtas.yml
+        - include_tasks: tasks/step-2-solve-install-rhtas.yml
 
     ###########################################
     # STEP 2: Test Image Signing
     ###########################################
     - name: "STEP 2: Test Image Signing"
       block:
-        - include_tasks: tasks/step-2-test-image-signing.yml
+        - include_tasks: tasks/step-2-solve-test-image-signing.yml
 
     ###########################################
     # Module Summary

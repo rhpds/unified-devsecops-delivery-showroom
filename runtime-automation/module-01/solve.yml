@@ -48,14 +48,14 @@
     ###########################################
     - name: "STEP 2: Install RHTPA"
       block:
-        - include_tasks: tasks/step-2-install-rhtpa.yml
+        - include_tasks: tasks/step-2-solve-install-rhtpa.yml
 
     ###########################################
     # STEP 2: Upload SBOM
     ###########################################
     - name: "STEP 2: Upload SBOM"
       block:
-        - include_tasks: tasks/step-2-upload-sbom.yml
+        - include_tasks: tasks/step-2-solve-upload-sbom.yml
 
     ###########################################
     # Module Summary

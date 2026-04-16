@@ -57,35 +57,35 @@
     ###########################################
     - name: "STEP 2: Create Developer User"
       block:
-        - include_tasks: tasks/step-2-create-developer-user.yml
+        - include_tasks: tasks/step-2-solve-create-developer-user.yml
 
     ###########################################
     # STEP 2: Update GitOps Backstage Config
     ###########################################
     - name: "STEP 2: Update GitOps Backstage Configuration"
       block:
-        - include_tasks: tasks/step-2-update-gitops-backstage-config.yml
+        - include_tasks: tasks/step-2-solve-update-gitops-backstage-config.yml
 
     ###########################################
     # STEP 2: Update RHDH Devfile Config
     ###########################################
     - name: "STEP 2: Update RHDH Devfile Configuration"
       block:
-        - include_tasks: tasks/step-2-update-rhdh-devfile-config.yml
+        - include_tasks: tasks/step-2-solve-update-rhdh-devfile-config.yml
 
     ###########################################
     # STEP 2: Create Dev Spaces ConfigMap
     ###########################################
     - name: "STEP 2: Create Dev Spaces ConfigMap"
       block:
-        - include_tasks: tasks/step-2-create-devspaces-configmap.yml
+        - include_tasks: tasks/step-2-solve-create-devspaces-configmap.yml
 
     ###########################################
     # STEP 2: Create Pipeline Secrets
     ###########################################
     - name: "STEP 2: Create Pipeline Secrets"
       block:
-        - include_tasks: tasks/step-2-create-pipeline-secrets.yml
+        - include_tasks: tasks/step-2-solve-create-pipeline-secrets.yml
 
     ###########################################
     # Module Summary
