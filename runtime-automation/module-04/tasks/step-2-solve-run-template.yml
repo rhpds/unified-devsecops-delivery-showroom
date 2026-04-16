@@ -115,7 +115,7 @@
     status_code: [200]
     return_content: true
   register: template_entity
-  until: template_entity.json.spec.steps[1].input.values.owner == expected_owner and template_entity.json.spec.steps[3].input.values.owner == expected_owner
+  until: template_entity.json.spec.steps | selectattr('input.values.owner', 'defined') | selectattr('input.values.owner', 'equalto', expected_owner) | list | length > 0
   retries: 30
   delay: 2
   when: >
