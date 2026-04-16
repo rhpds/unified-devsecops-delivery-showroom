@@ -19,7 +19,7 @@
     GIT_SSL_NO_VERIFY: "true"
   changed_when: true
 
-- name: Check if template already contains user1 fallback
+- name: Check if template already has user1 fallback
   ansible.builtin.shell:
     cmd: grep -q "user.entity.metadata.name | default('user1')" {{ template_file }}
   register: has_user1_fallback
@@ -27,106 +27,87 @@
   failed_when: false
   delegate_to: bastion
 
-- name: Reset template if it already has user1 fallback
-  when: has_user1_fallback.rc == 0
+- name: Update template with user1 fallback
+  when: has_user1_fallback.rc != 0
   block:
-    - name: Revert last commit
-      ansible.builtin.shell:
-        cmd: |
-          cd {{ gitlab_repo_dir }}
-          git revert --no-edit HEAD
-      changed_when: true
+    - name: Add fallback for user.entity.metadata.name
+      ansible.builtin.replace:
+        path: "{{ template_file }}"
+        regexp: 'user\.entity\.metadata\.name'
+        replace: "user.entity.metadata.name | default('user1')"
       delegate_to: bastion
-      failed_when: false
 
-    - name: Force push reset to GitLab
+    - name: Verify template file changes
+      ansible.builtin.shell:
+        cmd: |
+          grep -n "owner: user:default" {{ template_file }}
+      register: template_changes
+      changed_when: false
+
+    - name: Display template changes
+      ansible.builtin.debug:
+        msg: "{{ template_changes.stdout_lines }}"
+
+    - name: Configure git user for commit
       ansible.builtin.shell:
         cmd: |
           cd {{ gitlab_repo_dir }}
-          git push --force https://root:{{ gitlab_token.stdout }}@{{ gitlab_url.split('//')[1] }}/rhdh/build-secured-dev-workflows-idp-configuration.git
+          git config user.email "automation@redhat.com"
+          git config user.name "Automation"
+      changed_when: false
+
+    - name: Commit template changes
+      ansible.builtin.shell:
+        cmd: |
+          cd {{ gitlab_repo_dir }}
+          git add scaffolder-templates/quarkus-stssc-template/template.yaml
+          git commit -m "Update template user reference fallback"
+      changed_when: true
+      register: git_commit
+      failed_when: git_commit.rc != 0 and 'nothing to commit' not in git_commit.stdout
+
+    - name: Push changes to GitLab
+      ansible.builtin.shell:
+        cmd: |
+          cd {{ gitlab_repo_dir }}
+          git push https://root:{{ gitlab_token.stdout }}@{{ gitlab_url.split('//')[1] }}/rhdh/build-secured-dev-workflows-idp-configuration.git
       environment:
         GIT_SSL_NO_VERIFY: "true"
       changed_when: true
-      delegate_to: bastion
-      failed_when: false
+      when: git_commit.rc == 0
 
-    - name: Display reset result
+    - name: Display git push result
       ansible.builtin.debug:
-        msg: "✓ Template reset to remove previous user1 fallback"
+        msg: "✓ Template changes pushed to GitLab"
+      when: git_commit.rc == 0
 
-- name: Add fallback for user.entity.metadata.name
-  ansible.builtin.replace:
-    path: "{{ template_file }}"
-    regexp: 'user\.entity\.metadata\.name'
-    replace: "user.entity.metadata.name | default('user1')"
-  delegate_to: bastion
+    - name: Refresh template in Developer Hub
+      ansible.builtin.uri:
+        url: "{{ developer_hub_url }}/api/catalog/refresh"
+        method: POST
+        validate_certs: false
+        headers:
+          Authorization: "Bearer {{ rhdh_api_token }}"
+          Content-Type: "application/json"
+        body_format: json
+        body:
+          entityRef: "template:default/quarkus-stssc-template"
+        status_code: [200, 202]
+      register: template_refresh
+      delegate_to: localhost
+      when: >
+        developer_hub_url is defined and
+        rhdh_api_token is defined
 
-- name: Verify template file changes
-  ansible.builtin.shell:
-    cmd: |
-      grep -n "owner: user:default" {{ template_file }}
-  register: template_changes
-  changed_when: false
+    - name: Display template refresh result
+      ansible.builtin.debug:
+        msg: "✓ RHDH template refreshed"
+      when: template_refresh.status is defined and template_refresh.status in [200, 202]
 
-- name: Display template changes
+- name: Display skip message if template already has fallback
   ansible.builtin.debug:
-    msg: "{{ template_changes.stdout_lines }}"
-
-- name: Configure git user for commit
-  ansible.builtin.shell:
-    cmd: |
-      cd {{ gitlab_repo_dir }}
-      git config user.email "automation@redhat.com"
-      git config user.name "Automation"
-  changed_when: false
-
-- name: Commit template changes
-  ansible.builtin.shell:
-    cmd: |
-      cd {{ gitlab_repo_dir }}
-      git add scaffolder-templates/quarkus-stssc-template/template.yaml
-      git commit -m "Fix template user reference fallback"
-  changed_when: true
-  register: git_commit
-  failed_when: git_commit.rc != 0 and 'nothing to commit' not in git_commit.stdout
-
-- name: Push changes to GitLab
-  ansible.builtin.shell:
-    cmd: |
-      cd {{ gitlab_repo_dir }}
-      git push https://root:{{ gitlab_token.stdout }}@{{ gitlab_url.split('//')[1] }}/rhdh/build-secured-dev-workflows-idp-configuration.git
-  environment:
-    GIT_SSL_NO_VERIFY: "true"
-  changed_when: true
-  when: git_commit.rc == 0
-
-- name: Display git push result
-  ansible.builtin.debug:
-    msg: "✓ Template changes pushed to GitLab"
-  when: git_commit.rc == 0
-
-- name: Refresh template in Developer Hub
-  ansible.builtin.uri:
-    url: "{{ developer_hub_url }}/api/catalog/refresh"
-    method: POST
-    validate_certs: false
-    headers:
-      Authorization: "Bearer {{ rhdh_api_token }}"
-      Content-Type: "application/json"
-    body_format: json
-    body:
-      entityRef: "template:default/quarkus-stssc-template"
-    status_code: [200, 202]
-  register: template_refresh
-  delegate_to: localhost
-  when: >
-    developer_hub_url is defined and
-    rhdh_api_token is defined
-
-- name: Display template refresh result
-  ansible.builtin.debug:
-    msg: "✓ RHDH template refreshed"
-  when: template_refresh.status is defined and template_refresh.status in [200, 202]
+    msg: "✓ Template already contains user1 fallback, skipping update"
+  when: has_user1_fallback.rc == 0
 
 - name: Run template with verify commits enabled
   ansible.builtin.uri:
@@ -199,6 +180,7 @@
   when: >
     task_status.json is defined and
     task_status.json.status == 'completed' and
+    git_commit is defined and
     git_commit.rc == 0
 
 - name: Force push reverted changes to GitLab
@@ -213,6 +195,7 @@
   when: >
     task_status.json is defined and
     task_status.json.status == 'completed' and
+    git_commit is defined and
     git_commit.rc == 0
 
 - name: Display revert push result
@@ -221,6 +204,7 @@
   when: >
     task_status.json is defined and
     task_status.json.status == 'completed' and
+    git_commit is defined and
     git_commit.rc == 0
 
 - name: Refresh template in Developer Hub after revert
@@ -240,6 +224,7 @@
   when: >
     task_status.json is defined and
     task_status.json.status == 'completed' and
+    git_commit is defined and
     git_commit.rc == 0 and
     developer_hub_url is defined and
     rhdh_api_token is defined
