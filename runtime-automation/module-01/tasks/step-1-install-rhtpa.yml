@@ -12,6 +12,7 @@
     TPA_ADMIN_PASSWORD: "{{ tpa_admin_password }}"
   changed_when: true
   delegate_to: bastion
+  delegate_to: bastion
 
 - name: Wait for TPA Realm import completion
   kubernetes.core.k8s_info:
@@ -38,6 +39,7 @@
     TPA_CLI_CLIENT_SECRET: "{{ tpa_cli_client_secret }}"
   changed_when: true
   delegate_to: bastion
+  delegate_to: bastion
 
 - name: Display client secret configuration result
   ansible.builtin.debug:
@@ -51,6 +53,7 @@
     KEYCLOAK_URL: "{{ keycloak_admin_console }}"
     TPA_REALM: "{{ tpa_realm }}"
   changed_when: true
+  delegate_to: bastion
   delegate_to: bastion
 
 - name: Wait for RHTPA server to be ready

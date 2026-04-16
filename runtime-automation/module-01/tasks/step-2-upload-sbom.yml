@@ -76,6 +76,7 @@
         --data-binary @{{ sbom_file }}
   changed_when: true
   delegate_to: bastion
+  delegate_to: bastion
 
 - name: SBOM upload complete
   ansible.builtin.debug:
