@@ -66,14 +66,29 @@ echo "========================================="
 echo "Testing gitsign with obtained token"
 echo "========================================="
 
-# Clone a test repo to /tmp
-TEST_REPO="/tmp/test-commit-signing-$$"
-echo "Creating test repository: $TEST_REPO"
-mkdir -p $TEST_REPO
-cd $TEST_REPO
-git init
+# Clone my-quarkus-tkn repo from GitLab
+GITLAB_URL="{{ gitlab_url }}"
+GITLAB_USER="{{ user }}"
+GITLAB_PASSWORD="{{ password }}"
+REPO_NAME="my-quarkus-tkn"
+REPO_PATH="/tmp/${REPO_NAME}-$$"
 
-# Configure git for test
+echo "Cloning repository: development/${REPO_NAME}"
+echo "Repository path: $REPO_PATH"
+
+# Build Git URL with credentials
+GIT_URL=$(echo "$GITLAB_URL" | sed "s|https://|https://${GITLAB_USER}:${GITLAB_PASSWORD}@|")/development/${REPO_NAME}.git
+
+# Clone the repository
+if ! git clone "$GIT_URL" "$REPO_PATH" 2>&1; then
+  echo "ERROR: Failed to clone repository"
+  exit 1
+fi
+
+cd "$REPO_PATH"
+echo "✓ Repository cloned successfully"
+
+# Configure git for commit
 git config user.email "${USERNAME}@example.com"
 git config user.name "$USERNAME"
 
@@ -102,13 +117,26 @@ echo "GITSIGN_REKOR_URL: $GITSIGN_REKOR_URL"
 
 # Create a test file and commit
 echo ""
-echo "Creating test commit..."
-echo "Test content" > test.txt
-git add test.txt
+echo "Creating test file..."
+TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+TEST_FILE="test-signed-commit-${TIMESTAMP}.txt"
+echo "This is a test file to verify commit signing with RHTAS" > "$TEST_FILE"
+echo "Created by: $USERNAME" >> "$TEST_FILE"
+echo "Timestamp: $(date)" >> "$TEST_FILE"
+
+git add "$TEST_FILE"
 
 # Attempt to commit with signature
+echo ""
 echo "Attempting signed commit..."
-if git commit -m "Test signed commit" 2>&1 | tee /tmp/commit-output.txt; then
+if git commit -m "Add test file to verify commit signing
+
+This commit tests programmatic commit signing using:
+- RHTAS (Fulcio/Rekor)
+- Keycloak OIDC authentication
+- gitsign for transparent signing
+
+File: $TEST_FILE" 2>&1 | tee /tmp/commit-output.txt; then
   echo ""
   echo "✓ Commit succeeded!"
 
@@ -117,10 +145,21 @@ if git commit -m "Test signed commit" 2>&1 | tee /tmp/commit-output.txt; then
   echo "Verifying commit signature..."
   git log --show-signature -1
 
+  # Push to GitLab
+  echo ""
+  echo "Pushing signed commit to GitLab..."
+  if git push origin master 2>&1; then
+    echo "✓ Push succeeded!"
+  else
+    echo "✗ Push failed - check if branch exists or permissions"
+  fi
+
   echo ""
   echo "========================================="
   echo "SUCCESS: Commit signing works!"
   echo "========================================="
+  echo "Repository: development/${REPO_NAME}"
+  echo "Signed commit: $(git rev-parse HEAD)"
 else
   echo ""
   echo "✗ Commit failed"
@@ -131,4 +170,4 @@ fi
 
 # Cleanup
 cd /
-rm -rf $TEST_REPO
+rm -rf "$REPO_PATH"
