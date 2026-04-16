@@ -2,338 +2,103 @@
 
 == Introduction
 
-* By this point in the workshop, you have established strong foundations of trust across the software supply chain. In Module 1, you made software composition visible by ingesting and analysing SBOMs, turning dependency risk from an assumption into evidence. In Module 2, you anchored trust in cryptographic provenance, ensuring every build artifact is signed, traceable, and verifiably produced by your CI pipeline. In Module 3, you reduced developer friction by centralising access to tools and security capabilities through *Red Hat Developer Hub*, using *GitOps* to configure authentication, plugins, and catalog discovery as a consistent, secure entry point for developers.
-* One critical challenge remains: “How do we prevent unverified or unsafe images from reaching staging and production?” Security controls only scale when developers do not have to think about them. If teams must manually assemble pipelines or decide when policies apply, trust quickly erodes. This is where *Software Templates*, also known as *Golden Paths*, come in. In this module, you will use *software templates* to define opinionated, secure workflows that embed the guardrails established in earlier modules by design, including SBOM generation and analysis, code and image signing, vulnerability scanning, and *Enterprise Contract* policy checks.
 
-NOTE: Enterprise Contract is the policy engine that governs whether an application can be promoted through the delivery pipeline. It is based on the upstream open-source project link:https://conforma.dev/[*Conforma*^], which provides policy-driven verification of software supply chain evidence such as SBOMs, vulnerability scan results, image signatures, and build attestations.
+* In the previous modules, you established the foundations of a trusted software supply chain, from signing artifacts and generating SBOMs, to enforcing policy and verifying integrity.
+* Now, you will see how all of these capabilities come together in a real developer workflow.
 
+* In this module, you step into the role of a developer and use a Software Template to create and deliver a new application.
+* From the developer’s perspective, this is a simple, self-service experience, launching a template and following a guided workflow.
 
-* By the end of this module, you’ll see how RHADS turns trusted building blocks into repeatable, production-ready Golden Paths. Every application starts secure. Every promotion is governed. And teams move fast without bypassing trust.
+* Behind the scenes, the platform takes care of everything:
++
+. Provisioning repositories and environments
+. Configuring CI/CD pipelines
+. Enforcing security and compliance policies
+. Managing secrets and integrations
++
+* As a developer, you don’t need to worry about the underlying infrastructure or tooling.
+* You are provided with a standardised, approved path to production, allowing you to focus on writing and delivering features.
+
+* By the end of this module, you will see how the platform enables teams to move fast, while ensuring that every change is trusted, compliant, and production-ready by design.
 
 ---
 
-== Step 1: Set up image vulnerability scanning
+== Step 1: Execute the Software Template
 
-* *Red Hat Advanced Cluster Security (ACS)* provides vulnerability analysis and policy evaluation for container images. It integrates directly with container registries to scan images before they are deployed or promoted.
+=== 1.1 Step introduction
 
-=== 1.1 Configure ACS - Quay Integration
-
-* In this step, you will configure *ACS* to scan images stored in *Quay* and validate that vulnerability data can be evaluated as part of the trusted supply chain.
-* You will use the ACS API to create the integration programmatically, mirroring how platform teams automate integration setup in production environments.
-* In the Showroom terminal, run the following command to create the Quay integration:
-+
-[source, role="send-to-wetty", subs="attributes"]
-----
-curl -k -X POST \
-  -u "{rhacs_admin_user}:{rhacs_admin_password}" \
-  -H "Content-Type: application/json" \
-  {rhacs_admin_console}/v1/imageintegrations \
-  -d '{
-    "name": "acs_quay",
-    "type": "quay",
-    "categories": ["REGISTRY", "SCANNER"],
-    "quay": {
-      "endpoint": "{quay_host}",
-      "oauthToken": "{quay_admin_token}",
-      "insecure": true
-    },
-    "skipTestIntegration": false
-  }'
-----
-+
-* This command creates a new image integration in *ACS* with the following configuration:
-** *Integration name*: `acs_quay`
-** *Type*: Quay registry with vulnerability scanning capabilities
-** *Endpoint*: `{quay_host}` - your Quay registry instance
-** *Authentication*: OAuth token for secure access
-** *Test on create*: The integration will be validated before being saved
-+
-* Upon successful execution, you will receive a JSON response confirming the integration has been created and tested.
-* At this point, *ACS* can securely access images stored in *Quay* and perform scans automatically.
-+
-NOTE: For more details on configuring Quay Container Registry as a scanner integration, refer to the link:https://docs.redhat.com/en/documentation/red_hat_advanced_cluster_security_for_kubernetes/4.9/html/integrating/integrate-with-image-vulnerability-scanners#integrate-with-qcr-scanner_integrate-with-image-vulnerability-scanners[official Red Hat ACS documentation^].
+* Up to this point, you have been working in the role of a platform engineer, setting up the foundations.
+* Now we switch perspective and step into the role of a developer, using the *User1* account you created earlier.
+* As a developer, your goal is simple, get a production-ready service up and running without dealing with manual setup overhead.
+* This is where Software Templates, also referred to as Golden Paths, come in.
+* They provide a self-service way to create applications that already align with platform standards, including repository structure, CI/CD pipelines, and security controls.
+* Under the hood, this is powered by the link:https://backstage.spotify.com/docs/portal/core-features-and-plugins/scaffolder[*Backstage Scaffolder*^], which automates the setup based on platform-approved patterns.
 
 ---
 
-=== 1.2 Scan and evaluate an image
-
-* To confirm that scanning and policy evaluation are working end to end, you will now scan the signed image you produced in module 2.
-* This next command retrieves vulnerability data for the image and returns a detailed scan report.
-* In the Showroom terminal, run:
-
-[source, role="send-to-wetty", subs="attributes"]
-----
-roxctl image scan --image={quay_host}/tssc/tekton-chains-test:latest
-----
-
-* This command evaluates the image against ACS policies and reports whether it meets deployment requirements.
-
-[source, role="send-to-wetty", subs="attributes"]
-----
-roxctl image check --image={quay_host}/tssc/tekton-chains-test:latest
-----
-
-* Together, these checks demonstrate that:
-
-. Container images can be scanned deterministically from the registry using ACS
-. Vulnerability findings are associated with a specific image digest, not a mutable tag
-. Policy evaluation can be performed programmatically as part of a CI/CD workflow
-* This ensures that vulnerability scanning and policy evaluation are applied consistently across all workloads, as an integrated part of the delivery pipeline exposed through our Software Template.
-
----
-
-== Step 2: Execute the Software template
-
-===  2.1 Step introduction
-
-* Up to this point, you’ve been working in the role of a platform engineer.
-* Now let’s switch personas and step into the role of a developer (User1), which you created earlier.
-* As a developer, your goal is simple, get a ready-to-use development environment so you can focus on building your new feature.
-* This is exactly what Software Templates, or Golden Paths, are designed to provide.
-* Under the hood, they use the link:https://backstage.spotify.com/docs/portal/core-features-and-plugins/scaffolder[*Backstage scaffolder*^] to automate the creation of repositories, configuration, and CI/CD resources based on platform-approved patterns, as you'll see in the next section.
-
----
-
-===  2.2 Run the Software Template
+=== 1.2 Run the Software Template
 
 . Switch to the *RHDH* tab in the Showroom.
-. Click on Home in the left navigation menu
-. From the RHDH home page, scroll down until you see the Explore Templates section.
-. At the moment, only one template is available, but in real environments, platform teams typically provide multiple Golden Paths for different application types and technology stacks.
-. Click on the link: “Securing a Quarkus Service Software Supply Chain (Tekton)”.
+. Click *Home* in the left navigation menu.
+. Scroll down to the *Explore Templates* section.
+. Select *Securing a Quarkus Service Software Supply Chain (Tekton)*.
 
 image::select_software_template.png[select_software_template,align="center",link=self,window=blank]
 
-* You will be guided through a four-step, wizard-style form to collect the required inputs.
-* Instead of raising tickets and waiting for manual setup, this workflow applies platform standards automatically, as defined by the template.
-* In the first form, you are prompted to enter application-specific parameters.
-* Default values are already provided by the template, so keep the defaults and click *Next*.
+* You will now be guided through a four-step wizard.
+* This workflow replaces manual setup and automatically applies platform standards defined by the template.
+
+* In the first form, enter the application details.
+* The default values are already provided, so keep them as-is and click *Next*.
 
 image::software_template_step1.png[software_template_step1,align="center",link=self,window=blank]
 
-* The second form provides container image registry details.
+* In the second form, you will see the container image registry configuration.
 * In this workshop, container images are pushed to *Quay.io*.
-* The required values are pre-filled, so click *Next* to continue.
+* The values are already pre-filled, so click *Next*.
 
 image::software_template_Step2.png[software_template_Step2,align="center",link=self,window=blank]
 
-* In the third form, you configure the source code repository, which is *GitLab* in this environment.
-. Set *Verify Commits* to *Enabled*. This enforces commit signature verification in the pipeline, ensuring that only signed and trusted commits are accepted during the build process.
-. Leave the remaining values as provided by the template.
-* Click *Review* to proceed.
+* In the third form, configure the source code repository settings for *GitLab*.
+. Set *Verify Commits* to *Enabled*.
+. Leave all remaining values unchanged.
+* Click *Review* to continue.
 
 image::software_template_step3.png[software_template_step3,align="center",link=self,window=blank]
 
-* You will now see a summary of all the parameters that will be passed to the *scaffolder* when executing the template steps.
-* These  values are used to:
-
+* You will now see a summary of all parameters that will be passed to the *Scaffolder*.
+* These values are used to:
++
 . Create the Git repository and application skeleton
 . Configure CI pipelines
 . Register the component in the RHDH Software Catalog
++
 * Review the values, then click *Create* to start the scaffolding process.
 
 image::software_template_review.png[software_template_review,align="center",link=self,window=blank]
 
-* After a short time, the scaffolder workflow will complete and you will see a confirmation screen with green checkmarks indicating each step has succeeded.
-* Click *Open Component in Catalog* to view your newly created application in the Developer Hub.
+* After a short time, the scaffolder workflow will complete and each step will show a green checkmark.
+* Click *Open Component in Catalog* to view your newly created application in Developer Hub.
 
 image::open_component_in_catalog.png[open_component_in_catalog,align="center",link=self,window=blank]
 
 ---
 
-.Optional Deep Dive: Understanding Software Templates
-[%collapsible]
-====
+=== 1.3 Step summary
 
-* Software Templates are the primary mechanism used by *Red Hat Developer Hub* to expose Golden Paths to development teams.
-* Templates are defined using YAML and rendered as rich, validated forms in the Red Hat Developer Hub UI. Developers interact with a simple form. Behind the scenes, the platform does all the heavy lifting.
-* This YAML is processed by the *Scaffolder*, *RHDH*'s templating engine, which executes the steps outlined in the template.
-* This ensures that every new service is created in a standardized, automated, self-service way.
-* Let’s examine the structure of a template using
-
-=== Software Template YAML Structure
-
-* At a basic level, the Template Entity resembles a Kubernetes Custom Resource. Note, Backstage resources are stored in the Backstage instance's database and are not managed via the Kubernetes API Server.
-* Where the Template Entity differs is that it contains additional fields:
-. *Header*: Here, you provide essential information about the template.
-. *Parameters*: This section is for gathering inputs from the user.
-. *Steps*: In this section, you define the actions to be executed by the *Scaffolder*.
-. *Output*: This section is optional and allows you to provide details about the tasks performed by the *Scaffolder*.
-* Let’s examine each in more detail.
-
----
-
-=== Template Header
-
-* The header section is mandatory for every template.
-* The *Component* card on the *Create Component* page is displayed based on the details in the Header section.
-* For example, this is the header of the link:${gitlab_url}/rhdh/build-secured-dev-workflows-idp-configuration/-/blob/main/scaffolder-templates/quarkus-stssc-template/template.yaml[Software Template^] you will execute in the coming steps:
-
-[source, yaml]
-----
-apiVersion: scaffolder.backstage.io/v1beta3
-kind: Template
-metadata:
-  name: quarkus-stssc-template
-  title: Securing a Quarkus Service Software Supply Chain (Tekton)
-  description: Create a Quarkus Service built with Red Hat Trusted Application Pipeline on Tekton
-  tags:
-    - recommended
-    - java
-    - quarkus
-    - maven
-spec:
-  owner: tssc
-  type: service
-  # other fields removed for brevity
-----
-
-* The Software Template card is displayed in *RHDH* based on the header information, including the title, description, and tags.
-
----
-
-===  Template Parameters
-
-* Within the template, the *spec.parameters* field is used to generate the form.
-* You can choose to break up the parameter prompting into *form steps* or collect all the parameters in a single step.
-* This allows RHDH to generate a wizard like step by step process
-* In other words the parameters property is an array, each entry in the array is a *form step*.
-* Each form step must specify a *title*, which *properties* it will ask from the user, and if any of them is *required*.
-* Following is snippet of te properties section of the Software template you'll execute in the following steps.
-* RHDH renders as three steps, each with a seperate form:
-
-. Provide Information for Application
-. Provide Image Registry Information
-. Application Repository Information
-+
-[source, yaml]
-----
-parameters:
-    # Parameters can be spread across multiple forms/pages, each
-    # with their own titles and set of parameters
-    - title: Provide Information for Application
-      required:
-        - name
-        - javaPackageName
-      properties:
-        name:
-          title: Name
-          type: string
-          description: Unique name of the component
-          default: my-quarkus-tkn
-          ui:field: EntityNamePicker
-          maxLength: 23
-         # other fields removed for brevity
-    - title: Provide Image Registry Information
-      required:
-        - imageHost
-        - imageOrganization
-      properties:
-        imageHost:
-          title: Image Registry
-          type: string
-          default: Quay
-          enum:
-            - Quay
-        imageOrganization:
-          title: Organization
-          type: string
-          description: Name of the Quay Organization
-          default: tssc
-          ui:readonly: true
-    - title: Application Repository Information
-      required:
-        - repoHost
-        - repoOwner
-        - repoVerifyCommits
-      properties:
-        repoHost:
-          title: Source Repo
-          type: string
-          default: GitLab
-          enum:
-            - GitLab
-        # other fields removed for brevity
-----
-
----
-
-=== Template Steps
-
-* Steps define the actions that are performed by the *Scaffolder*  during its execution.
-* They are executed sequentially as defined in the template.
-* Each step utilizes actions for tasks such as publishing to a Gitlab repository (publish:gitlab) or registering a component in the catalog (catalog:register).
-* RHDH offers various built-in actions, and you can define custom actions as well.
-+
-[source, yaml]
-----
-  steps:
-    - id: fetch-provision-data
-      name: Fetch Provision Data
-      action: catalog:fetch
-      input:
-        entityRef: component:default/provisioning-data
- 	# other steps removed for brevity
-
-    - id: publish-gitlab-source
-      name: Publish
-      action: publish:gitlab
-      input:
-        repoUrl: 'gitlab-gitlab.${{ steps["fetch-provision-data"].output.entity.metadata.labels["ocp-apps-domain"] }}?owner=${{
-          parameters.repoOwner }}&repo=${{parameters.name}}'
-        repoVisibility: public
-    # other steps removed for brevity
-
-    - id: register-source
-      name: Register Source
-      action: catalog:register
-      input:
-        repoContentsUrl: ${{ steps['publish-gitlab-source'].output.repoContentsUrl }}
-        catalogInfoPath: '/catalog-info.yaml'
-    # other steps removed for brevity
-----
-+
-* Notice how the parameters are referenced in the input of the steps?
-* Another point of note is that subsequent steps can access output from prior steps.
-* To see the available actions in *RHDH* and understand their input and output parameters, go to the *Create Content* page by selecting *Create* from the left sidebar menu.
-* Next, open the *Kebab* menu at the top right of the *Create Content* page and choose *Installed Actions*.
-
-=== Template Output
-
-* The spec.output can be used to display useful information such as:
-
-. Links to newly created Components
-. Source Code Repository links
-. Links to Git Merge Requests that are needed etc
-
-[source, yaml]
-----
-output:
-    links:
-      - title: Source Repository
-        url: ${{ steps['publish-gitlab-source'].output.remoteUrl }}
-      - title: GitOps Repository
-        url: ${{ steps['publish-gitlab-gitops'].output.remoteUrl }}
-      - title: Open Component in catalog
-        icon: catalog
-        entityRef: ${{ steps['register-source'].output.entityRef }}
-      - title: Open GitOps Resource in catalog
-        icon: catalog
-        entityRef: ${{ steps['register-gitops'].output.entityRef }}
-----
-
-====
-
+* In this step, you used a Software Template to create a new service through a self-service workflow.
+* Instead of raising tickets or manually setting up repositories and pipelines, the platform applied the required standards automatically.
+* This is the value of Golden Paths, helping developers move faster while staying aligned with platform and security requirements.
 
 ---
 
 
-== Step 3: Sign Your Code and Enter the Trusted Supply Chain
+== Step 2: Sign Your Code and Enter the Trusted Supply Chain
 
 * In this step, you will make a small code change from within *OpenShift Dev Spaces (VS Code)* and commit it to Git. The commit will be signed automatically using your OIDC identity, and this signed commit will trigger the CI pipeline.
 * Your trusted identity is now carried forward into the build, verification, and promotion stages of the software supply chain.
 
-=== 3.1 Sign in to OpenShift Dev Spaces
+=== 2.1 Sign in to OpenShift Dev Spaces
 
 . *Right Click* the link for *OpenShift Dev Spaces* and choose *Open in Inconito Window*. This will launch your cloud-based development environment in a separate browser window.
 +
@@ -406,7 +171,7 @@ image::trust_publish_and_install.png[trust_publish_and_install,align="center"]
 
 ---
 
-=== 3.2 Verify Git Signing Configuration in OpenShift Dev Spaces
+=== 2.2 Verify Git Signing Configuration in OpenShift Dev Spaces
 
 * Before committing any code, verify that Git commit signing is correctly configured in your *OpenShift Dev Spaces* workspace.
 * The development environment has already been configured to use *gitsign* based on the configuration applied earlier in the Devfile.
@@ -425,7 +190,7 @@ image::Gitsign_Git_Global_Config.png[Git Global Configuration with Gitsign,link=
 
 ---
 
-=== 3.3 Apply a simple code change
+=== 2.3 Apply a simple code change
 
 * To see code signing in action, you will apply a simple change by adding a comment to the documentation.
 . Navigate to the *docs* folder and open the *index.md* file.
@@ -440,7 +205,7 @@ image::Index_Markdown_Updated.png[Updated Index Markdown File,link=self,window=b
 +
 . To begin commiting your code to the repository, run the following command to add your changes to staging and commiting your changes:
 +
-[source, role="send-to-wetty"]
+[source, role="execute"]
 ----
 git add .
 git commit -m "feat: test secure signing."
@@ -488,7 +253,7 @@ image::Gitsign_Commit_Signed.png[Successfully Signed Commit with Gitsign,link=se
 +
 . Push the code to the repository with the below command:
 +
-[source, role="send-to-wetty"]
+[source, role="execute"]
 ----
 git push origin master
 ----
@@ -498,184 +263,306 @@ git push origin master
 
 ---
 
-=== 5.4 Explore the Tekton Pipeline
+=== Step 3: Explore the Tekton Pipeline
 
-In this step, you will observe the CI pipeline that was triggered by your signed commit and follow its execution through the different verification stages.
+=== 3.1 Step introduction
 
-Switch back to *Red Hat Developer Hub* in *Showroom* and select the *CI* tab from the top menu. You should see the pipeline execution in progress. Note that the pipeline may take a few minutes to complete.
-
-image::secure_pipeline_in_progress.png[Secure Pipeline Execution in Progress,align="center",link=self,window=blank]
-
-In the meantime, let’s explore the key tasks in this pipeline that demonstrate the security guardrails enforced throughout the workflow.
-
-=== 5.5 Verify Commit
-
-* The first task executed after the Git repository is cloned is to verify that the code change you just committed was made by a trusted identity.
-* This task succeeds only if the pipeline can validate the signature on the commit that triggered the run. This is the signature you created using *gitsign* when you committed the change from *OpenShift Dev Spaces*.
-
-image::verify_commit.png[verify_commit,align="center",align="center",link=self,window=blank]
-
-* Click on the *verify-commit* task to view the logs.
-
-image::Verify_Commit_Log.png[Verify Commit Task Log Output,align="center",link=self,window=blank]
-
-* In the output, you can see that the commit signature you created earlier has been successfully validated. The log confirms a *good signature* from *user1*, along with successful verification of the Fulcio certificate, Rekor transparency entry, and certificate claims.
-* Close the log and return to the pipeline view to explore the next task.
-
-
-=== 5.6 Build Container
-
-* After the source code is packaged, the *build-container* task builds a container image from the verified source. As part of this step, the image is attested and a *Software Bill of Materials (SBOM)* is generated.
-+
-image::build_container_task.png[Build Container Task,align="center",window=blank]
-+
-* On successful completion, the container image, along with its associated attestations, signatures, and SBOM, is pushed to *Red Hat Quay*.
-* The SBOM is stored in the image registry alongside the container image, ensuring that composition data travels with the artifact.
-* Switch to the *Image Registry* tab and observe that the generated signature, attestation, and SBOM files appear side-by-side with the container image produced by the pipeline.
-+
-image::Generated_Artifacts_Registery.png[Generated Artifacts in Quay Registry,link=self,window=blank]
-+
-* Switch back to the *CI* tab to explore the next task.
-
-
-=== 5.3 Upload SBOM to Repository
-
-* Once the SBOM has been generated, the next step is to upload it to *Red Hat Trusted Profile Analyzer (RHTPA)*.
-
-image::Upload_SBOM.png[Upload SBOM to CycloneDX Task,link=self,window=blank]
-
-* Just like in Module 1, you can now inspect the packages included in the container image and assess identified vulnerabilities directly in Red Hat Trusted Profile Analyzer. This provides security teams and auditors with an end-to-end supply chain view, establishing verifiable software provenance, confirming open source licence compliance, and delivering a tamper-evident record of when components were introduced, updated, or removed across the build lifecycle.
-
-image::SBOM_in_RHTPA.png[Upload SBOM to CycloneDX Task,link=self,window=blank]
-
-
-=== 5.4 ACS Image Check
-
-* Switch back to the pipeline view. The next task, *acs-image-check*, assesses whether the container image adheres to predefined security and compliance policies.
-+
-image::ACS_Image_Check_Task.png[ACS Image Check Task,align="center",window=blank]
-+
-* The *acs-image-check* task evaluates the image against policies such as running as a non-root user, using approved base images, and avoiding prohibited or high-risk packages.
-
-
-=== 5.5 ACS Image Scan
-
-* Switch back to the pipeline view, the *acs-image-scan* task scans the container image for known vulnerabilities by comparing its components against vulnerability databases. This identifies any CVEs that could affect the security of the image.
-+
-image::ACS_Image_Scan.png[ACS Image Scan Task Results,link=self,window=blank]
-
-
-=== 5.6 ACS Deploy Check
-
-* The *acs-deploy-check* task evaluates whether the container image is allowed to be deployed into the target environment.
-* Unlike the image scan and image check tasks, which analyse the image itself, this task enforces deployment-time policies such as blocking images with critical vulnerabilities, failed policy checks, or missing attestations.
-* This ensures that only images that meet all security and compliance requirements are permitted to progress toward deployment.
-
-image::ACS_Deploy_Check.png[ACS Deploy Check,link=self,window=blank]
-
-=== 5.7 ACS Report Output
-
-* You can review the vulnerability scan results generated by *ACS* directly from the pipeline. Click the *Output* icon under *Actions* for the pipeline run.
-+
-image::Click_Output.png[Click_Output,link=self,window=blank]
-+
-* The report summarises detected vulnerabilities by severity and status, highlighting critical findings, whether fixes are available, and which components are affected. This allows teams to quickly assess risk and determine whether the image meets deployment requirements.
-+
-image::Image_Scan_Result.png[Image_Scan_Result,link=self,window=blank]
-+
-* You can also review the policy check results directly here, switch to the *Image Check* Output.
-+
-image::image_check_result.png[Image_check_Result,link=self,window=blank]
-+
-* This report highlights policy violations detected by *ACS*, including which violations break the build and which are informational. For each violation, you can see the affected component, the reason for the failure, and the recommended remediation, helping teams understand exactly why an image may be blocked and how to fix it.
-+
-* Finally, review the deployment-time policy checks by switching to the *Deployment Check* output.
-+
-image::deployment_check_output.png[deployment_check_output,link=self,window=blank]
-+
-* This report shows whether the image is permitted to be deployed into the target environment. It highlights any policy violations, distinguishes between build-breaking and non-blocking findings, and provides remediation guidance for issues that would prevent deployment.
-
+* In this step, you will observe the CI pipeline triggered by your signed commit.
+* This pipeline enforces security guardrails at every stage of the software delivery lifecycle.
+* Instead of relying on manual checks, the platform automatically verifies identity, validates artifacts, and enforces policy before allowing promotion.
+* Your goal here is to follow the pipeline and understand how trust is continuously validated.
 
 ---
 
+* Switch back to *Red Hat Developer Hub* in *Showroom* and select the *CI* tab.
+* You should see the pipeline execution in progress. Note that it may take a few minutes to complete.
+
+image::secure_pipeline_in_progress.png[Secure Pipeline Execution in Progress,align="center",link=self,window=blank]
+
+* While the pipeline runs, let’s walk through the key stages.
+
+---
+
+=== 3.2 Verify Commit
+
+* The first task ensures the code change was made by a trusted identity.
+* It validates the commit signature created earlier using *gitsign*.
+
+image::verify_commit.png[verify_commit,align="center",link=self,window=blank]
+
+* Click the *verify-commit* task and review the logs.
+
+image::Verify_Commit_Log.png[Verify Commit Task Log Output,align="center",link=self,window=blank]
+
+* The output confirms:
++
+. A valid signature from *user1*
+. Fulcio certificate verification
+. Rekor transparency log entry
++
+* This establishes trusted provenance at the source.
+
+---
+
+=== 3.3 Build Container
+
+* The *build-container* task builds the image from verified source code.
+* During this step:
++
+. The container image is created
+. An SBOM is generated
+. Attestations and signatures are attached
++
+image::build_container_task.png[Build Container Task,align="center",window=blank]
++
+* All artifacts are pushed to *Red Hat Quay*.
+
+* Switch to the *Image Registry* tab and observe:
++
+. Container image
+. Signature
+. Attestation
+. SBOM
++
+image::Generated_Artifacts_Registery.png[Generated Artifacts in Quay Registry,link=self,window=blank]
+
+* These artifacts travel together, ensuring traceability.
+
+---
+
+=== 3.4 Upload SBOM
+
+* The SBOM is uploaded to *Red Hat Trusted Profile Analyzer (RHTPA)*.
+
+image::Upload_SBOM.png[Upload SBOM Task,link=self,window=blank]
+
+* This enables:
++
+. Visibility into dependencies
+. Vulnerability analysis
+. License and compliance tracking
++
+image::SBOM_in_RHTPA.png[SBOM in RHTPA,link=self,window=blank]
+
+---
+
+=== 3.5 Security Policy Enforcement (ACS)
+
+* The next set of tasks uses *Red Hat Advanced Cluster Security (ACS)* to enforce security policies.
+
+image::ACS_Image_Check_Task.png[ACS Image Check Task,align="center",window=blank]
+
+* These checks cover:
+
+* *Image Check*  
+Ensures compliance with policies such as:
++
+. Non-root execution
+. Approved base images
+. No prohibited packages
+
+image::ACS_Image_Scan.png[ACS Image Scan Task Results,link=self,window=blank]
+
+* *Image Scan*  
+Identifies known vulnerabilities (CVEs) in the image.
+
+* *Deploy Check*  
+Determines whether the image is allowed to be deployed based on all prior checks.
+
+image::ACS_Deploy_Check.png[ACS Deploy Check,link=self,window=blank]
+
+* This enforces policy at build and deployment time, not just at release.
+
+---
+
+=== 3.6 Review Security Results
+
+* You can inspect the results directly from the pipeline.
+
+. Click the *Output* icon for the pipeline run.
++
+image::Click_Output.png[Click_Output,link=self,window=blank]
++
+* Review:
++
+. Vulnerability scan results
+. Policy violations
+. Deployment decisions
++
+image::Image_Scan_Result.png[Image_Scan_Result,link=self,window=blank]
++
+image::image_check_result.png[Image_check_Result,link=self,window=blank]
++
+image::deployment_check_output.png[deployment_check_output,link=self,window=blank]
+
+* These reports provide clear insight into:
++
+. What risks exist
+. Why a build may fail
+. What needs to be fixed
+
+---
+
+=== 3.7 Step summary
+
+* You followed a pipeline that enforces trust at every stage.
+* Each step validates a different aspect of the software supply chain:
++
+. Identity, verified commit signing
+. Integrity, signed and attested artifacts
+. Transparency, SBOM generation and analysis
+. Security, policy enforcement through ACS
++
+* The key takeaway:
++
+*Security is not a final checkpoint, it is continuously enforced throughout the delivery process.*
+
+---
+
+
 == Step 4: Explore the Application
 
-Now that the build is complete, let's examine the application features and how it works.
+=== 4.1 Step introduction
 
-=== Step 4.1: Explore the Application's Source Code
+* In this step, you will explore the application created by the Software Template.
+* As a developer, you now have a fully provisioned service, including source code, deployment configuration, and a running environment.
+* The goal is to understand how the platform has stitched everything together, from code to deployment to runtime.
 
-Examine the application's source code and deployment manifests:
+---
 
-. Select the GitLab tab in Showroom.
+=== 4.2 Explore the Application Source Code
+
+* First, review the generated repositories and deployment configuration.
+
+. Switch to the *GitLab* tab in Showroom.
 . Return to the GitLab homepage.
 +
 image:gitlab-quarkus-app-repos.png[gitlab_home_page_quarkus_apps,align="center",link=self,window=blank]
-. Select the *my-quarkus-tkn-gitops* repository.
-. Notice that *application.yaml*? This is used to manage the application deployment using OpenShift GitOps.
-. The *app-of-apps* folder contains files to manage application environments and the Tekton CI.
-
-Return to Dev Spaces and explore the source code for the Quarkus application. You'll quickly notice references to Langchain4j and Chatbot features:
-
-. Expand the my-quarkus-tkn project, navigate to src → main → resources.
-.Open the *application.properties*. Note that various Langchain4j properties are set to connect the application to an LLM.
 +
+. Open the *my-quarkus-tkn-gitops* repository.
+. Review the following:
++
+. *application.yaml*, defines application deployment via OpenShift GitOps
+. *app-of-apps* folder, manages environments and pipeline configuration
++
+* This repository represents the deployment and environment configuration managed by the platform.
+
+---
+
+* Next, explore the application source code.
+
+. Return to *OpenShift Dev Spaces*.
+. Open the *my-quarkus-tkn* project.
+. Navigate to *src → main → resources*.
+. Open *application.properties*.
+
 image:quarkus-langhcain-props.png[quarkus-langhcain-props,align="center",link=self,window=blank]
-. link:https://quarkus.io/extensions/io.quarkiverse.langchain4j/quarkus-langchain4j-easy-rag/[Easy RAG] is used to enable the Chatbot to perform Retrieval-Augmented Generation on a terms of service included in the *resources* folder.
-. Additionally, the `QUARKUS_LANGCHAIN4J_OPENAI_API_KEY` and `QUARKUS_LANGCHAIN4J_OPENAI_BASE_URL` environment variables are referenced. You can see that these are securely injected from Vault using an ExternalSecret in the *components/my-quarkus-tkn/base/* folder of the *my-quarkus-tkn-gitops* repository.
 
-NOTE: The model serving and inference has been taken care of by the platform engineering and data science teams, all developers need to do is use a template to benefit from approved models and a preconfigured pipeline that enforces secure software supply chain principles.
+* You will notice configuration related to *LangChain4j*, enabling integration with an LLM.
 
-=== Step 4.2: View and Test the Application
+* The application uses link:https://quarkus.io/extensions/io.quarkiverse.langchain4j/quarkus-langchain4j-easy-rag/[Easy RAG^] to provide a chatbot experience based on a predefined knowledge base.
 
-Next, return to Red Hat Developer Hub and learn how to access the deployed Quarkus application's dev environment:
+* Sensitive configuration, such as:
++
+. `QUARKUS_LANGCHAIN4J_OPENAI_API_KEY`
+. `QUARKUS_LANGCHAIN4J_OPENAI_BASE_URL`
++
+* is securely injected using *Vault*, referenced through an *ExternalSecret* in the GitOps repository.
 
-. Find open the *Topology* tab for the *my-quarkus-tkn* Component. Three Pods will be displayed, one for each of dev, staging, and production.
-. Select the *dev* Pod. You can confirm it's the *dev* Pod by checking the namespace listed when you click each Pod.
+NOTE: Model hosting and inference are handled by platform and data teams. Developers simply consume approved models through the template, without needing to manage infrastructure or security.
+
+---
+
+=== 4.3 View and Test the Application
+
+* Now, access the running application.
+
+. Return to *Red Hat Developer Hub*.
+. Open the *Topology* tab for the *my-quarkus-tkn* component.
+. You will see three environments:
++
+. dev
+. staging
+. production
++
+. Select the *dev* Pod (verify via namespace).
 +
 image::quarkus-tkn-dev-pod.png[quarkus-tkn-dev-pod,link=self,window=blank]
-. Click the popout arrow on the Pod to view the development version of your application.
-. You should see a Chatbot interface. Ask question such as "Can I cancel my reservation?".
++
+. Click the pop-out icon to open the application.
+
+* The application presents a chatbot interface.
+
+. Try asking:
++
+----
+Can I cancel my reservation?
+----
 +
 image:quarkus-rag-chat.png[quarkus-rag-chat,align="center",link=self,window=blank]
-. The Chatbot responds with policy information sourced using RAG.
 
-This template demonstrates the enhanced productivity that Red Hat Developer Hub can provide while enforcing security and compliance.
+* The response is generated using Retrieval-Augmented Generation (RAG), combining LLM capabilities with application-specific data.
+
+---
+
+=== 4.4 Step summary
+
+* You explored a fully provisioned application created through a Software Template.
+* The platform automatically delivered:
++
+. Source code and project structure
+. Deployment and environment configuration
+. Secure secret management
+. Integrated AI capabilities
++
+* The key takeaway:
++
+*Developers focus on building features, while the platform handles infrastructure, security, and compliance by default.*
 
 ---
 
 == Step 5: Promote to Staging
 
-In this step you will promote the application to staging by creating this tag, a GitLab webhook triggers the staging pipeline — proving that automation delivers both speed and quality.
+=== 5.1 Step introduction
 
-=== 5.1 Log in to Gitlab
+* In this step, you will promote your application using a Git tag.
+* This simulates a real release process, where promotion is triggered intentionally rather than on every commit.
+* The platform automatically runs a promotion pipeline that validates the release before allowing it to progress.
+* This ensures that only trusted, compliant, and verified artifacts move forward in the software supply chain.
 
-* If you are not already logged in to *GitLab*, click the *GitLab* Console tab in the Showroom and log in using:
+---
+
+=== 5.2 Log in to GitLab
+
+* If you are not already logged in to *GitLab*, switch to the *GitLab* tab in Showroom and log in using:
 
 * *Username*:
-
++
 [source, role="execute", subs="attributes"]
 ----
 {gitlab_root_user}
 ----
-
++
 * *Password*:
-
++
 [source, role="execute", subs="attributes"]
 ----
 {gitlab_root_password}
 ----
 
-=== 5.2 Create a Release Tag
+---
 
-. At the top left click on *Gitlab Home*.
+=== 5.3 Create a Release Tag
+
+. Navigate to *GitLab Home*.
 +
 image::gitlab_home_page.png[gitlab_home_page,align="center",link=self,window=blank]
 +
-. Select the repository *my-quarkus-tkn*.
+. Open the repository *my-quarkus-tkn*.
 +
 image::my-quarkus-tkn_repo.png[my-quarkus-tkn_repo,align="center",link=self,window=blank]
 +
-. From the left-hand menu, navigate to *Code → Tags*.
+. Go to *Code → Tags*.
 +
 image::click_code_tag.png[click_code_tag,align="center",link=self,window=blank]
 +
@@ -684,96 +571,130 @@ image::click_code_tag.png[click_code_tag,align="center",link=self,window=blank]
 image::click_new_tag.png[click_new_tag,align="center",link=self,window=blank]
 +
 . Enter a version tag, for example *v1.0*.
-+
 . Select *master* as the target branch.
-.
-. Click *Create tag* to create the release tag.
+. Click *Create tag*.
 +
 image::create_tag.png[create_tag,align="center",link=self,window=blank]
 +
+* Creating a tag triggers a *promotion pipeline*, not the standard development pipeline.
 
-* The software template configures a webhook that treats Git tags differently from regular commits. Creating a tag triggers a *promote to staging* pipeline, rather than the standard development pipeline.
+---
 
-=== 5.3 Explore the Promote to Staging Pipeline
+=== 5.4 Explore the Promotion Pipeline
 
 . Switch back to the *CI* tab in *Red Hat Developer Hub*.
-. Locate and expand the job labeled *promote-to-stage* to follow the progress of the release pipeline.
+. Locate and expand the *promote-to-stage* pipeline.
 
 ---
 
-=== Preparing the Release for Promotion
+* The pipeline begins by preparing the release:
 
-* The release pipeline begins with the *extract-destination-image-tag* task, which resolves the destination image tag from the Git release. This ensures the release is explicitly tied to a specific version, rather than a moving branch or commit.
-* Next, the *gather-images-to-verify* task identifies the container image that was previously built and validated during staging. Using the Git tag, it locates the correct image and generates metadata that links the image back to its source repository and release, establishing clear traceability before promotion.
+* *extract-destination-image-tag*  
+Resolves the release version from the Git tag.
+
+* *gather-images-to-verify*  
+Identifies the previously built image and links it to the release, ensuring traceability.
 
 ---
 
-=== Verify Enterprise Contract
+=== 5.5 Verify Enterprise Contract
 
-* Wait for the *verify-enterprise-contract* task to reach *Succeeded*.
-+
+* The *verify-enterprise-contract* task validates the image before promotion.
+
 image::verify-enterprise-contract.png[verify-enterprise-contract,align="center",link=self,window=blank]
-+
-. Click the task and review the logs.
-. In this task, the container image is validated against the *Enterprise Contract* using the following command:
-+
-[source]
-----
-ec validate image \
-  --image quay.tssc-quay/tssc/my-quarkus-tkn:v1.0 \
-  --policy git::github.com/org/ec-policies//default \
-  --public-key k8s://openshift/trusted-keys \
-  --output json
-----
-+
-* As part of this validation, Enterprise Contract ensures that:
-. *Provenance:* the image was built by a trusted pipeline and includes valid build attestations
-. *Identity:* the image is signed with *Cosign* and the signature matches the expected OIDC issuer and subject
-. *Integrity:* the image and its SLSA attestations have not been tampered with
-. *Composition:* a valid *SBOM* (for example, SPDX or CycloneDX) is present and attached to the image
-. *Risk and Policy:* vulnerability data (CVEs) and organisational security policies are evaluated before promotion
+
+. Open the task and review the logs.
+
+* This validation ensures:
+
+. *Provenance* — the image was built by a trusted pipeline
+. *Identity* — the image is signed and linked to a verified identity
+. *Integrity* — the image and its attestations have not been tampered with
+. *Composition* — an SBOM is present and attached
+. *Policy* — vulnerabilities and organisational rules are enforced
+
+* Only images that pass all checks are eligible for promotion.
 
 ---
 
-=== Promoting and Deploying the Release
+=== 5.6 Promote and Deploy
 
-* Once the image has passed all verification and policy checks, the *copy-image* task promotes it to production.
-* This task retags the previously validated image with a production label (for example, *prod-v1.0*), clearly identifying it as production-ready.
-* Only images that successfully pass *Enterprise Contract* validation reach this stage, ensuring that unverified or non-compliant artifacts cannot be promoted.
-* The final task, *update-deployment*, updates the deployment configuration to reference the newly promoted production image.
-* This integrates seamlessly with GitOps, allowing tools such as *Argo CD* to automatically deploy the validated image into the production environment.
-* At this point, security validation transitions into customer value, with promotion and deployment handled automatically and consistently.
+* Once validated, the pipeline promotes the image:
+
+. *copy-image*  
+Retags the verified image for production (for example, *prod-v1.0*)
+
+. *update-deployment*  
+Updates deployment configuration to use the promoted image
+
+* Through GitOps integration, tools like *Argo CD* automatically deploy the updated version.
 
 ---
 
-=== Release Pipeline Outcome
+=== 5.7 Step summary
 
-* By combining signed commits, SBOMs, provenance, vulnerability scanning, and Enterprise Contract validation, only verified container images are promoted to production. Release promotion becomes automated, auditable, and policy-driven, reducing risk while significantly accelerating delivery.
-* Security is enforced by design, and production readiness is proven, not assumed.
+* You promoted your application using a controlled, versioned release.
+* The platform enforced validation before allowing promotion.
+* No manual approvals, no guesswork, policy-driven automation.
+
+* The key takeaway:
++
+*Promotion is no longer a risk point, it becomes a controlled, verifiable, and automated step in the delivery process.*
 
 ---
 
 === Module 4: Summary
 
-* In this module, you addressed a critical customer challenge: “Unverified or unsafe images are slipping through to staging and production.”
-* As a participant, you executed an end-to-end trusted software supply chain workflow, observing how *Red Hat Advanced Cluster Security (RHACS)*, *Enterprise Contract (EC)* policies, and release promotion work together to ensure only verified images are allowed to progress.
-* For customers, this means releases become safer, auditable, and fully governed. Every promotion decision is backed by cryptographic evidence, vulnerability data, and policy enforcement, ensuring confidence at every stage of the delivery process.
-* For consultants, this module provides a reusable pattern for embedding policy enforcement and release governance into real-world CI and CD pipelines, without introducing friction or slowing development teams down.
-* For technical sellers, this completes the workshop story: *Red Hat Advanced Developer Suite (RHADS)* prevents unsafe releases and turns every deployment into a controlled, compliant, and predictable outcome.
-* The key takeaway is this: with RHADS, developer velocity is preserved because trust is verified automatically, and enterprise risk is reduced because policy-driven guardrails ensure only trusted, compliant artifacts are promoted to production.
+* In this module, you executed an end-to-end trusted software supply chain workflow.
+* You moved from code to commit, through build and verification, to controlled promotion into the next environment.
+
+* What’s important is how this was experienced:
++
+*As a developer, you simply launched a Software Template and followed a guided workflow.*
+
+* Behind the scenes, the platform handled everything else:
++
+. Provisioning repositories and environments
+. Configuring CI/CD pipelines
+. Managing secrets and integrations
+. Enforcing security and compliance policies
++
+* At each stage, trust was enforced automatically:
++
+. Only verified identities could contribute code
+. Every artifact was signed and traceable
+. SBOMs provided full visibility into software composition
+. Security and compliance policies were validated before promotion
+
+* The result is clear:
++
+*Developers follow a simple, standardised path, while the platform ensures every change is trusted, compliant, and production-ready.*
+
+* For your organisation, this means:
++
+. Reduced risk of vulnerable or untrusted software reaching production
+. Full auditability of how software is built and promoted
+. Consistent enforcement of security and compliance policies
+. Faster delivery without introducing additional process overhead
+
+* The key takeaway:
++
+*Developers focus on writing great code, while the platform provides a sanctioned, secure path to production where trust is continuously verified and enforced by design.*
 
 ---
 
 == Module 4: Automation
+
+=== Validate Module 4
+++++
+<div class="validate-button-placeholder" data-module="module-04"></div>
+++++
 
 === Solve Module 4
 ++++
 <div class="solve-button-placeholder" data-module="module-04"></div>
 ++++
 
-=== Validate Module 4
-++++
-<div class="validate-button-placeholder" data-module="module-04"></div>
-++++
+
 
 ---

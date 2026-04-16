@@ -9,12 +9,24 @@ This workshop uses *Showroom* to present the workshop guide and provide quick ac
 == Workshop Navigation and Shortcuts
 
 * Before you begin, the following shortcuts are available to help you navigate the workshop and move through the modules more efficiently:
-. To execute a script or command, click the *play button* next to it. This will automatically run the command in the Showroom terminal.
+. To execute a script or command, click the *run button* next to it. This will automatically run the command in the Showroom terminal.
 +
-image::play_button.png[Play Button ,align="center",link=self,window=blank]
+** Navigate to the Showroom Terminal and try it now:
 +
+[source, role="send-to-wetty"]
+----
+echo "Run button executed successfully."
+----
++
+** You should see the message printed in the Showroom terminal. This is how all scripts in this workshop can be executed.
 . To validate your progress, navigate to the *Validate* section at the end of each module and click the *Validate Module* button. This will generate a detailed log highlighting which steps have completed successfully and clearly identifying any failures that need attention.
 . If you are short on time, you can click the *Solve Module* button located at the end of each module. This will automatically execute all the required steps for the module so you can move on. However, we recommend going through the steps yourself first to understand how the platform works and how the capabilities are implemented.
+
+=== Optional Sections
+
+Along the way, you will encounter collapsible sections marked as `*Optional Deep Dive:* <section name>`. These sections provide additional technical detail for those who want to better understand how the components in this workshop work behind the scenes.
+These sections are completely optional and are not required to complete the lab.
+As a best practice, we recommend completing the modules first, then coming back to explore the optional sections to deepen your understanding without interrupting the flow of the workshop.
 
 ---
 
@@ -38,11 +50,11 @@ This is where *Red Hat Trusted Profile Analyzer*, or *RHTPA*, plays a critical r
 
 === 1.1 Install and Setup RHTPA
 
-* Navigate to the Showroom Terminal and click the green play button to run the script that installs and sets up *RHTPA*.
+* Navigate to the Showroom Terminal and click the run button to run the script that installs and sets up *RHTPA*.
 +
 [source, role="send-to-wetty"]
 ----
-./lab-assets/install-rhtpa.sh
+~/lab-assets/install-rhtpa.sh
 ----
 +
 * This script prepares the environment for *Trusted Profile Analyzer* by configuring identity integration and applying the required platform resources.
@@ -50,7 +62,7 @@ This is where *Red Hat Trusted Profile Analyzer*, or *RHTPA*, plays a critical r
 . As part of this setup, a dedicated realm is created along with the roles and permissions required by *RHTPA*. These define how different actors, such as developers, automation pipelines, or platform administrators, access and interact with *SBOM* data.
 . Finally, the script deploys the *RHTPA* instance using its Custom Resource. This instructs the *RHTPA Operator* to provision the required components in the cluster, making the service available for *SBOM* ingestion and analysis.
 * The script might take a few minutes to complete. Once the script has completed, you will see an output similar to the following screenshot:
-
++
 image::install-rhtpa.png[Install RHTPA ,align="center",link=self,window=blank]
 
 === 1.2 Validate the RHTPA deployment
@@ -102,11 +114,11 @@ image::tpa_pods_view.png[TPA Pods View,align="center",link=self,window=blank]
 
 == Step 2.1: Upload an SBOM into RHTPA
 
-* Navigate to the Showroom Terminal and click the green play button to run the script that uploads the *SBOM*.
+* Navigate to the Showroom Terminal and click the run button to run the script that uploads the *SBOM*.
 +
 [source, role="send-to-wetty"]
 ----
-./lab-assets/upload-sbom.sh 
+~/lab-assets/upload-sbom.sh 
 ----
 +
 * As the script runs, it uploads the *SBOM* to *RHTPA*, where it is processed and analyzed by the platform.
@@ -178,6 +190,81 @@ image::rhtpa_importers.png[rhtpa_importers,align="center",link=self,window=blank
 image::rhtpa_vulnerabilities_complete.png[rhtpa_vulnerabilities_complete,align="center",link=self,window=blank]
 
 ---
+
+.Optional Deep Dive: How does RHTPA process and secure SBOM data?
+[%collapsible]
+====
+
+You’ve now completed this module. The section below is optional and provides a deeper look at how *RHTPA* ingests, secures, and analyzes SBOM data.
+
+
+---
+
+=== 1. Identity and access control
+
+*RHTPA* does not manage users directly. Instead, it relies on *Red Hat build of Keycloak (RHBK)* as an external identity provider.
+
+At a high level:
+
+. A user or pipeline authenticates with *RHBK*
+. *RHBK* issues an access token containing identity and permissions (scopes)
+. The request is sent to *RHTPA* along with this token
+. *RHTPA* evaluates the token to determine whether the operation is allowed
+
+In this workshop:
+- The *frontend* client is used by human users accessing the UI
+- The *cli* client is used by pipelines to upload SBOMs programmatically
+
+This model ensures that all access to SBOM data is controlled and tied to a specific identity.
+
+---
+
+=== 2. SBOM ingestion and indexing
+
+When an SBOM is uploaded:
+
+. *RHTPA* parses the SBOM document (for example, SPDX or CycloneDX)
+. Every component, dependency, and relationship is extracted
+. This data is stored as a graph representing the full software composition
+
+This graph structure allows *RHTPA* to:
+- trace dependencies across layers
+- understand transitive relationships
+- support complex queries across components
+
+---
+
+=== 3. Continuous vulnerability correlation
+
+SBOM data alone is not enough. *RHTPA* continuously enriches this data using vulnerability intelligence.
+
+This is done through *importers*:
+
+. *CVE importer* retrieves vulnerability data from sources such as the CVE Project
+. *GitHub Advisory importer* pulls data from GitHub Security Advisories
+. These datasets are refreshed periodically (for example, daily)
+
+Once importer data is available:
+
+. *RHTPA* matches SBOM components against known vulnerabilities
+. Correlations are created between components and advisories
+. Results are made available in the *Vulnerabilities* view
+
+This is why, in a fresh environment, the vulnerability tab may initially appear empty — the importer jobs need time to populate the dataset.
+
+---
+
+=== Putting it all together
+
+*RHTPA* provides a continuous, identity-aware view of software composition:
+
+- Identity ensures only authorized users and systems interact with the data  
+- SBOM ingestion builds a structured inventory of components  
+- Importers continuously enrich that inventory with vulnerability intelligence  
+
+Together, this enables organizations to move from static SBOM files to a live, queryable, and auditable view of their software supply chain.
+
+====
 
 == Module 1: Summary
 

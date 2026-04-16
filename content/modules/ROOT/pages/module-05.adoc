@@ -1,58 +1,46 @@
 = Conclusion and Next Steps
 
-Congratulations! You've completed the **Build secure streamlined developer workflows with Red Hat Advanced Developer Suite** workshop.
+Congratulations! You've completed the *Unifying DevSecOps: Secure, Standardized Application Delivery Across Containers and VMs* workshop.
 
 == What You've Learned
 
-Throughout this workshop, you've gained hands-on experience with:
+Throughout this workshop, you’ve seen how a unified platform enables secure, standardized application delivery across environments.
 
-* **Established software composition trust** by deploying Red Hat Trusted Profile Analyzer (RHTPA) and ingesting SBOMs to gain verifiable visibility into software components and vulnerabilities
-* **Implemented cryptographic signing and verification** by deploying Red Hat Trusted Artifact Signer (RHTAS) to enable keyless artifact signing, immutable provenance tracking, and tamper-evident transparency logs
-* **Configured an Internal Developer Portal** using Red Hat Developer Hub (RHDH) with GitOps, enabling SSO authentication, dynamic plugins, catalog discovery, and seamless developer workflows
-* **Enforced policy-driven promotion** by integrating Red Hat Advanced Cluster Security (RHACS) scanning, Enterprise Contract validation, and automated release governance to ensure only verified, compliant images reach production
+* You established software composition trust by ingesting and analyzing SBOMs, gaining clear visibility into components and vulnerabilities
+* You implemented identity-based signing and verification, ensuring every artifact is cryptographically linked to a trusted source
+* You used an Internal Developer Portal to provide developers with a self-service, standardized path to create and deliver applications
+* You enforced policy-driven promotion, ensuring only verified, compliant software is allowed to progress through the delivery pipeline
 
-You now have the skills to design, deploy, and operate a comprehensive trusted software supply chain that balances developer velocity with enterprise-grade security.
+*Most importantly, you saw how these capabilities work together as a single, integrated workflow, not as isolated tools.*
+
+---
 
 == Key Takeaways
 
-The most important concepts to remember:
+. *Standardization Enables Scale*  
+Developers follow a consistent, approved path to production, regardless of whether applications run on containers or virtual machines.
 
-. **Trust Must Be Verifiable, Not Assumed**: Modern software delivery requires cryptographic proof of software composition (SBOMs), artifact integrity (signing), and build provenance (attestations). RHADS provides the infrastructure to make trust measurable and auditable across the entire supply chain.
+. *Trust Is Continuously Verified*  
+From code to deployment, identity, integrity, and provenance are validated at every step, not just at release time.
 
-. **Security Without Friction**: Developers should not have to choose between speed and security. By embedding security capabilities into Golden Path templates and platform-managed workflows, RHADS ensures security is enforced by design while developers remain focused on delivering business value.
+. *Security Without Friction*  
+Security, compliance, and governance are embedded into the platform, allowing developers to focus on building features rather than managing infrastructure or controls.
 
-. **Policy-Driven Automation Scales Trust**: Manual security checks do not scale. Enterprise Contract validation, automated SBOM ingestion, keyless signing via OIDC, and policy-based promotion ensure that every release is governed consistently, reducing risk while accelerating delivery.
+. *Policy-Driven Automation Reduces Risk*  
+Promotion decisions are enforced automatically through policy, ensuring that only trusted and compliant software reaches production.
 
-== Next Steps
+---
 
-Ready to continue your journey? Here are some recommended next steps:
+== What This Means for Your Organization
 
-=== Recommended Workshops
+* A consistent and repeatable path to deliver applications across environments
+* Reduced risk of untrusted or vulnerable software reaching production
+* Full visibility and auditability of the software delivery lifecycle
+* Faster delivery cycles without sacrificing security or compliance
 
-Explore related workshops to expand your skills:
+*You can move faster, with confidence, because trust and governance are built into the platform by design.*
 
-* link:https://demo.redhat.com[Red Hat Demo Platform^] - Access additional RHADS workshops and demos
-* link:https://developers.redhat.com/learn[Red Hat Developer Learning Paths^] - Explore hands-on tutorials for OpenShift, DevSpaces, and cloud-native development
-
-=== Documentation and Resources
-
-Deepen your knowledge with these resources:
-
-* link:https://docs.redhat.com/en/documentation/red_hat_trusted_profile_analyzer[Red Hat Trusted Profile Analyzer Documentation^]
-* link:https://docs.redhat.com/en/documentation/red_hat_trusted_artifact_signer[Red Hat Trusted Artifact Signer Documentation^]
-* link:https://docs.redhat.com/en/documentation/red_hat_developer_hub[Red Hat Developer Hub Documentation^]
-* link:https://docs.redhat.com/en/documentation/red_hat_advanced_cluster_security_for_kubernetes[Red Hat Advanced Cluster Security Documentation^]
-* link:https://developers.redhat.com/products/openshift-dev-spaces[Red Hat OpenShift Dev Spaces Product Page^]
-
-=== Practice Projects
-
-Put your new skills to work:
-
-. **Build a Custom Software Template**: Create a Golden Path template for your organization's technology stack, embedding SBOM generation, commit signing, image scanning, and Enterprise Contract validation into a repeatable, self-service workflow.
-
-. **Implement Multi-Environment Promotion**: Extend the workshop pipeline to include development, staging, and production environments with progressive Enterprise Contract policies that increase in strictness as artifacts move toward production.
-
-. **Integrate with External Systems**: Connect RHDH to your organization's existing Git provider, container registry, identity provider, and CI/CD platform to demonstrate how RHADS fits into real-world enterprise environments.
+---
 
 == References
 
@@ -64,7 +52,7 @@ This section consolidates all references used across the entire workshop.
 * link:https://github.com/guacsec/trustify[Trustify Project^] - Used in: Module 1 - Upstream open-source project for SBOM ingestion and analysis (upstream for RHTPA)
 * link:https://guac.sh/trustify/[GUAC Community^] - Used in: Module 1 - Graph for Understanding Artifact Composition community
 * link:https://www.backstage.io[Backstage^] - Used in: Module 3 - Upstream open-source developer portal platform created by Spotify (upstream for RHDH)
-* link:https://conforma.dev/[Conforma^] - Used in: Module 4 - Upstream open-source policy engine for supply chain verification (upstream for Enterprise Contract)
+* link:https://conforma.dev/[Conforma^] - Used in: Module 3 - Upstream open-source policy engine for supply chain verification (upstream for Enterprise Contract)
 
 === Developer Experience and Platform Engineering
 
@@ -72,25 +60,48 @@ This section consolidates all references used across the entire workshop.
 * link:https://devfile.io/[Devfile.io^] - Used in: Module 3 - Standard for defining cloud development environments as code
 * link:https://backstage.io/docs/features/software-templates/[Backstage Scaffolder Documentation^] - Used in: Module 4 - Technical reference for software templates and Golden Paths
 
+---
+
+== Next Steps
+
+To continue your journey:
+
+=== Explore Further
+
+* link:https://demo.redhat.com[Red Hat Demo Platform^] - Access additional workshops and demonstrations
+* link:https://developers.redhat.com/learn[Red Hat Developer Learning Paths^] - Hands-on learning across OpenShift and cloud-native development
+
+=== Apply This in Your Environment
+
+. Define your organizations *Golden Paths* to standardize how applications are built and delivered
+. Integrate identity, signing, and SBOM generation into your CI pipelines
+. Introduce policy-driven promotion to enforce security and compliance at every stage
+. Extend these practices across both containerized and virtualized workloads
+
+=== Deepen Your Knowledge
+
+* link:https://docs.redhat.com/en/documentation/red_hat_trusted_profile_analyzer[Red Hat Trusted Profile Analyzer Documentation^]
+* link:https://docs.redhat.com/en/documentation/red_hat_trusted_artifact_signer[Red Hat Trusted Artifact Signer Documentation^]
+* link:https://docs.redhat.com/en/documentation/red_hat_developer_hub[Red Hat Developer Hub Documentation^]
+* link:https://docs.redhat.com/en/documentation/red_hat_advanced_cluster_security_for_kubernetes[Red Hat Advanced Cluster Security Documentation^]
+
+---
+
 == Share Your Feedback
 
-Help us improve this workshop:
+We’d value your feedback:
 
-* What did you find most valuable?
-* What could be improved?
-* What topics would you like to see covered in future workshops?
+* What resonated most with you?
+* What would you like to explore further?
+* How can we improve this experience?
 
-== Thank You!
+---
 
-Thank you for participating in this workshop. We hope you found it valuable and informative.
+== Final Thought
 
-**For Consultants**: You now have a reference architecture for deploying trusted software supply chain capabilities in customer environments, with concrete patterns for identity configuration, signing workflows, policy enforcement, and developer platform integration.
+*Secure, standardized delivery is not about adding more controls, it’s about building the right platform so that every team can move fast, while trust is continuously verified in the background.*
 
-**For Technical Sellers**: You have seen how RHADS addresses the core customer challenges around software supply chain security and developer productivity, with a complete story arc from "we cannot verify our software components" to "only trusted, policy-compliant images reach production."
-
-**For Solutions Architects**: You understand how RHTPA, RHTAS, RHDH, and RHACS integrate to form a cohesive platform that enables organizations to move fast while staying safe.
-
-Keep building, keep learning! 🚀
+Thank you for your time.
 
 ---
 

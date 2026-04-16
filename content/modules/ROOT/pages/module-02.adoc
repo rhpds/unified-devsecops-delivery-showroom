@@ -2,7 +2,7 @@
 
 == Introduction 
 
-In the previous module, you established visibility into what is inside your software by analyzing SBOMs. The next challenge is ensuring that what gets built and delivered has not been altered along the way.
+In the previous module, you established visibility into what is inside your software by analyzing *SBOMs*. The next challenge is ensuring that what gets built and delivered has not been altered along the way.
 In modern software delivery, artifacts move across multiple systems, build pipelines, registries, and environments. Without a way to verify their origin and integrity, organizations are exposed to risks such as tampering, unauthorized changes, or compromised supply chains.
 
 This is where *Red Hat Trusted Artifact Signer (RHTAS)* comes in. *RHTAS* provides a platform capability for signing and verifying software artifacts, allowing organizations to confirm that what they are deploying was produced by a trusted process and has not been modified.
@@ -15,15 +15,19 @@ In this module, you will see how trusted signing is embedded directly into the p
 
 === 1.1 Install and setup RHTAS
 
-* Navigate to the Showroom Terminal and click the green play button to run the script that installs and sets up *RHTAS*.
+* Navigate to the Showroom Terminal and click the run button to run the script that installs and sets up *RHTAS*.
 +
 [source, role="send-to-wetty"]
 ----
-./lab-assets/install-rhtas.sh
+~/lab-assets/install-rhtas.sh
 ----
 +
 * This script deploys *Red Hat Trusted Artifact Signer (RHTAS)* and prepares the platform for trusted artifact signing.
 * As part of this setup, the platform enables signing and verification capabilities that allow artifacts to be traced back to a trusted source and checked for integrity as they move through the delivery process.
+* The script might take a few minutes to complete. Once the script has completed, you will see an output similar to the following screenshot:
++
+image::install-rhtas.png[Install RHTPA ,align="center",link=self,window=blank]
++
 * Once the script has completed execution, move to the OpenShift console to observe the deployment.
 
 ---
@@ -44,12 +48,21 @@ In this module, you will see how trusted signing is embedded directly into the p
 ----
 {openshift_gitops_admin_password}
 ----
-* After signing in, navigate to: Home → Projects  
-* Select the project: `tssc-tas`  
+* After signing in, navigate to: Workloads → Pods 
+* Switch to the *tssc-tpa* project
+. Select the project filter button
+. Provide the project name:
++
+[source,role="execute"]
+----
+tssc-tas
+----
++
+. Then select the *tssc-tas* project.
++
 +
 image::select_tssc-tas_project.png[Select tssc-tas project,align="center",link=self,window=blank]
 +
-* From the left-hand menu, select: Workloads → Pods
 * You should now see the RHTAS components running in this namespace. These services are responsible for enabling artifact signing and verification.
 * Wait until all pods are in a *Running* state.
 +
@@ -57,41 +70,27 @@ image::rhtas_pods.png[RHTAS Pods,align="center",link=self,window=blank]
 
 ---
 
-== Step 2: Validate artifact signing
+== Step 2: Trigger artifact signing
 
 * In this step, you will configure and run a simple CI pipeline that builds and signs an artifact, confirming that signing is working as expected.
 * *Tekton* is the pipeline engine used in this workshop. A *Task* represents a unit of work, such as building and pushing a container image, while *Tekton Chains* extends the pipeline to automatically sign and verify artifacts.
-* Navigate to the Showroom Terminal and click the green play button to run the script that configures *Tekton Chains* and the pipeline task:
+* Navigate to the Showroom Terminal and click the run button to run the script that configures and runs the pipeline task:
 +
 [source, role="send-to-wetty"]
 ----
-./lab-assets/setup_image_sign.sh
+~/lab-assets/test-image-signing.sh
 ----
 +
-* Once setup is successful, execute the following script to run the pipeline task:
+* The script might take a few minutes to complete. Once the script has completed, you will see an output similar to the following screenshot:
+image::test-sign-script.png[Test Sign Script,align="center",link=self,window=blank]
 +
-[source, role="execute"]
-----
-./lab-assets/test_image_sign.sh
-----
-+
-* This script triggers athe *Tekton Task* that builds and pushes a container image. Because *Tekton Chains* was configured in the previous step, it will automatically:
+* This script configures *Tekton Chains* and then triggers the *Tekton Task* that builds and pushes a container image. Because *Tekton Chains* was configured, it will automatically:
 . Detect the successful task completion.
-. Sign the resulting image using *Cosign*.
+. Sign the resulting image.
 . Store the signed image and its signature in the container registry (*Quay*).
 * *Quay* is the container registry used in this workshop to store images and their associated signatures.
-* This validates that signing is correctly integrated into the pipeline and that artifacts can be traced and verified.
-* In the OpenShift console, navigate to: Home → Projects  
-* Select the project: `tssc-app-ci`
-* From the left-hand menu, select: Pipelines → TaskRuns
-* You should see a TaskRun associated with the signing test.
-+
-image::taskrun_view.png[TaskRun View,align="center",link=self,window=blank]
-+
-* Select the TaskRun and review its execution.
-* Once the task completes successfully, the resulting artifact is signed automatically by the platform.
+* In the next step, you will verify the signed image in *Quay* and confirm that signing has been applied as expected.
 
----
 
 == Step 3: Verify the signed artifact
 
@@ -111,17 +110,65 @@ image::taskrun_view.png[TaskRun View,align="center",link=self,window=blank]
 {quay_admin_password}
 ----
 +
-* Navigate to the tssc/tekton-chains-test repository.
+* Navigate to the *tssc* organization.
 +
-image::select_tekton_chains_image.png[select tekton_chains image,align="center",link=self,window=blank]
+image::select_tssc_org.png[select tssc org,align="center",link=self,window=blank]
 +
-* Locate the image tag created by the task.
-* You should see a shield icon next to the image tag as seen in the following screenshot. 
-* This indicates that a valid signature is attached to the image.
+* Select the *tekton-chains-test* repository.
++ 
+image::navigate_to_tssc-app-ci.png[select tssc-app-ci repo,align="center",link=self,window=blank]
++
+. Open the *Tags* tab to view the image created by the task.
+. You should see a shield icon next to the image tag, as shown below.
+* This indicates that the image has been signed successfully.
 +
 image::Cosign_signature_shield.png[Cosign signature shield,align="center",link=self,window=blank]
 
 ---
+
+.Optional Deep Dive: How does keyless signing work?
+[%collapsible]
+====
+
+You’ve now completed this module. The section below is optional and provides a deeper look at how keyless signing works behind the scenes.
+
+At a high level, *RHTAS* uses link:https://www.sigstore.dev[*Sigstore project*^] components to provide identity-based, auditable signing:
+
+. *Fulcio* issues short-lived signing certificates tied to a verified identity
+. *Rekor* records signing events in a tamper-evident transparency log
+. *Cosign* signs and verifies container images
+. *TUF* manages trusted root metadata for verification
+
+Together, these components ensure that every signature is tied to a real identity, recorded in an immutable log, and verifiable at any time.
+
+---
+
+=== Signing flow in this workshop
+
+. A *Tekton Task* builds and pushes an image to the registry
+. *Tekton Chains* detects the successful pipeline execution
+. *Cosign* requests an identity token from the identity provider (*RHBK*)
+. *Fulcio* issues a short-lived certificate for that identity
+. The image is signed and the signature is recorded in *Rekor*
+. The signature is stored alongside the image in the registry (*Quay*)
+
+image::keyless_signing_flow.png[keyless_signing_flow,align="center",link=self,window=blank]
+
+---
+
+=== Why keyless signing matters
+
+Traditional signing relies on long-lived private keys that must be created, stored, and rotated.
+
+With keyless signing:
+. No long-lived keys are managed by developers or pipelines  
+. Every signature is tied to a verified identity  
+. All signing events are recorded and auditable  
+
+This reduces operational overhead while significantly improving trust and traceability across the software supply chain.
+
+
+====
 
 === Module 2: Summary
 
