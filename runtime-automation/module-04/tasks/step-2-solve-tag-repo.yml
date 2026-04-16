@@ -1,58 +1,33 @@
 ---
 # STEP 2: Tag Repository (tag-repo)
-- name: Wait for maven-image-build PipelineRun to complete
-  ansible.builtin.debug:
-    msg: "Waiting for maven-image-build PipelineRun to complete..."
-
-- name: Check for PipelineRun with label pipelinesascode.tekton.dev/original-prname=maven-image-build
+- name: Wait for maven-image-build PipelineRun to be created and complete
   ansible.builtin.shell: |
     oc get pipelinerun -n {{ app_ci_namespace }} \
       -l pipelinesascode.tekton.dev/original-prname=maven-image-build \
       --sort-by=.metadata.creationTimestamp \
-      -o jsonpath='{.items[-1:].metadata.name}' 2>/dev/null || echo ""
-  register: pipeline_run_name
+      -o jsonpath='{.items[-1:].metadata.name},{.items[-1:].status.conditions[?(@.type=="Succeeded")].status},{.items[-1:].status.conditions[?(@.type=="Succeeded")].reason}' 2>/dev/null || echo ",,"
+  register: pipeline_check
   changed_when: false
-  failed_when: pipeline_run_name.stdout == ""
+  until: >
+    pipeline_check.stdout.split(',')[0] != '' and
+    pipeline_check.stdout.split(',')[1] in ['True', 'False']
+  retries: 60
+  delay: 10
 
-- name: Display PipelineRun being monitored
-  ansible.builtin.debug:
-    msg: "Monitoring PipelineRun: {{ pipeline_run_name.stdout }}"
+- name: Set PipelineRun name and status
+  ansible.builtin.set_fact:
+    pipeline_run_name: "{{ pipeline_check.stdout.split(',')[0] }}"
+    pipeline_status: "{{ pipeline_check.stdout.split(',')[1] }}"
+    pipeline_reason: "{{ pipeline_check.stdout.split(',')[2] | default('') }}"
 
-- name: Wait for PipelineRun to complete
-  ansible.builtin.shell: |
-    TIMEOUT=600
-    ELAPSED=0
-    while [ $ELAPSED -lt $TIMEOUT ]; do
-      STATUS=$(oc get pipelinerun {{ pipeline_run_name.stdout }} -n {{ app_ci_namespace }} \
-        -o jsonpath='{.status.conditions[?(@.type=="Succeeded")].status}' 2>/dev/null || echo "Unknown")
-      REASON=$(oc get pipelinerun {{ pipeline_run_name.stdout }} -n {{ app_ci_namespace }} \
-        -o jsonpath='{.status.conditions[?(@.type=="Succeeded")].reason}' 2>/dev/null || echo "")
-
-      if [ "$STATUS" == "True" ]; then
-        echo "success"
-        exit 0
-      elif [ "$STATUS" == "False" ]; then
-        echo "failed:$REASON"
-        exit 1
-      fi
-
-      # Show progress every 30 seconds
-      if [ $((ELAPSED % 30)) -eq 0 ]; then
-        echo "  Status: ${STATUS} (${ELAPSED}s elapsed)" >&2
-      fi
-
-      sleep 10
-      ELAPSED=$((ELAPSED + 10))
-    done
-    echo "timeout"
-    exit 1
-  register: pipeline_result
-  changed_when: false
-  failed_when: pipeline_result.stdout != "success"
+- name: Check if PipelineRun succeeded
+  ansible.builtin.fail:
+    msg: "PipelineRun {{ pipeline_run_name }} failed: {{ pipeline_reason }}"
+  when: pipeline_status != "True"
 
 - name: Display PipelineRun completed
   ansible.builtin.debug:
-    msg: "✓ PipelineRun {{ pipeline_run_name.stdout }} completed successfully"
+    msg: "✓ PipelineRun {{ pipeline_run_name }} completed successfully"
 
 - name: Create temporary directory for repo clone
   ansible.builtin.tempfile:
