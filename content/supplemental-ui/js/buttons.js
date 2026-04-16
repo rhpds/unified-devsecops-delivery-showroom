@@ -129,7 +129,7 @@
       var m = p.getAttribute('data-module');
       var wrap = document.createElement('div');
       wrap.className = 'btn-section';
-      wrap.innerHTML = '<button class="solve-btn" data-module="' + m + '">🚀 Solve Module</button>';
+      wrap.innerHTML = '<button class="solve-btn" data-module="' + m + '">🚀 Solve</button>';
       p.replaceWith(wrap);
     });
     document.querySelectorAll('.solve-btn').forEach(function (btn) {
@@ -142,7 +142,7 @@
       var m = p.getAttribute('data-module');
       var wrap = document.createElement('div');
       wrap.className = 'btn-section';
-      wrap.innerHTML = '<button class="validate-btn" data-module="' + m + '">✓ Validate Module</button>';
+      wrap.innerHTML = '<button class="validate-btn" data-module="' + m + '">✓ Validate</button>';
       p.replaceWith(wrap);
     });
     document.querySelectorAll('.validate-btn').forEach(function (btn) {
@@ -154,7 +154,7 @@
 
   function runStream(stage, moduleName, section) {
     var btn = section.querySelector('.' + stage + '-btn');
-    var label = stage === 'solve' ? '🚀 Solve Module' : '✓ Validate Module';
+    var label = stage === 'solve' ? '🚀 Solve' : '✓ Validate';
 
     // Remove existing panel if re-running
     var old = section.querySelector('.stream-panel');
