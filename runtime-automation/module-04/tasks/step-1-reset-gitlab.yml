@@ -2,7 +2,7 @@
 # STEP 1: Reset - Clean up GitLab Repositories
 - name: Debug GitLab credentials status
   ansible.builtin.debug:
-    msg: "GitLab credentials available: {{ gitlab_root_user is defined and gitlab_root_password is defined }}"
+    msg: "GitLab credentials available: {{ gitlab_root_user is defined and gitlab_root_password is defined and gitlab_token.stdout is defined }}"
 
 - name: Get GitLab group ID for development group
   ansible.builtin.uri:
@@ -10,15 +10,15 @@
     method: GET
     validate_certs: false
     headers:
-      PRIVATE-TOKEN: "{{ gitlab_root_password }}"
+      PRIVATE-TOKEN: "{{ gitlab_token.stdout }}"
     status_code: [200, 404]
   register: gitlab_group_info
   changed_when: false
   failed_when: false
   when: >
     gitlab_url is defined and
-    gitlab_root_password is defined and
-    gitlab_root_password != ""
+    gitlab_token.stdout is defined and
+    gitlab_token.stdout != ""
 
 - name: Get all projects in development group
   ansible.builtin.uri:
@@ -26,15 +26,15 @@
     method: GET
     validate_certs: false
     headers:
-      PRIVATE-TOKEN: "{{ gitlab_root_password }}"
+      PRIVATE-TOKEN: "{{ gitlab_token.stdout }}"
     status_code: [200]
   register: gitlab_projects
   changed_when: false
   failed_when: false
   when: >
     gitlab_url is defined and
-    gitlab_root_password is defined and
-    gitlab_root_password != "" and
+    gitlab_token.stdout is defined and
+    gitlab_token.stdout != "" and
     gitlab_group_info.status is defined and
     gitlab_group_info.status == 200
 
@@ -49,7 +49,7 @@
     method: DELETE
     validate_certs: false
     headers:
-      PRIVATE-TOKEN: "{{ gitlab_root_password }}"
+      PRIVATE-TOKEN: "{{ gitlab_token.stdout }}"
     status_code: [202, 204]
   loop: "{{ gitlab_projects.json | default([]) }}"
   when: >
@@ -71,7 +71,7 @@
     method: GET
     validate_certs: false
     headers:
-      PRIVATE-TOKEN: "{{ gitlab_root_password }}"
+      PRIVATE-TOKEN: "{{ gitlab_token.stdout }}"
     status_code: [200, 404]
   register: gitlab_projects_scheduled
   changed_when: false
@@ -86,7 +86,7 @@
     method: DELETE
     validate_certs: false
     headers:
-      PRIVATE-TOKEN: "{{ gitlab_root_password }}"
+      PRIVATE-TOKEN: "{{ gitlab_token.stdout }}"
     status_code: [202, 204]
   loop: "{{ gitlab_projects_scheduled.json | default([]) }}"
   when: >
@@ -156,7 +156,7 @@
     method: GET
     validate_certs: false
     headers:
-      PRIVATE-TOKEN: "{{ gitlab_root_password }}"
+      PRIVATE-TOKEN: "{{ gitlab_token.stdout }}"
     status_code: [200]
     return_content: true
   register: template_project_info
@@ -174,7 +174,7 @@
     method: DELETE
     validate_certs: false
     headers:
-      PRIVATE-TOKEN: "{{ gitlab_root_password }}"
+      PRIVATE-TOKEN: "{{ gitlab_token.stdout }}"
     status_code: [204, 404]
   changed_when: true
   when: gitlab_url is defined and template_project_id is defined

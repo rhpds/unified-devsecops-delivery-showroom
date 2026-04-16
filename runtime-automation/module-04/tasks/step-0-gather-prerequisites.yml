@@ -20,7 +20,16 @@
   ansible.builtin.debug:
     msg: "{{ '✓ RHDH API token retrieved' if rhdh_api_token is defined else '⚠ WARNING: Could not retrieve RHDH API token' }}"
 
+- name: Get GitLab personal access token
+  ansible.builtin.shell:
+    cmd: |
+      oc get secret root-user-personal-token -n {{ gitlab_namespace }} -o jsonpath='{.data.token}' | base64 -d
+  changed_when: false
+  register: gitlab_token
+  failed_when: false
+  when: gitlab_url is defined
+
 - name: Display GitLab credentials status
   ansible.builtin.debug:
-    msg: "{{ '✓ GitLab credentials available (user: ' + gitlab_root_user + ')' if gitlab_root_user is defined and gitlab_root_password is defined else '⚠ WARNING: GitLab credentials not available' }}"
+    msg: "{{ '✓ GitLab credentials available (user: ' + gitlab_root_user + ', token retrieved)' if gitlab_root_user is defined and gitlab_root_password is defined and gitlab_token.stdout is defined else '⚠ WARNING: GitLab credentials not available' }}"
   when: gitlab_url is defined
