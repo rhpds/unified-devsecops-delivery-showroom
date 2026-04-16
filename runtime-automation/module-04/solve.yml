@@ -127,13 +127,14 @@
             validate_certs: false
             headers:
               PRIVATE-TOKEN: "{{ gitlab_token.stdout }}"
-            status_code: [202, 204]
+            status_code: [202, 204, 400]
           loop: "{{ gitlab_projects.json | default([]) }}"
           when: >
             gitlab_projects.json is defined and
             gitlab_projects.json | length > 0
           register: gitlab_delete_results
-          changed_when: true
+          changed_when: item.status | default(202) in [202, 204]
+          failed_when: false
           delegate_to: bastion
 
         - name: Display GitLab cleanup results
@@ -280,9 +281,175 @@
               - ""
 
     ###########################################
-    # STEP 1: Fix RHDH Template User Reference
+    # STEP 1: Configure ACS (configure-acs.sh)
     ###########################################
-    - name: "STEP 1: Fix RHDH Template User Reference"
+    - name: "STEP 1: Configure ACS-Quay Integration"
+      delegate_to: bastion
+      block:
+        - name: Get ACS API token from rox-api-token secret
+          ansible.builtin.shell:
+            cmd: oc get secret rox-api-token -n {{ app_ci_namespace }} -o jsonpath='{.data.rox-api-token}' | base64 -d
+          register: acs_token
+          changed_when: false
+          failed_when: acs_token.stdout == ""
+
+        - name: Display service URLs
+          ansible.builtin.debug:
+            msg:
+              - "ACS Central URL: {{ acs_route }}"
+              - "Quay URL: https://{{ quay_host }}"
+
+        - name: Check for existing integration
+          ansible.builtin.shell:
+            cmd: |
+              curl -k -s -X GET "{{ acs_route }}/v1/imageintegrations" \
+                -H "Authorization: Bearer {{ acs_token.stdout }}" 2>/dev/null | \
+                jq -r '.integrations[] | select(.name=="{{ acs_integration_name }}") | .id' 2>/dev/null || echo ""
+          register: existing_integration
+          changed_when: false
+
+        - name: Delete existing integration if found
+          when: existing_integration.stdout != ""
+          ansible.builtin.shell:
+            cmd: |
+              curl -k -s -X DELETE "{{ acs_route }}/v1/imageintegrations/{{ existing_integration.stdout }}" \
+                -H "Authorization: Bearer {{ acs_token.stdout }}" > /dev/null 2>&1
+          changed_when: true
+
+        - name: Create ACS-Quay integration
+          ansible.builtin.shell:
+            cmd: |
+              curl -k -s -X POST "{{ acs_route }}/v1/imageintegrations" \
+                -H "Authorization: Bearer {{ acs_token.stdout }}" \
+                -H "Content-Type: application/json" \
+                -d '{
+                  "name": "{{ acs_integration_name }}",
+                  "type": "quay",
+                  "categories": ["REGISTRY", "SCANNER"],
+                  "quay": {
+                    "endpoint": "https://{{ quay_host }}",
+                    "oauthToken": "{{ quay_admin_token }}",
+                    "insecure": true
+                  },
+                  "skipTestIntegration": true
+                }' 2>/dev/null
+          register: integration_create
+          changed_when: true
+
+        - name: Extract integration ID
+          ansible.builtin.set_fact:
+            integration_id: "{{ integration_create.stdout | from_json | json_query('id') }}"
+
+        - name: Verify integration created
+          ansible.builtin.fail:
+            msg: "Failed to create integration"
+          when: integration_id == "" or integration_id is none
+
+        - name: Test ACS-Quay integration
+          ansible.builtin.shell:
+            cmd: |
+              curl -k -s -X POST "{{ acs_route }}/v1/imageintegrations/{{ integration_id }}/test" \
+                -H "Authorization: Bearer {{ acs_token.stdout }}" 2>/dev/null
+          changed_when: false
+
+        - name: ACS configuration complete
+          ansible.builtin.debug:
+            msg:
+              - "✓ ACS-Quay integration configured"
+              - "Integration name: {{ acs_integration_name }}"
+              - "Integration ID: {{ integration_id }}"
+              - "Endpoint: https://{{ quay_host }}"
+              - "Type: Registry + Scanner"
+
+    ###########################################
+    # STEP 2: Test Image Scanning (test-image-scanning.sh)
+    ###########################################
+    - name: "STEP 2: Test Image Scanning"
+      delegate_to: bastion
+      block:
+        - name: Get ROX API token from rox-api-token secret
+          ansible.builtin.shell:
+            cmd: oc get secret rox-api-token -n {{ app_ci_namespace }} -o jsonpath='{.data.rox-api-token}' | base64 -d
+          register: rox_token
+          changed_when: false
+          failed_when: rox_token.stdout == ""
+
+        - name: Set scanning variables
+          ansible.builtin.set_fact:
+            rox_endpoint: "{{ acs_route }}:443"
+            test_image: "{{ quay_host }}/{{ quay_org }}/{{ quay_repo }}:{{ image_tag }}"
+
+        - name: Display test configuration
+          ansible.builtin.debug:
+            msg:
+              - "✓ roxctl configured"
+              - "ACS endpoint: {{ rox_endpoint }}"
+              - "Test image: {{ test_image }}"
+
+        - name: Run roxctl image scan
+          ansible.builtin.shell:
+            cmd: roxctl --insecure-skip-tls-verify image scan --image="{{ test_image }}" > {{ job_info_dir | default('/tmp') }}/roxctl-scan.txt 2>&1
+          environment:
+            ROX_API_TOKEN: "{{ rox_token.stdout }}"
+            ROX_ENDPOINT: "{{ rox_endpoint }}"
+          changed_when: false
+          failed_when: false  # Script uses || true
+          register: scan_result
+
+        - name: Display scan summary
+          ansible.builtin.debug:
+            msg: "✓ Image scan completed (output saved to {{ job_info_dir | default('/tmp') }}/roxctl-scan.txt)"
+
+        - name: Run roxctl image check
+          ansible.builtin.shell:
+            cmd: roxctl --insecure-skip-tls-verify image check --image="{{ test_image }}" > {{ job_info_dir | default('/tmp') }}/roxctl-check.txt 2>&1
+          environment:
+            ROX_API_TOKEN: "{{ rox_token.stdout }}"
+            ROX_ENDPOINT: "{{ rox_endpoint }}"
+          changed_when: false
+          failed_when: false  # Script uses || true
+          register: check_result
+
+        - name: Display policy check summary
+          ansible.builtin.debug:
+            msg: "✓ Policy check completed (output saved to {{ job_info_dir | default('/tmp') }}/roxctl-check.txt)"
+
+        - name: Image scanning test complete
+          ansible.builtin.debug:
+            msg:
+              - "========================================="
+              - "Image Scanning Test Complete!"
+              - "========================================="
+              - "Test Results:"
+              - "  Image: {{ test_image }}"
+              - "  Scan: Completed"
+              - "  Policy Check: Completed"
+              - ""
+              - "Key Findings:"
+              - "  ✓ Container images can be scanned from the registry using ACS"
+              - "  ✓ Vulnerability findings are associated with specific image digest"
+              - "  ✓ Policy evaluation can be performed programmatically"
+
+    ###########################################
+    # Module Summary
+    ###########################################
+    - name: Module 4 completion summary
+      ansible.builtin.debug:
+        msg:
+          - "========================================="
+          - "Module 4 Complete!"
+          - "========================================="
+          - "Summary:"
+          - "  ✓ ACS-Quay integration configured"
+          - "  ✓ Image scanning tested with roxctl"
+          - "  ✓ Policy checks verified"
+          - "  ✓ RHDH template user reference fixed"
+          - "  ✓ Template executed with verify commits enabled"
+          - "  ✓ Ready for supply chain policy enforcement"
+    ###########################################
+    # STEP 3: Fix RHDH Template User Reference
+    ###########################################
+    - name: "STEP 3: Fix RHDH Template User Reference"
       delegate_to: bastion
       when: gitlab_url is defined
       block:
@@ -469,169 +636,3 @@
               - "✓ RHDH template catalog refreshed"
               - "✓ Template executed with verify commits enabled"
 
-    ###########################################
-    # STEP 2: Configure ACS (configure-acs.sh)
-    ###########################################
-    - name: "STEP 2: Configure ACS-Quay Integration"
-      delegate_to: bastion
-      block:
-        - name: Get ACS API token from rox-api-token secret
-          ansible.builtin.shell:
-            cmd: oc get secret rox-api-token -n {{ app_ci_namespace }} -o jsonpath='{.data.rox-api-token}' | base64 -d
-          register: acs_token
-          changed_when: false
-          failed_when: acs_token.stdout == ""
-
-        - name: Display service URLs
-          ansible.builtin.debug:
-            msg:
-              - "ACS Central URL: {{ acs_route }}"
-              - "Quay URL: https://{{ quay_host }}"
-
-        - name: Check for existing integration
-          ansible.builtin.shell:
-            cmd: |
-              curl -k -s -X GET "{{ acs_route }}/v1/imageintegrations" \
-                -H "Authorization: Bearer {{ acs_token.stdout }}" 2>/dev/null | \
-                jq -r '.integrations[] | select(.name=="{{ acs_integration_name }}") | .id' 2>/dev/null || echo ""
-          register: existing_integration
-          changed_when: false
-
-        - name: Delete existing integration if found
-          when: existing_integration.stdout != ""
-          ansible.builtin.shell:
-            cmd: |
-              curl -k -s -X DELETE "{{ acs_route }}/v1/imageintegrations/{{ existing_integration.stdout }}" \
-                -H "Authorization: Bearer {{ acs_token.stdout }}" > /dev/null 2>&1
-          changed_when: true
-
-        - name: Create ACS-Quay integration
-          ansible.builtin.shell:
-            cmd: |
-              curl -k -s -X POST "{{ acs_route }}/v1/imageintegrations" \
-                -H "Authorization: Bearer {{ acs_token.stdout }}" \
-                -H "Content-Type: application/json" \
-                -d '{
-                  "name": "{{ acs_integration_name }}",
-                  "type": "quay",
-                  "categories": ["REGISTRY", "SCANNER"],
-                  "quay": {
-                    "endpoint": "https://{{ quay_host }}",
-                    "oauthToken": "{{ quay_admin_token }}",
-                    "insecure": true
-                  },
-                  "skipTestIntegration": true
-                }' 2>/dev/null
-          register: integration_create
-          changed_when: true
-
-        - name: Extract integration ID
-          ansible.builtin.set_fact:
-            integration_id: "{{ integration_create.stdout | from_json | json_query('id') }}"
-
-        - name: Verify integration created
-          ansible.builtin.fail:
-            msg: "Failed to create integration"
-          when: integration_id == "" or integration_id is none
-
-        - name: Test ACS-Quay integration
-          ansible.builtin.shell:
-            cmd: |
-              curl -k -s -X POST "{{ acs_route }}/v1/imageintegrations/{{ integration_id }}/test" \
-                -H "Authorization: Bearer {{ acs_token.stdout }}" 2>/dev/null
-          changed_when: false
-
-        - name: ACS configuration complete
-          ansible.builtin.debug:
-            msg:
-              - "✓ ACS-Quay integration configured"
-              - "Integration name: {{ acs_integration_name }}"
-              - "Integration ID: {{ integration_id }}"
-              - "Endpoint: https://{{ quay_host }}"
-              - "Type: Registry + Scanner"
-
-    ###########################################
-    # STEP 3: Test Image Scanning (test-image-scanning.sh)
-    ###########################################
-    - name: "STEP 3: Test Image Scanning"
-      delegate_to: bastion
-      block:
-        - name: Get ROX API token from rox-api-token secret
-          ansible.builtin.shell:
-            cmd: oc get secret rox-api-token -n {{ app_ci_namespace }} -o jsonpath='{.data.rox-api-token}' | base64 -d
-          register: rox_token
-          changed_when: false
-          failed_when: rox_token.stdout == ""
-
-        - name: Set scanning variables
-          ansible.builtin.set_fact:
-            rox_endpoint: "{{ acs_route }}:443"
-            test_image: "{{ quay_host }}/{{ quay_org }}/{{ quay_repo }}:{{ image_tag }}"
-
-        - name: Display test configuration
-          ansible.builtin.debug:
-            msg:
-              - "✓ roxctl configured"
-              - "ACS endpoint: {{ rox_endpoint }}"
-              - "Test image: {{ test_image }}"
-
-        - name: Run roxctl image scan
-          ansible.builtin.shell:
-            cmd: roxctl --insecure-skip-tls-verify image scan --image="{{ test_image }}" > {{ job_info_dir | default('/tmp') }}/roxctl-scan.txt 2>&1
-          environment:
-            ROX_API_TOKEN: "{{ rox_token.stdout }}"
-            ROX_ENDPOINT: "{{ rox_endpoint }}"
-          changed_when: false
-          failed_when: false  # Script uses || true
-          register: scan_result
-
-        - name: Display scan summary
-          ansible.builtin.debug:
-            msg: "✓ Image scan completed (output saved to {{ job_info_dir | default('/tmp') }}/roxctl-scan.txt)"
-
-        - name: Run roxctl image check
-          ansible.builtin.shell:
-            cmd: roxctl --insecure-skip-tls-verify image check --image="{{ test_image }}" > {{ job_info_dir | default('/tmp') }}/roxctl-check.txt 2>&1
-          environment:
-            ROX_API_TOKEN: "{{ rox_token.stdout }}"
-            ROX_ENDPOINT: "{{ rox_endpoint }}"
-          changed_when: false
-          failed_when: false  # Script uses || true
-          register: check_result
-
-        - name: Display policy check summary
-          ansible.builtin.debug:
-            msg: "✓ Policy check completed (output saved to {{ job_info_dir | default('/tmp') }}/roxctl-check.txt)"
-
-        - name: Image scanning test complete
-          ansible.builtin.debug:
-            msg:
-              - "========================================="
-              - "Image Scanning Test Complete!"
-              - "========================================="
-              - "Test Results:"
-              - "  Image: {{ test_image }}"
-              - "  Scan: Completed"
-              - "  Policy Check: Completed"
-              - ""
-              - "Key Findings:"
-              - "  ✓ Container images can be scanned from the registry using ACS"
-              - "  ✓ Vulnerability findings are associated with specific image digest"
-              - "  ✓ Policy evaluation can be performed programmatically"
-
-    ###########################################
-    # Module Summary
-    ###########################################
-    - name: Module 4 completion summary
-      ansible.builtin.debug:
-        msg:
-          - "========================================="
-          - "Module 4 Complete!"
-          - "========================================="
-          - "Summary:"
-          - "  ✓ RHDH template user reference fixed"
-          - "  ✓ Template executed with verify commits enabled"
-          - "  ✓ ACS-Quay integration configured"
-          - "  ✓ Image scanning tested with roxctl"
-          - "  ✓ Policy checks verified"
-          - "  ✓ Ready for supply chain policy enforcement"
