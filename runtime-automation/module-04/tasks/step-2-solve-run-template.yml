@@ -69,6 +69,9 @@
       entityRef: "template:default/quarkus-stssc-template"
     status_code: [200, 202]
   register: template_refresh
+  until: template_refresh.status in [200, 202]
+  retries: 30
+  delay: 2
   when: >
     developer_hub_url is defined and
     rhdh_api_token is defined
@@ -202,6 +205,9 @@
       entityRef: "template:default/quarkus-stssc-template"
     status_code: [200, 202]
   register: template_refresh_reset
+  until: template_refresh_reset.status in [200, 202]
+  retries: 30
+  delay: 2
   when: >
     task_status.json is defined and
     developer_hub_url is defined and
