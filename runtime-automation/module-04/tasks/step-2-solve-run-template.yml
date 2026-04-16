@@ -18,11 +18,11 @@
     GIT_SSL_NO_VERIFY: "true"
   changed_when: true
 
-- name: Set template owner to static user1 reference (all occurrences)
-  ansible.builtin.replace:
-    path: "{{ template_file }}"
-    regexp: '^\s*owner:\s*user:default/.*$'
-    replace: '          owner: user:default/user1'
+- name: Set template owner to static user1 reference (lines 110 and 144)
+  ansible.builtin.shell:
+    cmd: |
+      sed -i '110s|.*owner:.*|          owner: user:default/user1|; 144s|.*owner:.*|          owner: user:default/user1|' {{ template_file }}
+  changed_when: true
 
 - name: Configure git user for commit
   ansible.builtin.shell:
@@ -137,11 +137,11 @@
     msg: "{{ '✓ Scaffolder task completed successfully' if task_status.json.status == 'completed' else '✗ Scaffolder task failed: ' + (task_status.json.error | default('Unknown error')) }}"
   when: task_status.json is defined
 
-- name: Reset template owner to dynamic user reference (all occurrences)
-  ansible.builtin.replace:
-    path: "{{ template_file }}"
-    regexp: '^\s*owner:\s*user:default/.*$'
-    replace: '          owner: user:default/${% raw %}{{ user.entity.metadata.name }}{% endraw %}'
+- name: Reset template owner to dynamic user reference (lines 110 and 144)
+  ansible.builtin.shell:
+    cmd: |
+      sed -i '110s|.*owner:.*|          owner: user:default/\${% raw %}{{ user.entity.metadata.name }}{% endraw %}|; 144s|.*owner:.*|          owner: user:default/\${% raw %}{{ user.entity.metadata.name }}{% endraw %}|' {{ template_file }}
+  changed_when: true
   when: task_status.json is defined
 
 - name: Commit template reset to dynamic reference

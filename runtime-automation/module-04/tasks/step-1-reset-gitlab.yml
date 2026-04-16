@@ -133,11 +133,11 @@
   changed_when: false
   when: gitlab_url is defined
 
-- name: Reset template owner to dynamic user reference (all occurrences)
-  ansible.builtin.replace:
-    path: "{{ template_file }}"
-    regexp: '^\s*owner:\s*user:default/.*$'
-    replace: '          owner: user:default/${% raw %}{{ user.entity.metadata.name }}{% endraw %}'
+- name: Reset template owner to dynamic user reference (lines 110 and 144)
+  ansible.builtin.shell:
+    cmd: |
+      sed -i '110s|.*owner:.*|          owner: user:default/\${% raw %}{{ user.entity.metadata.name }}{% endraw %}|; 144s|.*owner:.*|          owner: user:default/\${% raw %}{{ user.entity.metadata.name }}{% endraw %}|' {{ template_file }}
+  changed_when: true
   when: gitlab_url is defined
 
 - name: Verify template changes
