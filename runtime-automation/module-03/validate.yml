@@ -5,6 +5,7 @@
   vars:
     # Environment variables matching shell script
     cluster_domain: "{{ openshift_cluster_ingress_domain }}"
+    k8s_kubeconfig: "{{ lookup('env', 'K8S_AUTH_KUBECONFIG') | default('~/.kube/config', true) }}"
     keycloak_namespace: tssc-keycloak
     devspaces_namespace: openshift-devspaces
     app_ci_namespace: tssc-app-ci
@@ -35,7 +36,7 @@
 
   - name: Login to OpenShift cluster
     ansible.builtin.shell:
-      cmd: oc login --token={{ openshift_cluster_admin_token }} --server={{ openshift_api_url }} --insecure-skip-tls-verify=true
+      cmd: oc login --token={{ (lookup('file', k8s_kubeconfig) | from_yaml).users[0].user.token }} --server={{ openshift_api_url }} --insecure-skip-tls-verify=true
     changed_when: false
 
   #######################################
