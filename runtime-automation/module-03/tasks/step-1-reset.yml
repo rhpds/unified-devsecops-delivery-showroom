@@ -48,49 +48,77 @@
   changed_when: false
   register: kc_reset_creds
 
+- name: Parse Keycloak admin credentials
+  ansible.builtin.set_fact:
+    kc_reset_user: "{{ kc_reset_creds.stdout.split(':')[0] }}"
+    kc_reset_password: "{{ kc_reset_creds.stdout.split(':')[1] }}"
+
 - name: Get Keycloak admin token
-  ansible.builtin.shell:
-    cmd: |
-      ADMIN_USER=$(echo "{{ kc_reset_creds.stdout }}" | cut -d: -f1)
-      ADMIN_PASS=$(echo "{{ kc_reset_creds.stdout }}" | cut -d: -f2)
-      curl -s -X POST "{{ keycloak_admin_console }}/realms/master/protocol/openid-connect/token" \
-        -H "Content-Type: application/x-www-form-urlencoded" \
-        -d "client_id=admin-cli" \
-        -d "username=${ADMIN_USER}" \
-        -d "password=${ADMIN_PASS}" \
-        -d "grant_type=password" | jq -r '.access_token'
+  ansible.builtin.uri:
+    url: "{{ keycloak_admin_console }}/realms/master/protocol/openid-connect/token"
+    method: POST
+    body_format: form-urlencoded
+    body:
+      client_id: admin-cli
+      username: "{{ kc_reset_user }}"
+      password: "{{ kc_reset_password }}"
+      grant_type: password
+    validate_certs: false
+    status_code: [200]
+    return_content: true
+  register: reset_admin_token_response
   changed_when: false
-  register: reset_admin_token
+  failed_when: false
+
+- name: Set Keycloak admin token
+  ansible.builtin.set_fact:
+    reset_admin_token: "{{ reset_admin_token_response.json.access_token | default('') }}"
+  when: reset_admin_token_response.status is defined and reset_admin_token_response.status == 200
 
 - name: Check if token is valid
   ansible.builtin.set_fact:
-    reset_token_valid: "{{ reset_admin_token.stdout != '' and reset_admin_token.stdout != 'null' }}"
+    reset_token_valid: "{{ reset_admin_token is defined and reset_admin_token != '' }}"
 
 - name: Delete developer user from Keycloak
   when: reset_token_valid | bool
   block:
     - name: Get user ID
-      ansible.builtin.shell:
-        cmd: |
-          curl -s -H "Authorization: Bearer {{ reset_admin_token.stdout }}" \
-            "{{ keycloak_admin_console }}/admin/realms/{{ sso_realm }}/users?username={{ developer_username }}" | jq -r '.[0].id // empty'
-      register: reset_user_id
+      ansible.builtin.uri:
+        url: "{{ keycloak_admin_console }}/admin/realms/{{ sso_realm }}/users?username={{ developer_username }}"
+        method: GET
+        headers:
+          Authorization: "Bearer {{ reset_admin_token }}"
+        validate_certs: false
+        status_code: [200]
+        return_content: true
+      register: reset_user_id_response
       changed_when: false
 
+    - name: Set user ID
+      ansible.builtin.set_fact:
+        reset_user_id: "{{ reset_user_id_response.json[0].id | default('') }}"
+
     - name: Delete user if exists
-      when: reset_user_id.stdout != ""
-      ansible.builtin.shell:
-        cmd: |
-          curl -s -X DELETE "{{ keycloak_admin_console }}/admin/realms/{{ sso_realm }}/users/{{ reset_user_id.stdout }}" \
-            -H "Authorization: Bearer {{ reset_admin_token.stdout }}"
+      when: reset_user_id != ""
+      ansible.builtin.uri:
+        url: "{{ keycloak_admin_console }}/admin/realms/{{ sso_realm }}/users/{{ reset_user_id }}"
+        method: DELETE
+        headers:
+          Authorization: "Bearer {{ reset_admin_token }}"
+        validate_certs: false
+        status_code: [204]
       changed_when: true
 
     - name: Verify user deletion
-      when: reset_user_id.stdout != ""
-      ansible.builtin.shell:
-        cmd: |
-          curl -s -H "Authorization: Bearer {{ reset_admin_token.stdout }}" \
-            "{{ keycloak_admin_console }}/admin/realms/{{ sso_realm }}/users?username={{ developer_username }}" | jq -r '.[0].id // empty'
+      when: reset_user_id != ""
+      ansible.builtin.uri:
+        url: "{{ keycloak_admin_console }}/admin/realms/{{ sso_realm }}/users?username={{ developer_username }}"
+        method: GET
+        headers:
+          Authorization: "Bearer {{ reset_admin_token }}"
+        validate_certs: false
+        status_code: [200]
+        return_content: true
       register: verify_user_delete
       changed_when: false
 
