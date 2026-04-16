@@ -45,9 +45,9 @@
     msg: "Found {{ gitlab_projects.json | default([]) | length }} project(s) in development group"
   when: gitlab_projects.json is defined
 
-- name: Delete all projects in development group (immediate deletion)
+- name: Mark all projects for deletion (step 1 of 2)
   ansible.builtin.uri:
-    url: "{{ gitlab_url }}/api/v4/projects/{{ item.id }}?permanently_remove=true&full_path={{ item.path_with_namespace | urlencode }}"
+    url: "{{ gitlab_url }}/api/v4/projects/{{ item.id }}"
     method: DELETE
     validate_certs: false
     headers:
@@ -57,19 +57,52 @@
   when: >
     gitlab_projects.json is defined and
     gitlab_projects.json | length > 0
-  register: gitlab_delete_results
+  register: gitlab_mark_results
   changed_when: true
-  failed_when: false
   delegate_to: bastion
 
-- name: Debug deletion results
-  ansible.builtin.debug:
-    msg: "Deletion results: {{ gitlab_delete_results.results | default([]) | map(attribute='status') | list }}"
-  when: gitlab_delete_results is defined and gitlab_delete_results.results is defined
+- name: Wait for projects to be marked for deletion
+  ansible.builtin.pause:
+    seconds: 2
+  when: >
+    gitlab_projects.json is defined and
+    gitlab_projects.json | length > 0
+
+- name: Get updated project list with deletion_scheduled paths
+  ansible.builtin.uri:
+    url: "{{ gitlab_url }}/api/v4/groups/{{ gitlab_group_info.json.id }}/projects"
+    method: GET
+    validate_certs: false
+    headers:
+      PRIVATE-TOKEN: "{{ gitlab_token.stdout }}"
+    status_code: [200, 404]
+  register: gitlab_projects_scheduled
+  changed_when: false
+  failed_when: false
+  delegate_to: bastion
+  when: >
+    gitlab_mark_results is defined and
+    gitlab_mark_results.changed
+
+- name: Permanently delete all marked projects (step 2 of 2)
+  ansible.builtin.uri:
+    url: "{{ gitlab_url }}/api/v4/projects/{{ item.id }}?permanently_remove=true&full_path={{ item.path_with_namespace | urlencode }}"
+    method: DELETE
+    validate_certs: false
+    headers:
+      PRIVATE-TOKEN: "{{ gitlab_token.stdout }}"
+    status_code: [202, 204]
+  loop: "{{ gitlab_projects_scheduled.json | default([]) }}"
+  when: >
+    gitlab_projects_scheduled.json is defined and
+    gitlab_projects_scheduled.json | length > 0
+  register: gitlab_delete_results
+  changed_when: true
+  delegate_to: bastion
 
 - name: Display GitLab cleanup results
   ansible.builtin.debug:
-    msg: "{{ '✓ Deleted ' + (gitlab_projects.json | default([]) | length | string) + ' project(s) from development group' if gitlab_projects.json is defined and gitlab_projects.json | length > 0 else '✓ No projects found in development group' }}"
+    msg: "{{ '✓ Deleted ' + (gitlab_projects.json | default([]) | length | string) + ' project(s) from development group (marked and permanently removed)' if gitlab_projects.json is defined and gitlab_projects.json | length > 0 else '✓ No projects found in development group' }}"
   when: >
     gitlab_url is defined and
     gitlab_group_info.status is defined and
