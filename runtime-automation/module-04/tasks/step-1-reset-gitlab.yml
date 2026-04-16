@@ -136,7 +136,7 @@
 - name: Reset template owner to dynamic user reference (lines 110 and 144)
   ansible.builtin.shell:
     cmd: |
-      sed -i '110s|.*owner:.*|          owner: user:default/\${% raw %}{{ user.entity.metadata.name }}{% endraw %}|; 144s|.*owner:.*|          owner: user:default/\${% raw %}{{ user.entity.metadata.name }}{% endraw %}|' {{ template_file }}
+      sed -i '110s|.*|          owner: user:default/\${% raw %}{{ user.entity.metadata.name }}{% endraw %}|; 144s|.*|          owner: user:default/\${% raw %}{{ user.entity.metadata.name }}{% endraw %}|' {{ template_file }}
   changed_when: true
   when: gitlab_url is defined
 

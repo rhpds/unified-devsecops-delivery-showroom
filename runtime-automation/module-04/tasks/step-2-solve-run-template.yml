@@ -21,7 +21,7 @@
 - name: Set template owner to static user1 reference (lines 110 and 144)
   ansible.builtin.shell:
     cmd: |
-      sed -i '110s|.*owner:.*|          owner: user:default/user1|; 144s|.*owner:.*|          owner: user:default/user1|' {{ template_file }}
+      sed -i '110s|.*|          owner: user:default/user1|; 144s|.*|          owner: user:default/user1|' {{ template_file }}
   changed_when: true
 
 - name: Configure git user for commit
@@ -140,7 +140,7 @@
 - name: Reset template owner to dynamic user reference (lines 110 and 144)
   ansible.builtin.shell:
     cmd: |
-      sed -i '110s|.*owner:.*|          owner: user:default/\${% raw %}{{ user.entity.metadata.name }}{% endraw %}|; 144s|.*owner:.*|          owner: user:default/\${% raw %}{{ user.entity.metadata.name }}{% endraw %}|' {{ template_file }}
+      sed -i '110s|.*|          owner: user:default/\${% raw %}{{ user.entity.metadata.name }}{% endraw %}|; 144s|.*|          owner: user:default/\${% raw %}{{ user.entity.metadata.name }}{% endraw %}|' {{ template_file }}
   changed_when: true
   when: task_status.json is defined
 
