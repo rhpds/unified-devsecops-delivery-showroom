@@ -111,7 +111,7 @@
 
 - name: Set tssc group ID
   ansible.builtin.set_fact:
-    tssc_group_id: "{{ (tssc_group_id_response.json | selectattr('name', 'equalto', 'tssc') | map(attribute='id') | first) if (tssc_group_id_response.json | selectattr('name', 'equalto', 'tssc') | list | length > 0) else '' }}"
+    tssc_group_id: "{{ (tssc_group_id_response.json | selectattr('name', 'equalto', 'tssc') | list | first).id if (tssc_group_id_response.json | selectattr('name', 'equalto', 'tssc') | list | length > 0) else '' }}"
 
 - name: Get users group ID
   ansible.builtin.uri:
@@ -131,7 +131,11 @@
 
 - name: Set users group ID
   ansible.builtin.set_fact:
-    users_group_id: "{{ (users_group_id_response.json | selectattr('name', 'equalto', 'users') | map(attribute='id') | first) if (users_group_id_response.json | selectattr('name', 'equalto', 'users') | list | length > 0) else '' }}"
+    users_group_id: "{{ (users_group_id_response.json | selectattr('name', 'equalto', 'users') | list | first).id if (users_group_id_response.json | selectattr('name', 'equalto', 'users') | list | length > 0) else '' }}"
+
+- name: Debug group IDs found
+  ansible.builtin.debug:
+    msg: "Group IDs - tssc: '{{ tssc_group_id }}', users: '{{ users_group_id }}'"
 
 - name: Check if user is member of tssc group
   when: tssc_group_id != ""
@@ -151,6 +155,11 @@
   ansible.builtin.set_fact:
     tssc_member_check: "{{ (tssc_member_check_response.json | selectattr('id', 'equalto', tssc_group_id) | list | length > 0) | string }}"
 
+- name: Debug tssc membership
+  ansible.builtin.debug:
+    msg: "TSSC group ID: '{{ tssc_group_id }}', Member check: '{{ tssc_member_check | default('not defined') }}', Will add: {{ tssc_group_id != '' and (tssc_member_check is not defined or tssc_member_check == 'False') }}"
+  when: tssc_group_id != ""
+
 - name: Add user to tssc group
   when: tssc_group_id != "" and (tssc_member_check is not defined or tssc_member_check == "False")
   ansible.builtin.uri:
@@ -161,6 +170,11 @@
     validate_certs: false
     status_code: [204]
   changed_when: true
+
+- name: Display tssc group add result
+  ansible.builtin.debug:
+    msg: "✓ Added user to tssc group"
+  when: tssc_group_id != "" and (tssc_member_check is not defined or tssc_member_check == "False")
 
 - name: Check if user is member of users group
   when: users_group_id != ""
@@ -180,6 +194,11 @@
   ansible.builtin.set_fact:
     users_member_check: "{{ (users_member_check_response.json | selectattr('id', 'equalto', users_group_id) | list | length > 0) | string }}"
 
+- name: Debug users membership
+  ansible.builtin.debug:
+    msg: "Users group ID: '{{ users_group_id }}', Member check: '{{ users_member_check | default('not defined') }}', Will add: {{ users_group_id != '' and (users_member_check is not defined or users_member_check == 'False') }}"
+  when: users_group_id != ""
+
 - name: Add user to users group
   when: users_group_id != "" and (users_member_check is not defined or users_member_check == "False")
   ansible.builtin.uri:
@@ -190,6 +209,11 @@
     validate_certs: false
     status_code: [204]
   changed_when: true
+
+- name: Display users group add result
+  ansible.builtin.debug:
+    msg: "✓ Added user to users group"
+  when: users_group_id != "" and (users_member_check is not defined or users_member_check == "False")
 
 - name: Set user password
   ansible.builtin.uri:
