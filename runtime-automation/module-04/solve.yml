@@ -55,6 +55,9 @@
     ###########################################
     - name: "STEP 1: Reset Module 4"
       block:
+        - name: Clean up ArgoCD Applications
+          include_tasks: steps/step-1-reset-argocd.yml
+
         - name: Clean up GitLab Repositories
           include_tasks: steps/step-1-reset-gitlab.yml
 
@@ -70,6 +73,7 @@
               - "========================================="
               - "Module 4 Reset Complete"
               - "========================================="
+              - "  ✓ ArgoCD applications deleted"
               - "  ✓ GitLab development group repositories cleaned"
               - "  ✓ Developer Hub components deleted"
               - "  ✓ ACS integration reset"

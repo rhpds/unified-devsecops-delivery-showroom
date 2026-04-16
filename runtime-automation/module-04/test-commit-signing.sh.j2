@@ -114,6 +114,34 @@ fi
 cd "$REPO_PATH"
 echo "✓ Repository cloned successfully"
 
+# Wait for ArgoCD application to be synced and healthy
+echo ""
+echo "Waiting for ArgoCD application my-quarkus-tkn-ci to be synced and healthy..."
+MAX_RETRIES=30
+RETRY_COUNT=0
+while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+  SYNC_STATUS=$(oc get application my-quarkus-tkn-ci -n tssc-gitops -o jsonpath='{.status.sync.status}' 2>/dev/null || echo "NotFound")
+  HEALTH_STATUS=$(oc get application my-quarkus-tkn-ci -n tssc-gitops -o jsonpath='{.status.health.status}' 2>/dev/null || echo "NotFound")
+
+  echo "  Attempt $((RETRY_COUNT + 1))/$MAX_RETRIES - Sync: $SYNC_STATUS, Health: $HEALTH_STATUS"
+
+  if [ "$SYNC_STATUS" = "Synced" ] && [ "$HEALTH_STATUS" = "Healthy" ]; then
+    echo "✓ ArgoCD application is synced and healthy"
+    break
+  fi
+
+  RETRY_COUNT=$((RETRY_COUNT + 1))
+  if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+    sleep 10
+  fi
+done
+
+if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
+  echo "⚠ WARNING: ArgoCD application not healthy after ${MAX_RETRIES} attempts"
+  echo "  Current status - Sync: $SYNC_STATUS, Health: $HEALTH_STATUS"
+  echo "  Continuing anyway..."
+fi
+
 # Configure git for commit
 git config user.email "${USERNAME}@demo.redhat.com"
 git config user.name "$USERNAME"
