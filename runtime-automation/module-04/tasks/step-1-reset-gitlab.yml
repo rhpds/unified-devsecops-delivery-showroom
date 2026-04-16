@@ -111,44 +111,12 @@
     gitlab_group_info.status is defined and
     gitlab_group_info.status == 404
 
-# Reset RHDH template to clean commit
+# Reset RHDH template to default user reference
 - name: Set GitLab template repo details
   ansible.builtin.set_fact:
-    template_repo_url: "{{ gitlab_url }}/rhdh/build-secured-dev-workflows-idp-configuration.git"
     template_repo_dir: "/tmp/reset-template-repo"
-    commit_reset_file: "/tmp/module-4-commit-reset"
+    template_file: "/tmp/reset-template-repo/scaffolder-templates/quarkus-stssc-template/template.yaml"
   when: gitlab_url is defined
-
-- name: Check if commit reset file exists
-  ansible.builtin.stat:
-    path: "{{ commit_reset_file }}"
-  register: commit_file_stat
-  when: gitlab_url is defined
-
-- name: Read existing commit ID from file
-  ansible.builtin.slurp:
-    src: "{{ commit_reset_file }}"
-  register: existing_commit_id
-  when: >
-    gitlab_url is defined and
-    commit_file_stat.stat.exists
-  failed_when: false
-
-- name: Set commit ID from file
-  ansible.builtin.set_fact:
-    reset_commit_id: "{{ existing_commit_id.content | b64decode | trim }}"
-  when: >
-    gitlab_url is defined and
-    commit_file_stat.stat.exists and
-    existing_commit_id.content is defined
-
-- name: Display using existing commit ID
-  ansible.builtin.debug:
-    msg: "Using existing commit ID from file: {{ reset_commit_id }}"
-  when: >
-    gitlab_url is defined and
-    commit_file_stat.stat.exists and
-    reset_commit_id is defined
 
 - name: Get template repository project ID
   ansible.builtin.uri:
@@ -168,7 +136,7 @@
     template_project_id: "{{ template_project_info.json.id }}"
   when: gitlab_url is defined and template_project_info.json is defined
 
-- name: Unprotect main branch to allow force push
+- name: Unprotect main branch to allow push
   ansible.builtin.uri:
     url: "{{ gitlab_url }}/api/v4/projects/{{ template_project_id }}/protected_branches/main"
     method: DELETE
@@ -194,52 +162,44 @@
   changed_when: false
   when: gitlab_url is defined
 
-- name: Get latest commit ID and save to file (first time only)
-  ansible.builtin.shell:
-    cmd: |
-      cd {{ template_repo_dir }}
-      COMMIT_ID=$(git rev-parse HEAD)
-      echo "$COMMIT_ID" > {{ commit_reset_file }}
-      echo "$COMMIT_ID"
-  register: new_commit_id
-  changed_when: true
-  when: >
-    gitlab_url is defined and
-    not commit_file_stat.stat.exists
-
-- name: Set commit ID from repository (first time)
-  ansible.builtin.set_fact:
-    reset_commit_id: "{{ new_commit_id.stdout | trim }}"
-  when: >
-    gitlab_url is defined and
-    not commit_file_stat.stat.exists
-
-- name: Display saved new commit ID
-  ansible.builtin.debug:
-    msg: "Saved new commit ID to file: {{ reset_commit_id }}"
-  when: >
-    gitlab_url is defined and
-    not commit_file_stat.stat.exists
-
-- name: Reset template to clean commit
-  ansible.builtin.shell:
-    cmd: |
-      cd {{ template_repo_dir }}
-      git reset --hard {{ reset_commit_id }}
-  changed_when: true
+- name: Reset template owner to dynamic user reference
+  ansible.builtin.replace:
+    path: "{{ template_file }}"
+    regexp: '(^\s*owner:\s*user:default/).*$'
+    replace: '\1${{ '{{' }} user.entity.metadata.name {{ '}}' }}'
   when: gitlab_url is defined
 
-- name: Force push clean template to GitLab
+- name: Configure git user for commit
   ansible.builtin.shell:
     cmd: |
       cd {{ template_repo_dir }}
-      git push --force origin main
+      git config user.email "automation@redhat.com"
+      git config user.name "Lab Automation"
+  changed_when: false
+  when: gitlab_url is defined
+
+- name: Commit template changes
+  ansible.builtin.shell:
+    cmd: |
+      cd {{ template_repo_dir }}
+      git add scaffolder-templates/quarkus-stssc-template/template.yaml
+      git commit -m "Reset template to use dynamic user reference"
+  changed_when: true
+  register: reset_commit
+  failed_when: reset_commit.rc != 0 and 'nothing to commit' not in reset_commit.stdout
+  when: gitlab_url is defined
+
+- name: Push template changes to GitLab
+  ansible.builtin.shell:
+    cmd: |
+      cd {{ template_repo_dir }}
+      git push origin main
   environment:
     GIT_SSL_NO_VERIFY: "true"
   changed_when: true
-  when: gitlab_url is defined
+  when: gitlab_url is defined and reset_commit.changed
 
 - name: Display template reset result
   ansible.builtin.debug:
-    msg: "✓ RHDH template reset to commit {{ reset_commit_id }}"
+    msg: "✓ RHDH template reset to use dynamic user reference (${{ '{{' }} user.entity.metadata.name {{ '}}' }})"
   when: gitlab_url is defined

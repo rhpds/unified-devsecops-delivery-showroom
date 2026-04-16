@@ -2,7 +2,6 @@
 # STEP 2.3: Update and Run RHDH Template
 - name: Set GitLab repo details
   ansible.builtin.set_fact:
-    gitlab_repo_url: "{{ gitlab_url }}/rhdh/build-secured-dev-workflows-idp-configuration.git"
     gitlab_repo_dir: "/tmp/build-secured-dev-workflows-idp-configuration"
     template_file: "/tmp/build-secured-dev-workflows-idp-configuration/scaffolder-templates/quarkus-stssc-template/template.yaml"
 
@@ -19,40 +18,29 @@
     GIT_SSL_NO_VERIFY: "true"
   changed_when: true
 
-- name: Add fallback for user.entity.metadata.name
+- name: Set template owner to static user1 reference
   ansible.builtin.replace:
     path: "{{ template_file }}"
-    regexp: 'user\.entity\.metadata\.name'
-    replace: "user.entity.metadata.name or 'user1'"
-
-- name: Verify template file changes
-  ansible.builtin.shell:
-    cmd: |
-      grep -n "owner: user:default" {{ template_file }}
-  register: template_changes
-  changed_when: false
-
-- name: Display template changes
-  ansible.builtin.debug:
-    msg: "{{ template_changes.stdout_lines }}"
+    regexp: '(^\s*owner:\s*user:default/).*$'
+    replace: '\1user1'
 
 - name: Configure git user for commit
   ansible.builtin.shell:
     cmd: |
       cd {{ gitlab_repo_dir }}
       git config user.email "automation@redhat.com"
-      git config user.name "Automation"
+      git config user.name "Lab Automation"
   changed_when: false
 
-- name: Commit template changes
+- name: Commit template changes for user1
   ansible.builtin.shell:
     cmd: |
       cd {{ gitlab_repo_dir }}
       git add scaffolder-templates/quarkus-stssc-template/template.yaml
-      git commit -m "Update template user reference fallback"
+      git commit -m "Update template to use static user1 reference"
   changed_when: true
-  register: git_commit
-  failed_when: git_commit.rc != 0 and 'nothing to commit' not in git_commit.stdout
+  register: git_commit_user1
+  failed_when: git_commit_user1.rc != 0 and 'nothing to commit' not in git_commit_user1.stdout
 
 - name: Push changes to GitLab
   ansible.builtin.shell:
@@ -62,10 +50,11 @@
   environment:
     GIT_SSL_NO_VERIFY: "true"
   changed_when: true
+  when: git_commit_user1.changed
 
 - name: Display git push result
   ansible.builtin.debug:
-    msg: "✓ Template changes pushed to GitLab"
+    msg: "✓ Template changes pushed to GitLab (owner: user:default/user1)"
 
 - name: Refresh template in Developer Hub
   ansible.builtin.uri:
@@ -148,54 +137,40 @@
     msg: "{{ '✓ Scaffolder task completed successfully' if task_status.json.status == 'completed' else '✗ Scaffolder task failed: ' + (task_status.json.error | default('Unknown error')) }}"
   when: task_status.json is defined
 
-- name: Read commit ID from reset file
-  ansible.builtin.slurp:
-    src: "/tmp/module-4-commit-reset"
-  register: reset_commit_file
+- name: Reset template owner to dynamic user reference
+  ansible.builtin.replace:
+    path: "{{ template_file }}"
+    regexp: '(^\s*owner:\s*user:default/).*$'
+    replace: '\1${{ '{{' }} user.entity.metadata.name {{ '}}' }}'
   when: task_status.json is defined
 
-- name: Set reset commit ID from file
-  ansible.builtin.set_fact:
-    template_reset_commit_id: "{{ reset_commit_file.content | b64decode | trim }}"
-  when: >
-    task_status.json is defined and
-    reset_commit_file.content is defined
-
-- name: Display commit ID being used for reset
-  ansible.builtin.debug:
-    msg: "Using commit ID from file for reset: {{ template_reset_commit_id }}"
-  when: >
-    task_status.json is defined and
-    template_reset_commit_id is defined
-
-- name: Reset template to clean commit
+- name: Commit template reset to dynamic reference
   ansible.builtin.shell:
     cmd: |
       cd {{ gitlab_repo_dir }}
-      git reset --hard {{ template_reset_commit_id }}
+      git add scaffolder-templates/quarkus-stssc-template/template.yaml
+      git commit -m "Reset template to use dynamic user reference"
   changed_when: true
-  when: >
-    task_status.json is defined and
-    template_reset_commit_id is defined
+  register: git_commit_reset
+  failed_when: git_commit_reset.rc != 0 and 'nothing to commit' not in git_commit_reset.stdout
+  when: task_status.json is defined
 
-- name: Force push clean template to GitLab
+- name: Push reset changes to GitLab
   ansible.builtin.shell:
     cmd: |
       cd {{ gitlab_repo_dir }}
-      git push --force origin main
+      git push origin main
   environment:
     GIT_SSL_NO_VERIFY: "true"
   changed_when: true
   when: >
     task_status.json is defined and
-    template_reset_commit_id is defined
+    git_commit_reset.changed
 
 - name: Display reset push result
   ansible.builtin.debug:
-    msg: "✓ Template reset to commit {{ template_reset_commit_id }} and pushed to GitLab"
-  when: >
-    task_status.json is defined and
-    template_reset_commit_id is defined
+    msg: "✓ Template reset to dynamic user reference (${{ '{{' }} user.entity.metadata.name {{ '}}' }}) and pushed to GitLab"
+  when: task_status.json is defined
 
 - name: Refresh template in Developer Hub after reset
   ansible.builtin.uri:
@@ -209,7 +184,7 @@
     body:
       entityRef: "template:default/quarkus-stssc-template"
     status_code: [200, 202]
-  register: template_refresh_revert
+  register: template_refresh_reset
   when: >
     task_status.json is defined and
     developer_hub_url is defined and
@@ -217,17 +192,18 @@
 
 - name: Display template refresh after reset
   ansible.builtin.debug:
-    msg: "✓ RHDH template refreshed with clean content"
+    msg: "✓ RHDH template refreshed with dynamic user reference"
   when: >
-    template_refresh_revert.status is defined and
-    template_refresh_revert.status in [200, 202]
+    template_refresh_reset.status is defined and
+    template_refresh_reset.status in [200, 202]
 
 - name: Template update and run complete
   ansible.builtin.debug:
     msg:
-      - "✓ Template updated with user1 fallback"
+      - "✓ Template updated to use static user1 reference"
       - "✓ Changes committed and pushed to GitLab"
       - "✓ RHDH template catalog refreshed"
       - "✓ Template executed with verify commits enabled"
-      - "✓ Template reset to commit {{ template_reset_commit_id | default('stored commit') }}"
-      - "✓ Clean template restored in GitLab and RHDH"
+      - "✓ Template reset to dynamic user reference (${{ '{{' }} user.entity.metadata.name {{ '}}' }})"
+      - "✓ Dynamic reference committed and pushed to GitLab"
+      - "✓ RHDH template refreshed with clean content"
