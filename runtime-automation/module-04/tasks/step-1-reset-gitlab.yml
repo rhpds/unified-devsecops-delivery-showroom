@@ -150,6 +150,35 @@
     commit_file_stat.stat.exists and
     reset_commit_id is defined
 
+- name: Get template repository project ID
+  ansible.builtin.uri:
+    url: "{{ gitlab_url }}/api/v4/projects/rhdh%2Fbuild-secured-dev-workflows-idp-configuration"
+    method: GET
+    validate_certs: false
+    headers:
+      PRIVATE-TOKEN: "{{ gitlab_root_password }}"
+    status_code: [200]
+    return_content: true
+  register: template_project_info
+  changed_when: false
+  when: gitlab_url is defined
+
+- name: Set template project ID
+  ansible.builtin.set_fact:
+    template_project_id: "{{ template_project_info.json.id }}"
+  when: gitlab_url is defined and template_project_info.json is defined
+
+- name: Unprotect main branch to allow force push
+  ansible.builtin.uri:
+    url: "{{ gitlab_url }}/api/v4/projects/{{ template_project_id }}/protected_branches/main"
+    method: DELETE
+    validate_certs: false
+    headers:
+      PRIVATE-TOKEN: "{{ gitlab_root_password }}"
+    status_code: [204, 404]
+  changed_when: true
+  when: gitlab_url is defined and template_project_id is defined
+
 - name: Remove existing template repo directory
   ansible.builtin.file:
     path: "{{ template_repo_dir }}"
