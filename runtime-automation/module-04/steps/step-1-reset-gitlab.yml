@@ -1,5 +1,9 @@
 ---
 # STEP 1: Reset - Clean up GitLab Repositories
+- name: Debug GitLab token status
+  ansible.builtin.debug:
+    msg: "GitLab token available: {{ gitlab_token is defined and gitlab_token.stdout is defined and gitlab_token.stdout != '' }}"
+
 - name: Get GitLab group ID for development group
   ansible.builtin.uri:
     url: "{{ gitlab_url }}/api/v4/groups/{{ gitlab_group }}"
@@ -36,6 +40,11 @@
     gitlab_group_info.status is defined and
     gitlab_group_info.status == 200
 
+- name: Debug projects found
+  ansible.builtin.debug:
+    msg: "Found {{ gitlab_projects.json | default([]) | length }} project(s) in development group"
+  when: gitlab_projects.json is defined
+
 - name: Delete all projects in development group (immediate deletion)
   ansible.builtin.uri:
     url: "{{ gitlab_url }}/api/v4/projects/{{ item.id }}?permanently_remove=true&full_path={{ item.path_with_namespace | urlencode }}"
@@ -52,6 +61,11 @@
   changed_when: true
   failed_when: false
   delegate_to: bastion
+
+- name: Debug deletion results
+  ansible.builtin.debug:
+    msg: "Deletion results: {{ gitlab_delete_results.results | default([]) | map(attribute='status') | list }}"
+  when: gitlab_delete_results is defined and gitlab_delete_results.results is defined
 
 - name: Display GitLab cleanup results
   ansible.builtin.debug:
