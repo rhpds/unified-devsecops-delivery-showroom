@@ -18,8 +18,10 @@ TAS_CHAINS_REALM="{{ tas_chains_realm }}"
 TAS_CHAINS_CLIENT_ID="{{ tas_chains_client_id }}"
 USERNAME="{{ user }}"
 PASSWORD="{{ password }}"
-
+GITLAB_URL="{{ gitlab_url }}"
 CLUSTER_DOMAIN="{{ openshift_cluster_ingress_domain }}"
+
+{% raw %}
 
 echo "Configuration:"
 echo "  Username: $USERNAME"
@@ -93,9 +95,6 @@ echo "Testing gitsign with obtained token"
 echo "========================================="
 
 # Clone my-quarkus-tkn repo from GitLab
-GITLAB_URL="{{ gitlab_url }}"
-GITLAB_USER="{{ user }}"
-GITLAB_PASSWORD="{{ password }}"
 REPO_NAME="my-quarkus-tkn"
 REPO_PATH="/tmp/${REPO_NAME}-$$"
 
@@ -103,7 +102,7 @@ echo "Cloning repository: development/${REPO_NAME}"
 echo "Repository path: $REPO_PATH"
 
 # Build Git URL with credentials
-GIT_URL=$(echo "$GITLAB_URL" | sed "s|https://|https://${GITLAB_USER}:${GITLAB_PASSWORD}@|")/development/${REPO_NAME}.git
+GIT_URL=$(echo "$GITLAB_URL" | sed "s|https://|https://${USERNAME}:${PASSWORD}@|")/development/${REPO_NAME}.git
 
 # Clone the repository
 if ! git clone "$GIT_URL" "$REPO_PATH" 2>&1; then
@@ -198,3 +197,4 @@ fi
 cd /
 rm -rf "$REPO_PATH"
 rm -f "$GITSIGN_BIN"
+{% endraw %}
