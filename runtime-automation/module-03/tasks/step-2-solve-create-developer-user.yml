@@ -105,9 +105,13 @@
   register: tssc_group_id_response
   changed_when: false
 
+- name: Debug tssc group search results
+  ansible.builtin.debug:
+    msg: "TSSC group search returned {{ tssc_group_id_response.json | length }} groups: {{ tssc_group_id_response.json | map(attribute='name') | list }}"
+
 - name: Set tssc group ID
   ansible.builtin.set_fact:
-    tssc_group_id: "{{ (tssc_group_id_response.json | first).id if tssc_group_id_response.json | length > 0 else '' }}"
+    tssc_group_id: "{{ (tssc_group_id_response.json | selectattr('name', 'equalto', 'tssc') | map(attribute='id') | first) if (tssc_group_id_response.json | selectattr('name', 'equalto', 'tssc') | list | length > 0) else '' }}"
 
 - name: Get users group ID
   ansible.builtin.uri:
@@ -121,9 +125,13 @@
   register: users_group_id_response
   changed_when: false
 
+- name: Debug users group search results
+  ansible.builtin.debug:
+    msg: "Users group search returned {{ users_group_id_response.json | length }} groups: {{ users_group_id_response.json | map(attribute='name') | list }}"
+
 - name: Set users group ID
   ansible.builtin.set_fact:
-    users_group_id: "{{ (users_group_id_response.json | first).id if users_group_id_response.json | length > 0 else '' }}"
+    users_group_id: "{{ (users_group_id_response.json | selectattr('name', 'equalto', 'users') | map(attribute='id') | first) if (users_group_id_response.json | selectattr('name', 'equalto', 'users') | list | length > 0) else '' }}"
 
 - name: Check if user is member of tssc group
   when: tssc_group_id != ""
