@@ -78,33 +78,6 @@
     msg: "✓ RHDH template refresh triggered"
   when: template_refresh.status is defined and template_refresh.status in [200, 202]
 
-- name: Check template owner value in RHDH
-  ansible.builtin.uri:
-    url: "{{ developer_hub_url }}/api/catalog/entities/by-name/template/default/quarkus-stssc-template"
-    method: GET
-    validate_certs: false
-    headers:
-      Authorization: "Bearer {{ rhdh_api_token }}"
-    status_code: [200]
-    return_content: true
-  register: template_entity_check
-  when: >
-    developer_hub_url is defined and
-    rhdh_api_token is defined
-
-- name: Display current owner value
-  ansible.builtin.debug:
-    msg:
-      - "Step 1 owner: {{ template_entity_check.json.spec.steps[1].input.values.owner }}"
-      - "Step 3 owner: {{ template_entity_check.json.spec.steps[3].input.values.owner }}"
-  when: >
-    template_entity_check.json is defined and
-    template_entity_check.json.spec.steps is defined
-
-- name: Set expected owner value
-  ansible.builtin.set_fact:
-    expected_owner: "user:default/user1"
-
 - name: Wait for template to be updated with user1 reference
   ansible.builtin.uri:
     url: "{{ developer_hub_url }}/api/catalog/entities/by-name/template/default/quarkus-stssc-template"
@@ -115,7 +88,7 @@
     status_code: [200]
     return_content: true
   register: template_entity
-  until: template_entity.json.spec.steps | selectattr('input.values.owner', 'defined') | selectattr('input.values.owner', 'equalto', expected_owner) | list | length > 0
+  until: template_entity.json.spec.steps | selectattr('input.values.owner', 'defined') | selectattr('input.values.owner', 'equalto', 'user:default/user1') | list | length > 0
   retries: 30
   delay: 2
   when: >
