@@ -19,6 +19,8 @@ TAS_CHAINS_CLIENT_ID="{{ tas_chains_client_id }}"
 USERNAME="{{ user }}"
 PASSWORD="{{ password }}"
 
+CLUSTER_DOMAIN="{{ openshift_cluster_ingress_domain }}"
+
 echo "Configuration:"
 echo "  Username: $USERNAME"
 echo "  Keycloak: $KEYCLOAK_URL"
@@ -27,9 +29,33 @@ echo "  Realm: $TAS_CHAINS_REALM"
 echo "  Fulcio URL: $TAS_FULCIO_URL"
 echo "  Rekor URL: $TAS_REKOR_URL"
 echo "  TUF URL: $TAS_TUF_URL"
+echo "  Cluster domain: $CLUSTER_DOMAIN"
+
+# Download and install gitsign CLI
+echo ""
+echo "Installing gitsign CLI..."
+GITSIGN_CLI_URL="https://cli-server-trusted-artifact-signer.${CLUSTER_DOMAIN}/clients/linux/gitsign-amd64.gz"
+echo "Downloading from: $GITSIGN_CLI_URL"
+
+GITSIGN_BIN="/tmp/gitsign-$$"
+if curl -k -s -L "$GITSIGN_CLI_URL" | gunzip > "$GITSIGN_BIN"; then
+  chmod +x "$GITSIGN_BIN"
+  echo "✓ gitsign installed to $GITSIGN_BIN"
+
+  # Verify it works
+  if "$GITSIGN_BIN" version >/dev/null 2>&1; then
+    echo "✓ gitsign version: $("$GITSIGN_BIN" version 2>/dev/null | head -1)"
+  else
+    echo "⚠ gitsign installed but version check failed"
+  fi
+else
+  echo "ERROR: Failed to download gitsign"
+  exit 1
+fi
 
 # Build token endpoint
 TOKEN_ENDPOINT="$KEYCLOAK_URL/realms/$TAS_CHAINS_REALM/protocol/openid-connect/token"
+echo ""
 echo "Token endpoint: $TOKEN_ENDPOINT"
 
 # Get access token for user
@@ -97,7 +123,7 @@ echo ""
 echo "Configuring gitsign..."
 git config --local commit.gpgsign true
 git config --local tag.gpgsign true
-git config --local gpg.x509.program gitsign
+git config --local gpg.x509.program "$GITSIGN_BIN"
 git config --local gpg.format x509
 
 # Set gitsign environment variables
@@ -171,3 +197,4 @@ fi
 # Cleanup
 cd /
 rm -rf "$REPO_PATH"
+rm -f "$GITSIGN_BIN"
