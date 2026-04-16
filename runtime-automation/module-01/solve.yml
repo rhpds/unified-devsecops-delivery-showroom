@@ -36,6 +36,11 @@
         ansible_port: "{{ bastion_ssh_port }}"
         ansible_ssh_common_args: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
 
+    - name: Login to OpenShift cluster
+      ansible.builtin.shell: |
+        oc login {{ openshift_api_server_url }} --token={{ (lookup('file', k8s_kubeconfig) | from_yaml).users[0].user.token }} --insecure-skip-tls-verify=true
+      changed_when: false
+
     ###########################################
     # STEP 1: Reset Module 1
     ###########################################
