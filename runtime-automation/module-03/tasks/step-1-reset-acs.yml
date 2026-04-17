@@ -1,0 +1,80 @@
+---
+# STEP 0.4: Reset ACS Integration
+- name: Check if rox-api-token secret exists
+  ansible.builtin.command:
+    cmd: oc get secret rox-api-token -n {{ app_ci_namespace }}
+  register: rox_secret_check
+  changed_when: false
+  failed_when: false
+
+- name: Get ACS API token from rox-api-token secret
+  ansible.builtin.shell:
+    cmd: oc get secret rox-api-token -n {{ app_ci_namespace }} -o jsonpath='{.data.rox-api-token}' | base64 -d
+  register: acs_api_token
+  changed_when: false
+  failed_when: false
+  when: rox_secret_check.rc == 0
+
+- name: Check for existing ACS integration
+  ansible.builtin.uri:
+    url: "{{ acs_route }}/v1/imageintegrations"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ acs_api_token.stdout }}"
+    validate_certs: false
+    status_code: [200]
+    return_content: true
+  register: existing_integrations
+  changed_when: false
+  failed_when: false
+  when: >
+    rox_secret_check.rc == 0 and
+    acs_api_token.stdout is defined and
+    acs_api_token.stdout != ""
+
+- name: Set integration ID if exists
+  ansible.builtin.set_fact:
+    reset_integration_id: "{{ (existing_integrations.json.integrations | selectattr('name', 'equalto', acs_integration_name) | list | first).id if (existing_integrations.json.integrations | selectattr('name', 'equalto', acs_integration_name) | list | length > 0) else '' }}"
+  when: >
+    existing_integrations.json is defined and
+    existing_integrations.json.integrations is defined
+
+- name: Delete ACS integration via API
+  ansible.builtin.uri:
+    url: "{{ acs_route }}/v1/imageintegrations/{{ reset_integration_id }}"
+    method: DELETE
+    headers:
+      Authorization: "Bearer {{ acs_api_token.stdout }}"
+    validate_certs: false
+    status_code: [200, 204]
+  changed_when: true
+  failed_when: false
+  when: >
+    reset_integration_id is defined and
+    reset_integration_id != ""
+
+- name: Verify ACS integration deletion
+  ansible.builtin.uri:
+    url: "{{ acs_route }}/v1/imageintegrations"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ acs_api_token.stdout }}"
+    validate_certs: false
+    status_code: [200]
+    return_content: true
+  register: verify_integrations
+  changed_when: false
+  failed_when: false
+  when: >
+    reset_integration_id is defined and
+    reset_integration_id != ""
+
+- name: Check if integration still exists
+  ansible.builtin.set_fact:
+    integration_still_exists: "{{ (verify_integrations.json.integrations | selectattr('name', 'equalto', acs_integration_name) | list | length > 0) if verify_integrations.json is defined else false }}"
+  when: verify_integrations.json is defined
+
+- name: Display ACS integration deletion result
+  ansible.builtin.debug:
+    msg: "{{ '✓ ACS-Quay integration deleted' if integration_still_exists is defined and not integration_still_exists else '✓ No ACS integration found' }}"
+  when: rox_secret_check.rc == 0

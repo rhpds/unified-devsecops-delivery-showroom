@@ -24,6 +24,12 @@
     developer_firstname: "User1"
     developer_lastname: "Demo"
     lab_assets_dir: "/home/lab-user/lab-assets"
+    # ACS variables (from module 4)
+    acs_namespace: "stackrox"
+    acs_integration_name: "acs_quay"
+    quay_org: "tssc"
+    quay_repo: "tekton-chains-test"
+    image_tag: "latest"
 
   module_defaults:
     group/kubernetes.core.k8s:
@@ -93,6 +99,20 @@
         - include_tasks: tasks/step-2-solve-create-pipeline-secrets.yml
 
     ###########################################
+    # STEP 2: Configure ACS-Quay Integration
+    ###########################################
+    - name: "STEP 2: Configure ACS-Quay Integration"
+      block:
+        - include_tasks: tasks/step-2-solve-acs.yml
+
+    ###########################################
+    # STEP 2: Test Image Scanning
+    ###########################################
+    - name: "STEP 2: Test Image Scanning"
+      block:
+        - include_tasks: tasks/step-2-solve-image-scanning.yml
+
+    ###########################################
     # Module Summary
     ###########################################
     - name: Module 3 completion summary
@@ -110,5 +130,7 @@
           - "    - gitlab-auth-secret (GitLab authentication)"
           - "  ✓ GitOps backstage configuration updated"
           - "  ✓ RHDH devfile configuration updated"
+          - "  ✓ ACS-Quay integration configured"
+          - "  ✓ Image scanning tested with roxctl"
           - ""
           - "The developer environment is now fully configured!"

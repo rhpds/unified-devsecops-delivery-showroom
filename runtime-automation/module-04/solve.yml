@@ -68,9 +68,6 @@
         - name: Clean up Developer Hub Components
           include_tasks: tasks/step-1-reset-devhub.yml
 
-        - name: Reset ACS Integration
-          include_tasks: tasks/step-1-reset-acs.yml
-
         - name: Clean up PipelineRuns and TaskRuns
           include_tasks: tasks/step-1-reset-pipelines.yml
 
@@ -83,7 +80,6 @@
               - "  ✓ ArgoCD applications deleted"
               - "  ✓ GitLab development group repositories cleaned"
               - "  ✓ Developer Hub components deleted"
-              - "  ✓ ACS integration reset"
               - "  ✓ PipelineRuns and TaskRuns cleaned up"
               - ""
 
@@ -92,25 +88,17 @@
     ###########################################
     - name: "STEP 2: Solve Module 4"
       block:
-        - name: "STEP 2.1: Configure ACS-Quay Integration"
-          block:
-            - include_tasks: tasks/step-2-solve-acs.yml
-
-        - name: "STEP 2.2: Test Image Scanning"
-          block:
-            - include_tasks: tasks/step-2-solve-image-scanning.yml
-
-        - name: "STEP 2.3: Update and Run RHDH Template"
+        - name: "STEP 2.1: Update and Run RHDH Template"
           when: gitlab_url is defined
           block:
             - include_tasks: tasks/step-2-solve-run-template.yml
 
-        - name: "STEP 2.4: Test Commit Signing with RHTAS"
+        - name: "STEP 2.2: Test Commit Signing with RHTAS"
           when: gitlab_url is defined
           block:
             - include_tasks: tasks/step-2-solve-commit-signing.yml
 
-        - name: "STEP 2.5: Tag Repository"
+        - name: "STEP 2.3: Tag Repository"
           when: gitlab_url is defined
           block:
             - include_tasks: tasks/step-2-solve-tag-repo.yml
@@ -122,9 +110,6 @@
               - "Module 4 Complete!"
               - "========================================="
               - "Summary:"
-              - "  ✓ ACS-Quay integration configured"
-              - "  ✓ Image scanning tested with roxctl"
-              - "  ✓ Policy checks verified"
               - "  ✓ RHDH template updated and executed"
               - "  ✓ Template executed with verify commits enabled"
               - "  ✓ Commit signing tested with RHTAS and gitsign"

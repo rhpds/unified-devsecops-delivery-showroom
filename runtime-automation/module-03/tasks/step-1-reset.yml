@@ -1,5 +1,8 @@
 ---
 # STEP 1: Reset Module 3 (reset-module-3.sh)
+- name: Reset ACS Integration
+  include_tasks: step-1-reset-acs.yml
+
 - name: Check if tpa-secret exists
   ansible.builtin.shell:
     cmd: oc get secret tpa-secret -n {{ app_ci_namespace }} 2>/dev/null
