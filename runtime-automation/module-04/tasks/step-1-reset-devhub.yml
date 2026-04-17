@@ -10,15 +10,15 @@
   register: devhub_pods
   until: >
     devhub_pods.resources | length > 0 and
-    devhub_pods.resources | selectattr('status.phase', 'equalto', 'Running') | list | length == devhub_pods.resources | length and
-    devhub_pods.resources | map(attribute='status.conditions') | flatten | selectattr('type', 'equalto', 'Ready') | selectattr('status', 'equalto', 'True') | list | length == devhub_pods.resources | length
+    devhub_pods.resources | selectattr('status', 'defined') | selectattr('status.phase', 'defined') | selectattr('status.phase', 'equalto', 'Running') | list | length == devhub_pods.resources | length and
+    devhub_pods.resources | selectattr('status', 'defined') | selectattr('status.conditions', 'defined') | map(attribute='status.conditions') | flatten | selectattr('type', 'equalto', 'Ready') | selectattr('status', 'equalto', 'True') | list | length == devhub_pods.resources | length
   retries: 60
   delay: 10
   failed_when: false
 
 - name: Display Developer Hub pod readiness result
   ansible.builtin.debug:
-    msg: "{{ '✓ All Developer Hub pods are ready (' + (devhub_pods.resources | length | string) + ' pod(s))' if (devhub_pods.resources | length > 0 and devhub_pods.resources | selectattr('status.phase', 'equalto', 'Running') | list | length == devhub_pods.resources | length) else '⚠ Developer Hub pods not ready or timed out' }}"
+    msg: "{{ '✓ All Developer Hub pods are ready (' + (devhub_pods.resources | length | string) + ' pod(s))' if (devhub_pods.resources | length > 0 and devhub_pods.resources | selectattr('status', 'defined') | selectattr('status.phase', 'defined') | selectattr('status.phase', 'equalto', 'Running') | list | length == devhub_pods.resources | length) else '⚠ Developer Hub pods not ready or timed out' }}"
 
 - name: Get catalog locations from Developer Hub
   ansible.builtin.uri:
