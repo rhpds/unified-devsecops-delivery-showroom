@@ -1,0 +1,142 @@
+---
+# STEP 1: Reset Module 3 (reset-module-3.sh)
+- name: Reset ACS Integration
+  include_tasks: step-1-reset-acs.yml
+
+- name: Check if tpa-secret exists
+  ansible.builtin.shell:
+    cmd: oc get secret tpa-secret -n {{ app_ci_namespace }} 2>/dev/null
+  register: tpa_secret_check
+  changed_when: false
+  failed_when: false
+
+- name: Delete tpa-secret
+  when: tpa_secret_check.rc == 0
+  ansible.builtin.shell:
+    cmd: oc delete secret tpa-secret -n {{ app_ci_namespace }}
+  changed_when: true
+
+- name: Check if gitlab-auth-secret exists
+  ansible.builtin.shell:
+    cmd: oc get secret gitlab-auth-secret -n {{ app_ci_namespace }} 2>/dev/null
+  register: gitlab_secret_check
+  changed_when: false
+  failed_when: false
+
+- name: Delete gitlab-auth-secret
+  when: gitlab_secret_check.rc == 0
+  ansible.builtin.shell:
+    cmd: oc delete secret gitlab-auth-secret -n {{ app_ci_namespace }}
+  changed_when: true
+
+- name: Check if tas-git-config ConfigMap exists
+  ansible.builtin.shell:
+    cmd: oc get configmap tas-git-config -n {{ devspaces_namespace }} 2>/dev/null
+  register: tas_configmap_check
+  changed_when: false
+  failed_when: false
+
+- name: Delete tas-git-config ConfigMap
+  when: tas_configmap_check.rc == 0
+  ansible.builtin.shell:
+    cmd: oc delete configmap tas-git-config -n {{ devspaces_namespace }}
+  changed_when: true
+
+- name: Get Keycloak admin credentials
+  ansible.builtin.shell:
+    cmd: |
+      ADMIN_USER=$(oc get secret keycloak-initial-admin -n {{ keycloak_namespace }} -o jsonpath='{.data.username}' | base64 -d)
+      ADMIN_PASS=$(oc get secret keycloak-initial-admin -n {{ keycloak_namespace }} -o jsonpath='{.data.password}' | base64 -d)
+      echo "${ADMIN_USER}:${ADMIN_PASS}"
+  changed_when: false
+  register: kc_reset_creds
+
+- name: Parse Keycloak admin credentials
+  ansible.builtin.set_fact:
+    kc_reset_user: "{{ kc_reset_creds.stdout.split(':')[0] }}"
+    kc_reset_password: "{{ kc_reset_creds.stdout.split(':')[1] }}"
+
+- name: Get Keycloak admin token
+  ansible.builtin.uri:
+    url: "{{ keycloak_admin_console }}/realms/master/protocol/openid-connect/token"
+    method: POST
+    body_format: form-urlencoded
+    body:
+      client_id: admin-cli
+      username: "{{ kc_reset_user }}"
+      password: "{{ kc_reset_password }}"
+      grant_type: password
+    validate_certs: false
+    status_code: [200]
+    return_content: true
+  register: reset_admin_token_response
+  changed_when: false
+  failed_when: false
+
+- name: Set Keycloak admin token
+  ansible.builtin.set_fact:
+    reset_admin_token: "{{ reset_admin_token_response.json.access_token | default('') }}"
+  when: reset_admin_token_response.status is defined and reset_admin_token_response.status == 200
+
+- name: Check if token is valid
+  ansible.builtin.set_fact:
+    reset_token_valid: "{{ reset_admin_token is defined and reset_admin_token != '' }}"
+
+- name: Delete developer user from Keycloak
+  when: reset_token_valid | bool
+  block:
+    - name: Get user ID
+      ansible.builtin.uri:
+        url: "{{ keycloak_admin_console }}/admin/realms/{{ sso_realm }}/users?username={{ developer_username }}"
+        method: GET
+        headers:
+          Authorization: "Bearer {{ reset_admin_token }}"
+        validate_certs: false
+        status_code: [200]
+        return_content: true
+      register: reset_user_id_response
+      changed_when: false
+
+    - name: Set user ID
+      ansible.builtin.set_fact:
+        reset_user_id: "{{ (reset_user_id_response.json | first).id if reset_user_id_response.json | length > 0 else '' }}"
+
+    - name: Delete user if exists
+      when: reset_user_id != ""
+      ansible.builtin.uri:
+        url: "{{ keycloak_admin_console }}/admin/realms/{{ sso_realm }}/users/{{ reset_user_id }}"
+        method: DELETE
+        headers:
+          Authorization: "Bearer {{ reset_admin_token }}"
+        validate_certs: false
+        status_code: [204]
+      changed_when: true
+
+    - name: Verify user deletion
+      when: reset_user_id != ""
+      ansible.builtin.uri:
+        url: "{{ keycloak_admin_console }}/admin/realms/{{ sso_realm }}/users?username={{ developer_username }}"
+        method: GET
+        headers:
+          Authorization: "Bearer {{ reset_admin_token }}"
+        validate_certs: false
+        status_code: [200]
+        return_content: true
+      register: verify_user_delete
+      changed_when: false
+
+- name: Reset GitOps Backstage Configuration
+  ansible.builtin.shell:
+    cmd: bash {{ lab_assets_dir }}/update-gitops-backstage-config.sh reset
+  changed_when: true
+  delegate_to: bastion
+
+- name: Reset RHDH Devfile Configuration
+  ansible.builtin.shell:
+    cmd: bash {{ lab_assets_dir }}/update-rhdh-devfile-config.sh reset
+  changed_when: true
+  delegate_to: bastion
+
+- name: Reset complete
+  ansible.builtin.debug:
+    msg: "✓ Module 3 reset complete"

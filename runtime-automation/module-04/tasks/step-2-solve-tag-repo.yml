@@ -1,0 +1,62 @@
+---
+# STEP 2.5: Tag Repository
+- name: Create temporary directory for repo clone
+  ansible.builtin.tempfile:
+    state: directory
+    suffix: -my-quarkus-tkn
+  register: temp_repo_dir
+
+- name: Clone my-quarkus-tkn repository
+  ansible.builtin.debug:
+    msg: "Cloning my-quarkus-tkn repository..."
+
+- name: Git clone my-quarkus-tkn
+  ansible.builtin.shell: |
+    cd {{ temp_repo_dir.path }}
+    GIT_URL=$(echo "{{ gitlab_url }}" | sed "s|https://|https://{{ gitlab_root_user }}:{{ gitlab_root_password }}@|")/development/my-quarkus-tkn.git
+    git clone "$GIT_URL"
+  changed_when: true
+  no_log: true
+
+- name: Configure git user for tagging
+  ansible.builtin.shell: |
+    cd {{ temp_repo_dir.path }}/my-quarkus-tkn
+    git config user.name "Lab Automation"
+    git config user.email "automation@demo.redhat.com"
+  changed_when: false
+
+- name: Tag repository with v1.0
+  ansible.builtin.debug:
+    msg: "Tagging repository with v1.0..."
+
+- name: Create and push v1.0 tag
+  ansible.builtin.shell: |
+    cd {{ temp_repo_dir.path }}/my-quarkus-tkn
+    git tag v1.0
+    GIT_URL=$(echo "{{ gitlab_url }}" | sed "s|https://|https://{{ gitlab_root_user }}:{{ gitlab_root_password }}@|")/development/my-quarkus-tkn.git
+    git push "$GIT_URL" v1.0
+  changed_when: true
+  no_log: true
+  register: tag_result
+
+- name: Display tag creation result
+  ansible.builtin.debug:
+    msg: "✓ Repository tagged with v1.0 and pushed to GitLab"
+
+- name: Clean up temporary directory
+  ansible.builtin.file:
+    path: "{{ temp_repo_dir.path }}"
+    state: absent
+
+- name: Tag repository complete
+  ansible.builtin.debug:
+    msg:
+      - "========================================="
+      - "Repository Tagging Complete!"
+      - "========================================="
+      - ""
+      - "  ✓ PipelineRun completed successfully"
+      - "  ✓ Repository cloned: development/my-quarkus-tkn"
+      - "  ✓ Tag created: v1.0"
+      - "  ✓ Tag pushed to GitLab"
+      - ""

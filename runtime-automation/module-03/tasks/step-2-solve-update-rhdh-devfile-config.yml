@@ -1,0 +1,11 @@
+---
+# STEP 2: Update RHDH Devfile Config (update-rhdh-devfile-config.sh)
+- name: Update RHDH Devfile configuration
+  ansible.builtin.shell:
+    cmd: bash {{ lab_assets_dir }}/update-rhdh-devfile-config.sh update
+  changed_when: true
+  delegate_to: bastion
+
+- name: RHDH devfile config update complete
+  ansible.builtin.debug:
+    msg: "✓ RHDH Devfile configuration updated"

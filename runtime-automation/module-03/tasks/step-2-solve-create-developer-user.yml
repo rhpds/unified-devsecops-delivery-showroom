@@ -1,0 +1,204 @@
+---
+# STEP 2: Create Developer User (create-developer-user.sh)
+- name: Get Keycloak admin credentials for user creation
+  ansible.builtin.shell:
+    cmd: |
+      ADMIN_USER=$(oc get secret keycloak-initial-admin -n {{ keycloak_namespace }} -o jsonpath='{.data.username}' | base64 -d)
+      ADMIN_PASS=$(oc get secret keycloak-initial-admin -n {{ keycloak_namespace }} -o jsonpath='{.data.password}' | base64 -d)
+      echo "${ADMIN_USER}:${ADMIN_PASS}"
+  changed_when: false
+  register: kc_create_creds
+
+- name: Parse Keycloak admin credentials for user creation
+  ansible.builtin.set_fact:
+    kc_create_user: "{{ kc_create_creds.stdout.split(':')[0] }}"
+    kc_create_password: "{{ kc_create_creds.stdout.split(':')[1] }}"
+
+- name: Get Keycloak admin token for user creation
+  ansible.builtin.uri:
+    url: "{{ keycloak_admin_console }}/realms/master/protocol/openid-connect/token"
+    method: POST
+    body_format: form-urlencoded
+    body:
+      client_id: admin-cli
+      username: "{{ kc_create_user }}"
+      password: "{{ kc_create_password }}"
+      grant_type: password
+    validate_certs: false
+    status_code: [200]
+    return_content: true
+  register: create_admin_token_response
+  changed_when: false
+
+- name: Set Keycloak admin token for user creation
+  ansible.builtin.set_fact:
+    create_admin_token: "{{ create_admin_token_response.json.access_token }}"
+  failed_when: create_admin_token_response.json.access_token is not defined or create_admin_token_response.json.access_token == ""
+
+- name: Check if developer user exists
+  ansible.builtin.uri:
+    url: "{{ keycloak_admin_console }}/admin/realms/{{ sso_realm }}/users?username={{ developer_username }}"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ create_admin_token }}"
+    validate_certs: false
+    status_code: [200]
+    return_content: true
+  register: existing_user_id_response
+  changed_when: false
+
+- name: Set existing user ID
+  ansible.builtin.set_fact:
+    existing_user_id: "{{ (existing_user_id_response.json | first).id if existing_user_id_response.json | length > 0 else '' }}"
+
+- name: Create developer user
+  when: existing_user_id == ""
+  ansible.builtin.uri:
+    url: "{{ keycloak_admin_console }}/admin/realms/{{ sso_realm }}/users"
+    method: POST
+    headers:
+      Authorization: "Bearer {{ create_admin_token }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      username: "{{ developer_username }}"
+      email: "{{ developer_email }}"
+      firstName: "{{ developer_firstname }}"
+      lastName: "{{ developer_lastname }}"
+      emailVerified: true
+      enabled: true
+    validate_certs: false
+    status_code: [201]
+  changed_when: true
+
+- name: Wait for user creation
+  when: existing_user_id == ""
+  ansible.builtin.pause:
+    seconds: 2
+
+- name: Get user ID
+  ansible.builtin.uri:
+    url: "{{ keycloak_admin_console }}/admin/realms/{{ sso_realm }}/users?username={{ developer_username }}"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ create_admin_token }}"
+    validate_certs: false
+    status_code: [200]
+    return_content: true
+  register: user_id_response
+  changed_when: false
+
+- name: Set user ID
+  ansible.builtin.set_fact:
+    user_id: "{{ (user_id_response.json | first).id if user_id_response.json | length > 0 else '' }}"
+  failed_when: user_id_response.json | length == 0 or user_id == ""
+
+- name: Get tssc group ID
+  ansible.builtin.uri:
+    url: "{{ keycloak_admin_console }}/admin/realms/{{ sso_realm }}/groups?search=tssc"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ create_admin_token }}"
+    validate_certs: false
+    status_code: [200]
+    return_content: true
+  register: tssc_group_id_response
+  changed_when: false
+
+- name: Set tssc group ID
+  ansible.builtin.set_fact:
+    tssc_group_id: "{{ (tssc_group_id_response.json | selectattr('name', 'equalto', 'tssc') | list | first).id if (tssc_group_id_response.json | selectattr('name', 'equalto', 'tssc') | list | length > 0) else '' }}"
+
+- name: Get users group ID
+  ansible.builtin.uri:
+    url: "{{ keycloak_admin_console }}/admin/realms/{{ sso_realm }}/groups?search=users"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ create_admin_token }}"
+    validate_certs: false
+    status_code: [200]
+    return_content: true
+  register: users_group_id_response
+  changed_when: false
+
+- name: Set users group ID
+  ansible.builtin.set_fact:
+    users_group_id: "{{ (users_group_id_response.json | selectattr('name', 'equalto', 'users') | list | first).id if (users_group_id_response.json | selectattr('name', 'equalto', 'users') | list | length > 0) else '' }}"
+
+- name: Check if user is member of tssc group
+  when: tssc_group_id != ""
+  ansible.builtin.uri:
+    url: "{{ keycloak_admin_console }}/admin/realms/{{ sso_realm }}/users/{{ user_id }}/groups"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ create_admin_token }}"
+    validate_certs: false
+    status_code: [200]
+    return_content: true
+  register: tssc_member_check_response
+  changed_when: false
+
+- name: Set tssc membership status
+  when: tssc_group_id != ""
+  ansible.builtin.set_fact:
+    tssc_is_member: "{{ tssc_member_check_response.json | selectattr('id', 'equalto', tssc_group_id) | list | length > 0 }}"
+
+- name: Add user to tssc group
+  when: tssc_group_id != "" and not tssc_is_member
+  ansible.builtin.uri:
+    url: "{{ keycloak_admin_console }}/admin/realms/{{ sso_realm }}/users/{{ user_id }}/groups/{{ tssc_group_id }}"
+    method: PUT
+    headers:
+      Authorization: "Bearer {{ create_admin_token }}"
+    validate_certs: false
+    status_code: [204]
+  changed_when: true
+
+- name: Check if user is member of users group
+  when: users_group_id != ""
+  ansible.builtin.uri:
+    url: "{{ keycloak_admin_console }}/admin/realms/{{ sso_realm }}/users/{{ user_id }}/groups"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ create_admin_token }}"
+    validate_certs: false
+    status_code: [200]
+    return_content: true
+  register: users_member_check_response
+  changed_when: false
+
+- name: Set users membership status
+  when: users_group_id != ""
+  ansible.builtin.set_fact:
+    users_is_member: "{{ users_member_check_response.json | selectattr('id', 'equalto', users_group_id) | list | length > 0 }}"
+
+- name: Add user to users group
+  when: users_group_id != "" and not users_is_member
+  ansible.builtin.uri:
+    url: "{{ keycloak_admin_console }}/admin/realms/{{ sso_realm }}/users/{{ user_id }}/groups/{{ users_group_id }}"
+    method: PUT
+    headers:
+      Authorization: "Bearer {{ create_admin_token }}"
+    validate_certs: false
+    status_code: [204]
+  changed_when: true
+
+- name: Set user password
+  ansible.builtin.uri:
+    url: "{{ keycloak_admin_console }}/admin/realms/{{ sso_realm }}/users/{{ user_id }}/reset-password"
+    method: PUT
+    headers:
+      Authorization: "Bearer {{ create_admin_token }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      type: "password"
+      value: "{{ developer_password }}"
+      temporary: false
+    validate_certs: false
+    status_code: [204]
+  changed_when: true
+
+- name: Developer user creation complete
+  ansible.builtin.debug:
+    msg: "✓ Developer user created: {{ developer_username }}"

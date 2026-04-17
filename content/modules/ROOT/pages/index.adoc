@@ -1,21 +1,40 @@
-= Build secure streamlined developer workflows with Red Hat Advanced Developer Suite (RHADS)
+= Unifying DevSecOps: Secure, Standardized Application Delivery Across Containers
 
 image::rhads-logo.png[RHADS Logo,align="center",width=200,link=self,window=blank]
 
-== Welcome to Build secure streamlined developer workflows with RHADS Workshop
+== Welcome
 
-This hands-on workshop goes deep into the architecture and implementation of the *Red Hat Advanced Developer Suite (RHADS)*. Built for solutions architects, consultants, and technical sellers, you’ll deploy and configure core *RHADS* components, explore real-world integration patterns, and see how *RHADS* improves developer experience while strengthening software supply chain security, all mapped to clear technical and business value.
+This hands-on workshop demonstrates how to deliver applications through a *secure, standardized, and automated path to production* using the *Red Hat Advanced Developer Suite (RHADS)*.
+
+You will experience how platform engineering enables developers to move fast, while ensuring that every change is trusted, verified, and compliant, across both containerized and virtualised environments.
+
+Rather than focusing on individual tools, this workshop shows how these capabilities come together as a single, integrated workflow.
+
+---
 
 == About Red Hat Advanced Developer Suite
 
-Red Hat Advanced Developer Suite (RHADS) scales platform engineering teams to increase developer productivity and reduce software supply chain risk in hybrid and multicloud environments. It is designed to balance speed and security, integrating into existing organizational workflows. The suite brings together an enterprise-grade developer portal, enhanced software supply chain security capabilities, and components that empower platform engineers to enhance developer productivity and streamline the software development lifecycle.
+Red Hat Advanced Developer Suite (RHADS) enables organizations to standardize how applications are built, secured, and delivered across hybrid and multi-cloud environments.
+
+It provides a unified platform that balances developer productivity with software supply chain security, embedding governance and trust directly into the delivery process.
+
+---
 
 === Core Benefits
 
-* **Improved Developer Productivity & Efficiency**: Speed development with onboarding through preconfigured workspaces, automated software templates, and self-service capabilities via a central source-of-truth.
-* **Enhanced Software Integrity and Provenance**:  Protect your software supply chain with automated signing, cryptographic verification, and end-to-end provenance tracking. This strengthens supply chain trust and reduces the risk of compromised artifacts.
-* **Automated Compliance and Governance**: Implement policy-driven, verifiable build pipelines to automatically enforce security standards (e.g., link:https://slsa.dev/[*SLSA*]) and adhere to regulatory requirements, making the business impact tangible.
-* **Real-time Risk Visibility**: Gain critical insights into the risk profile of applications across the software development lifecycle (SDLC) through link:https://www.cisa.gov/sbom[*SBOM*]  management and analysis.
+* **Standardised Path to Production**  
+Developers follow a consistent, approved workflow to build and deliver applications, regardless of environment.
+
+* **End-to-End Trust and Provenance**  
+Every artifact is signed, verified, and traceable, ensuring integrity across the entire software supply chain.
+
+* **Built-in Security and Compliance**  
+Policies are enforced automatically throughout the pipeline, reducing risk without introducing manual gates.
+
+* **Full Visibility and Risk Awareness**  
+SBOM analysis and vulnerability insights provide clear visibility into software composition and risk.
+
+---
 
 === Key Components Covered
 
@@ -25,80 +44,76 @@ image::rhads-architecture.png[rhads-architecture,align="center",link=self,window
 |===
 | Component | Description
 
-| **Red Hat Developer Hub (RHDH)**
-|  An enterprise-grade, self-managed, and customizable internal developer portal built on Backstage.io. RHDH drives Increased Developer Velocity by reducing cognitive load and setup time and streamlining development workflows with automated software templates and self-service capabilities.
+| *Red Hat Developer Hub (RHDH)*
+| Provides a central developer portal with Software Templates that offer a self-service, standardized way to create and deliver applications.
 
-| **Red Hat Trusted Artifact Signer (RHTAS)**
-|  RHTAS is a production-ready deployment of the Sigstore project that delivers Guaranteed Artifact Integrity by supporting keyless signing tied to existing user identity (SSO), eliminating complex key management, and maintaining an immutable audit trail for verification and transparency across the supply chain. RHTAS ensures the integrity, authenticity, and provenance of software artifacts.
+| *Red Hat Trusted Artifact Signer (RHTAS)*
+| Enables keyless signing and verification of artifacts, ensuring integrity and trusted provenance.
 
-| **Red Hat Trusted Profile Analyzer (RHTPA)**
-| RHTPA provides platform engineers, developers, and security teams with visibility and actionable insights into the risk profile (vulnerabilities, licenses) of their software supply chain. RHTPA enables Automated Risk Management and Compliance by facilitating blast radius analysis across the entire application portfolio and ensuring compliance through system and security profile analysis.
+| *Red Hat Trusted Profile Analyzer (RHTPA)*
+| Provides visibility into software composition, vulnerabilities, and compliance through SBOM analysis.
 
-| **Red Hat DevSpaces**
-| Red Hat DevSpaces provides cloud-based, containerized development environments hosted on OpenShift, allowing developers to code, build, and test software using only a browser. It Enhances Developer Experience and Consistency by ensuring instant onboarding, preconfigured workspaces, and consistent workflows, thereby eliminating complex local setup challenges.
+| *Red Hat Dev Spaces*
+| Delivers cloud-based development environments with preconfigured tooling, enabling consistent developer workflows.
 |===
 
-=== Complementary Components included
+---
+
+=== Supporting Capabilities
 
 [cols="1,3"]
 |===
 | Component | Description
 
-| **Red Hat Build of Keycloak (RHBK)**
-| RHBK serves as the OpenID Connect (OIDC) provider for secure identity and access management. RHBK `*centralizes secure identity management*` and is critical for enabling RHTAS keyless signing workflows and user authentication for the entire RHADS ecosystem, including synchronizing User and Group entities into RHDH.
+| *Red Hat Build of Keycloak (RHBK)*
+| Provides identity and access management, enabling OIDC-based authentication and keyless signing workflows.
 
-| **Red Hat Advanced Cluster Security (RHACS)**
-| RHACS is a Kubernetes-native security platform that enforces security policies for containerized applications and performs image scanning and security checks. RHACS `*enforces security at scale*` by ensuring that only trusted, verified, and compliant artifacts reach the cluster. It is integrated into the CI/CD pipeline to provide image scanning and security checks.
+| *Red Hat Advanced Cluster Security (RHACS)*
+| Enforces security policies and performs vulnerability scanning across the software lifecycle.
 
-| **Red Hat Quay**
-| Quay is a secure image management and global registry that stores and manages container images and other build artifacts. Quay secures Artifact Storage by providing a centralized repository for container images and offering real-time scans and granular access controls.
-|=== 
+| *Red Hat Quay*
+| Stores container images and associated artifacts, including signatures, attestations, and SBOMs.
+|===
+
+---
 
 == Workshop Objectives
 
-By the end of this workshop, you will be able to:
+By the end of this workshop, you will:
 
-* Explain the role of RHADS in secure software delivery.
-* Understand how RHADS components (RHTPA, RHTAS, and RHDH) combine to deliver verifiable, policy-driven build pipelines.
-* Configure and integrate trusted services, including setting up authentication realms and clients in Keycloak/SSO for RHTPA and RHTAS, and deploying these services on OpenShift to verify connectivity and token-based access.
-* Generate and validate software provenance data by uploading and analyzing SBOMs through RHTPA and performing keyless artifact signing with RHTAS integrated into Tekton Chains.
-* Implement a secure developer workflow using Red Hat Developer Hub software templates, leveraging Red Hat DevSpaces and gitsign for OIDC-based commit signing, and performing image scanning using RHACS.
-* Validate the end-to-end trusted supply chain by executing a pipeline that verifies commits, uploads SBOMs, signs images, performs scans, and runs a promotion pipeline that applies Enterprise Contract (EC) checks before image advancement to stage and production
+* Understand how to standardize application delivery using a platform-driven approach
+* See how identity, signing, SBOMs, and policy enforcement work together to establish trust
+* Experience a developer workflow where security and compliance are embedded by design
+* Observe how only verified and compliant software is promoted across environments
+
+---
 
 == Prerequisites
 
-* Experience with Red Hat OpenShift and containerized applications
-* Understanding of CI/CD pipelines and DevOps practices
-* Basic knowledge of software supply chain security concepts
-* Familiarity with developer tools and workflows
+* Familiarity with OpenShift and container-based applications
+* Basic understanding of CI/CD pipelines
+* Awareness of software supply chain concepts
 
-== Workshop Structure (Hands-on Modules)
+---
 
-This workshop consists of hands-on labs designed to demonstrate how Red Hat Advanced Developer Suite (RHADS) solves key customer challenges through a highly automated, policy-driven development lifecycle.
+== Workshop Structure
 
-* **Module 1: Establish Software Composition Trust with SBOMs** (20 minutes)
-    - **Customer challenge**: “We cannot verify or attest to the components that make up our software.”
-    - **Participants Will**: Deploy Red Hat Trusted Profile Analyzer (RHTPA) and integrate Red Hat build of Keycloak (RHBK) to enable verifiable SBOM ingestion and vulnerability risk analysis.
-    - **Customer Outcome**: Builds include verifiable and trusted SBOM data from the start.
-    - **Consultant Takeaway**: A reference implementation for establishing early-stage software trust in customer environments.
-    - **Technical Seller Takeaway**: A compelling demo showing how RHADS enables visibility and integrity in the software supply chain.
-* **Module 2: Sign and Verify All Artifacts With RHTAS** (30 minutes)
-    - **Customer challenge**: “We cannot trust that our images were built and signed through our trusted CI pipeline, or that they haven’t been tampered with.”
-    - **Participants Will**: Deploy RHTAS and integrate it with Tekton Chains to automate keyless artifact signing and immutable provenance tracking.
-    - **Customer Outcome**: Images are cryptographically signed, tamper-evident, and fully auditable.
-    - **Consultant Takeaway**: Learn to embed signing workflows into CI pipelines for customer environments.
-    - **Technical Seller Takeaway**: A demo showcasing secure image provenance before deployment.
-* **Module 3: Developer workflow without developer friction** (25 minutes)
-    - **Customer challenge**: “Developer velocity suffers when security isn’t seamlessly integrated into their workflows.”
-    - **Participants Will**: Use Red Hat Developer Hub templates and Red Hat OpenShift Dev Spaces to provision a Trusted Software Supply Chain (TSSC) pipeline and enable secure, OIDC-based commit signing with GitSign.
-    - **Customer Outcome**: With RHADS, security is baked in. Developers just write code—trust is handled automatically.
-    - **Consultant Takeaway**: Build developer-centric pipelines that meet security and compliance requirements.
-    - **Technical Seller Takeaway**: This is the demo that proves you don’t have to choose between speed and security. With RHADS, your developers stay fast — and your pipeline stays secure.
-* **Module 4: Enforce Policy and Promote Safely** (25 minutes)
-    - **Customer challenge**: “Unverified or unsafe images are slipping through to staging and production.”
-    - **Participants Will**: Execute an end-to-end trusted software supply chain pipeline, including RHACS scanning, enforce Enterprise Contract (EC) policies, and promote only when all trust conditions pass.
-    - **Customer Outcome**: Releases become safer, auditable, and fully governed — only trusted images move forward, ensuring confidence at every stage of the delivery process
-    - **Consultant Takeaway**: Gain a reusable pattern for embedding policy enforcement and release governance into real-world pipelines — without slowing teams down.
-    - **Technical Seller Takeaway**: This is the final demo story: “RHADS prevents unsafe releases and makes every deployment a controlled, compliant, and predictable outcome.”
+This workshop is structured around key challenges organizations face when securing software delivery:
 
-Ready to embrace the principle to "Move Fast, Stay Safe?" Let's begin implementing the policy-driven automation necessary to accelerate developer productivity and strengthen software supply chain security with *RHADS*.
+* *Module 1: Establish Software Composition Trust with SBOMs*  
+Understand what is in your software and identify risk early.
+
+* *Module 2: Sign and Verify Artifacts*  
+Ensure every artifact is trusted, signed, and tamper-evident.
+
+* *Module 3: Developer Workflow Without Friction*  
+Enable developers to move fast using Software Templates and self-service workflows.
+
+* *Module 4: Enforce Policy and Promote Safely*  
+Ensure only trusted and compliant software is promoted across environments.
+
+---
+
+* Throughout the workshop, you will see how these capabilities work together to provide a secure, standardized path to production.*
+
+* Ready to embrace the principle to "Move Fast, Stay Safe?" Let's begin implementing the policy-driven automation necessary to accelerate developer productivity and strengthen software supply chain security with *RHADS*.

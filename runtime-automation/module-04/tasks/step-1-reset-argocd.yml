@@ -1,0 +1,32 @@
+---
+# STEP 1: Reset ArgoCD Applications
+- name: Get my-quarkus-tkn app-of-apps
+  ansible.builtin.shell:
+    cmd: |
+      oc get application my-quarkus-tkn-app-of-apps -n tssc-gitops -o name 2>/dev/null || echo "not-found"
+  register: app_of_apps_check
+  changed_when: false
+  failed_when: false
+
+- name: Delete my-quarkus-tkn app-of-apps (cascades to all child apps)
+  ansible.builtin.shell:
+    cmd: |
+      oc delete application my-quarkus-tkn-app-of-apps -n tssc-gitops
+  when: app_of_apps_check.stdout != "not-found"
+  changed_when: true
+  failed_when: false
+
+- name: Wait for my-quarkus-tkn applications to be deleted
+  ansible.builtin.shell:
+    cmd: |
+      oc get applications -n tssc-gitops -o name | grep -c "my-quarkus-tkn" || echo "0"
+  register: apps_remaining
+  until: apps_remaining.stdout | int == 0
+  retries: 30
+  delay: 2
+  changed_when: false
+  when: app_of_apps_check.stdout != "not-found"
+
+- name: Display ArgoCD cleanup results
+  ansible.builtin.debug:
+    msg: "{{ '✓ Deleted my-quarkus-tkn ArgoCD applications and child apps' if app_of_apps_check.stdout != 'not-found' else '✓ No my-quarkus-tkn ArgoCD applications found' }}"

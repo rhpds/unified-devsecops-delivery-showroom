@@ -1,0 +1,35 @@
+---
+# STEP 0: Gather Prerequisites - Tokens and credentials needed for reset and solve
+- name: Get RHDH API token from backstage secret
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Secret
+    name: backstage-env-secret
+    namespace: "{{ backstage_namespace }}"
+  register: backstage_secret
+  failed_when: false
+
+- name: Set RHDH API token fact
+  ansible.builtin.set_fact:
+    rhdh_api_token: "{{ backstage_secret.resources[0].data.AUTOMATION_SECRET | b64decode }}"
+  when: >
+    backstage_secret.resources is defined and
+    backstage_secret.resources | length > 0
+
+- name: Display token retrieval status
+  ansible.builtin.debug:
+    msg: "{{ '✓ RHDH API token retrieved' if rhdh_api_token is defined else '⚠ WARNING: Could not retrieve RHDH API token' }}"
+
+- name: Get GitLab personal access token
+  ansible.builtin.shell:
+    cmd: |
+      oc get secret root-user-personal-token -n {{ gitlab_namespace }} -o jsonpath='{.data.token}' | base64 -d
+  changed_when: false
+  register: gitlab_token
+  failed_when: false
+  when: gitlab_url is defined
+
+- name: Display GitLab credentials status
+  ansible.builtin.debug:
+    msg: "{{ '✓ GitLab credentials available (user: ' + gitlab_root_user + ', token retrieved)' if gitlab_root_user is defined and gitlab_root_password is defined and gitlab_token.stdout is defined else '⚠ WARNING: GitLab credentials not available' }}"
+  when: gitlab_url is defined

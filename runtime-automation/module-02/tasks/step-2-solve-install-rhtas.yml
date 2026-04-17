@@ -1,0 +1,534 @@
+---
+# STEP 2: Install RHTAS (install-rhtas.sh)
+- name: Display RHTAS installation start
+  ansible.builtin.debug:
+    msg:
+      - "========================================="
+      - "Installing RHTAS"
+      - "========================================="
+
+- name: Authenticate with Keycloak
+  ansible.builtin.debug:
+    msg: "Authenticating with Keycloak..."
+
+- name: Get Keycloak admin access token
+  ansible.builtin.uri:
+    url: "{{ keycloak_admin_console }}/realms/master/protocol/openid-connect/token"
+    method: POST
+    body_format: form-urlencoded
+    body:
+      client_id: admin-cli
+      username: "{{ keycloak_admin_user }}"
+      password: "{{ keycloak_admin_password }}"
+      grant_type: password
+    validate_certs: false
+    status_code: [200]
+    return_content: true
+  register: kc_admin_token_response
+  changed_when: false
+
+- name: Set Keycloak admin token
+  ansible.builtin.set_fact:
+    kc_admin_token: "{{ kc_admin_token_response.json.access_token }}"
+  failed_when: kc_admin_token_response.json.access_token is not defined or kc_admin_token_response.json.access_token == ""
+
+- name: Display Keycloak authentication success
+  ansible.builtin.debug:
+    msg: "✓ Authenticated with Keycloak"
+
+- name: "Configure Machine Identity (Tekton Chains)"
+  ansible.builtin.debug:
+    msg:
+      - "Configure Machine Identity (Tekton Chains)"
+      - "---------------------------------------------------"
+
+- name: Creating tas-chains realm
+  ansible.builtin.debug:
+    msg: "Creating tas-chains realm..."
+
+- name: Check if tas-chains realm exists
+  ansible.builtin.shell: |
+      REALM_EXISTS=$(curl -s -o /dev/null -w "%{http_code}" \
+        -H "Authorization: Bearer {{ kc_admin_token }}" \
+        "{{ keycloak_admin_console }}/admin/realms/{{ tas_chains_realm }}")
+      echo "$REALM_EXISTS"
+  register: check_realm
+  changed_when: false
+
+- name: Create tas-chains realm if it doesn't exist
+  when: check_realm.stdout == "404"
+  block:
+    - name: Create realm
+      ansible.builtin.shell: |
+          curl -s -X POST "{{ keycloak_admin_console }}/admin/realms" \
+            -H "Authorization: Bearer {{ kc_admin_token }}" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"realm\": \"{{ tas_chains_realm }}\",
+              \"enabled\": true
+            }"
+      changed_when: true
+
+    - name: Display realm creation result
+      ansible.builtin.debug:
+        msg: "✓ Created tas-chains realm"
+
+- name: Display realm already exists
+  when: check_realm.stdout != "404"
+  ansible.builtin.debug:
+    msg: "✓ tas-chains realm already exists"
+
+- name: Creating trusted-artifact-signer client in tas-chains realm
+  ansible.builtin.debug:
+    msg: "Creating {{ tas_client_id }} client in {{ tas_chains_realm }} realm..."
+
+- name: Check if client exists in tas-chains realm
+  ansible.builtin.uri:
+    url: "{{ keycloak_admin_console }}/admin/realms/{{ tas_chains_realm }}/clients?clientId={{ tas_client_id }}"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ kc_admin_token }}"
+    validate_certs: false
+    status_code: [200]
+    return_content: true
+  register: check_client_response
+  changed_when: false
+
+- name: Set client exists fact
+  ansible.builtin.set_fact:
+    check_client: "{{ check_client_response.json[0].id | default('') }}"
+
+- name: Create trusted-artifact-signer client if it doesn't exist
+  when: check_client == ""
+  block:
+    - name: Create client
+      ansible.builtin.shell: |
+          curl -s -X POST "{{ keycloak_admin_console }}/admin/realms/{{ tas_chains_realm }}/clients" \
+            -H "Authorization: Bearer {{ kc_admin_token }}" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"clientId\": \"{{ tas_client_id }}\",
+              \"enabled\": true,
+              \"clientAuthenticatorType\": \"client-secret\",
+              \"standardFlowEnabled\": true,
+              \"serviceAccountsEnabled\": true,
+              \"publicClient\": false,
+              \"frontchannelLogout\": false
+            }"
+      changed_when: true
+
+    - name: Display client creation result
+      ansible.builtin.debug:
+        msg: "✓ Created {{ tas_client_id }} client"
+
+- name: Display client already exists
+  when: check_client != ""
+  ansible.builtin.debug:
+    msg: "✓ {{ tas_client_id }} client already exists"
+
+- name: Get client ID for service account configuration
+  ansible.builtin.uri:
+    url: "{{ keycloak_admin_console }}/admin/realms/{{ tas_chains_realm }}/clients?clientId={{ tas_client_id }}"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ kc_admin_token }}"
+    validate_certs: false
+    status_code: [200]
+    return_content: true
+  register: tas_client_uuid_response
+  changed_when: false
+
+- name: Set TAS client UUID
+  ansible.builtin.set_fact:
+    tas_client_uuid: "{{ tas_client_uuid_response.json[0].id }}"
+
+- name: Configure service account user
+  ansible.builtin.debug:
+    msg: "Configuring service account user..."
+
+- name: Get service account user ID
+  ansible.builtin.uri:
+    url: "{{ keycloak_admin_console }}/admin/realms/{{ tas_chains_realm }}/clients/{{ tas_client_uuid }}/service-account-user"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ kc_admin_token }}"
+    validate_certs: false
+    status_code: [200]
+    return_content: true
+  register: service_account_response
+  changed_when: false
+
+- name: Set service account user ID
+  ansible.builtin.set_fact:
+    service_account_user_id: "{{ service_account_response.json.id }}"
+
+- name: Update service account with email verification
+  ansible.builtin.uri:
+    url: "{{ keycloak_admin_console }}/admin/realms/{{ tas_chains_realm }}/users/{{ service_account_user_id }}"
+    method: PUT
+    headers:
+      Authorization: "Bearer {{ kc_admin_token }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      emailVerified: true
+      email: "trusted-artifact-signer@demo.redhat.com"
+      firstName: "Trusted"
+      lastName: "Content"
+    validate_certs: false
+    status_code: [200, 204]
+  register: email_update_result
+  changed_when: true
+
+- name: Verify email verification was set
+  ansible.builtin.uri:
+    url: "{{ keycloak_admin_console }}/admin/realms/{{ tas_chains_realm }}/clients/{{ tas_client_uuid }}/service-account-user"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ kc_admin_token }}"
+    validate_certs: false
+    status_code: [200]
+    return_content: true
+  register: verify_email_response
+  changed_when: false
+  failed_when: not verify_email_response.json.emailVerified
+
+- name: Display service account configured
+  ansible.builtin.debug:
+    msg: "✓ Service account configured with verified email"
+
+- name: "Configure Developer Identity for Commit Signing"
+  ansible.builtin.debug:
+    msg:
+      - "Configure Developer Identity for Commit Signing"
+      - "--------------------------------------------------------"
+
+- name: Creating trusted-artifact-signer client in sso realm
+  ansible.builtin.debug:
+    msg: "Creating {{ tas_client_id }} client in {{ tas_sso_realm }} realm..."
+
+- name: Check if client exists in sso realm
+  ansible.builtin.uri:
+    url: "{{ keycloak_admin_console }}/admin/realms/{{ tas_sso_realm }}/clients?clientId={{ tas_client_id }}"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ kc_admin_token }}"
+    validate_certs: false
+    status_code: [200]
+    return_content: true
+  register: check_sso_client_response
+  changed_when: false
+
+- name: Set SSO client exists fact
+  ansible.builtin.set_fact:
+    check_sso_client: "{{ check_sso_client_response.json[0].id | default('') }}"
+
+- name: Create trusted-artifact-signer client in sso realm if it doesn't exist
+  when: check_sso_client == ""
+  block:
+    - name: Create client in sso realm
+      ansible.builtin.shell: |
+          curl -s -X POST "{{ keycloak_admin_console }}/admin/realms/{{ tas_sso_realm }}/clients" \
+            -H "Authorization: Bearer {{ kc_admin_token }}" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"clientId\": \"{{ tas_client_id }}\",
+              \"enabled\": true,
+              \"standardFlowEnabled\": true,
+              \"directAccessGrantsEnabled\": true,
+              \"publicClient\": true,
+              \"redirectUris\": [\"urn:ietf:wg:oauth:2.0:oob\", \"*\"],
+              \"frontchannelLogout\": false
+            }"
+      changed_when: true
+
+    - name: Display sso client creation result
+      ansible.builtin.debug:
+        msg: "✓ Created {{ tas_client_id }} client in {{ tas_sso_realm }} realm"
+
+- name: Display sso client already exists
+  when: check_sso_client != ""
+  ansible.builtin.debug:
+    msg: "✓ {{ tas_client_id }} client already exists in {{ tas_sso_realm }} realm"
+
+- name: "Deploy RHTAS Instance"
+  ansible.builtin.debug:
+    msg:
+      - "Deploy RHTAS Instance"
+      - "------------------------------"
+
+- name: Applying RHTAS Instance CR
+  ansible.builtin.debug:
+    msg: "Applying RHTAS Instance CR..."
+
+- name: Apply RHTAS Instance CR
+  ansible.builtin.shell: |
+      export TAS_CHAINS_CLIENT_ID="{{ tas_client_id }}"
+      export TAS_CHAINS_REALM="{{ tas_chains_realm }}"
+      export TAS_SSO_REALM="{{ tas_sso_realm }}"
+      export KEYCLOAK_URL="{{ keycloak_admin_console }}"
+      envsubst '${TAS_CHAINS_CLIENT_ID} ${TAS_CHAINS_REALM} ${TAS_SSO_REALM} ${KEYCLOAK_URL}' < {{ lab_assets_dir }}/tas-instance.yml | oc apply -n {{ tas_namespace }} -f -
+  changed_when: true
+  delegate_to: bastion
+
+- name: Display RHTAS Instance CR applied
+  ansible.builtin.debug:
+    msg: "✓ RHTAS Instance CR applied"
+
+- name: Waiting for RHTAS instance status to be populated
+  ansible.builtin.debug:
+    msg: "Waiting for RHTAS instance status to be populated..."
+
+- name: Wait for RHTAS instance status URLs
+  ansible.builtin.shell: |
+      TIMEOUT=600
+      ELAPSED=0
+      while [ $ELAPSED -lt $TIMEOUT ]; do
+        FULCIO_URL=$(oc get securesign trusted-artifact-signer -n {{ tas_namespace }} -o jsonpath='{.status.fulcio.url}' 2>/dev/null || echo "")
+        REKOR_URL=$(oc get securesign trusted-artifact-signer -n {{ tas_namespace }} -o jsonpath='{.status.rekor.url}' 2>/dev/null || echo "")
+        TUF_URL=$(oc get securesign trusted-artifact-signer -n {{ tas_namespace }} -o jsonpath='{.status.tuf.url}' 2>/dev/null || echo "")
+
+        if [ -n "$FULCIO_URL" ] && [ -n "$REKOR_URL" ] && [ -n "$TUF_URL" ]; then
+          echo "status_ready"
+          echo "$FULCIO_URL"
+          echo "$REKOR_URL"
+          echo "$TUF_URL"
+          exit 0
+        fi
+        echo "Waiting for RHTAS status URLs to be populated..." >&2
+        sleep 10
+        ELAPSED=$((ELAPSED + 10))
+      done
+      echo "timeout"
+      exit 1
+  register: rhtas_status
+  changed_when: false
+  failed_when: rhtas_status.stdout_lines[0] == "timeout"
+
+- name: Display RHTAS instance status ready
+  ansible.builtin.debug:
+    msg:
+      - "✓ RHTAS instance status populated"
+      - "  Fulcio URL: {{ rhtas_status.stdout_lines[1] }}"
+      - "  Rekor URL: {{ rhtas_status.stdout_lines[2] }}"
+      - "  TUF URL: {{ rhtas_status.stdout_lines[3] }}"
+
+- name: "Deploy OIDC Refresher App"
+  ansible.builtin.debug:
+    msg:
+      - "Deploy OIDC Refresher App"
+      - "----------------------------------"
+
+- name: Retrieving client secret
+  ansible.builtin.debug:
+    msg: "Retrieving client secret..."
+
+- name: Get TAS client UUID
+  ansible.builtin.uri:
+    url: "{{ keycloak_admin_console }}/admin/realms/{{ tas_chains_realm }}/clients?clientId={{ tas_client_id }}"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ kc_admin_token }}"
+    validate_certs: false
+    status_code: [200]
+    return_content: true
+  register: tas_chains_client_uuid_response
+  changed_when: false
+
+- name: Set TAS chains client UUID
+  ansible.builtin.set_fact:
+    tas_chains_client_uuid: "{{ tas_chains_client_uuid_response.json[0].id }}"
+
+- name: Get TAS client secret
+  ansible.builtin.uri:
+    url: "{{ keycloak_admin_console }}/admin/realms/{{ tas_chains_realm }}/clients/{{ tas_chains_client_uuid }}/client-secret"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ kc_admin_token }}"
+    validate_certs: false
+    status_code: [200]
+    return_content: true
+  register: tas_client_secret_response
+  changed_when: false
+
+- name: Set TAS client secret
+  ansible.builtin.set_fact:
+    tas_client_secret: "{{ tas_client_secret_response.json.value }}"
+  failed_when: tas_client_secret is not defined or tas_client_secret == "" or tas_client_secret == "null"
+
+- name: Display client secret retrieved
+  ansible.builtin.debug:
+    msg: "✓ Client secret retrieved"
+
+- name: Creating OIDC info secret
+  ansible.builtin.debug:
+    msg: "Creating OIDC info secret..."
+
+- name: Create OIDC info secret
+  ansible.builtin.shell: |
+      export TAS_CHAINS_CLIENT_ID="{{ tas_client_id }}"
+      export TAS_CHAINS_CLIENT_SECRET="{{ tas_client_secret }}"
+      export TAS_CHAINS_REALM="{{ tas_chains_realm }}"
+      envsubst '${TAS_CHAINS_CLIENT_ID} ${TAS_CHAINS_CLIENT_SECRET} ${TAS_CHAINS_REALM}' < {{ lab_assets_dir }}/oidc-info-secret.yml | oc apply -n {{ pipelines_namespace }} -f -
+  changed_when: true
+  delegate_to: bastion
+
+- name: Display OIDC info secret created
+  ansible.builtin.debug:
+    msg: "✓ OIDC info secret created"
+
+- name: Deploying OIDC refresher app
+  ansible.builtin.debug:
+    msg: "Deploying OIDC refresher app..."
+
+- name: Deploy OIDC refresher app
+  ansible.builtin.shell: |
+    oc apply -f $(eval echo "{{ lab_assets_dir }}/oidc-refresher-app.yml") -n {{ pipelines_namespace }}
+  changed_when: true
+  delegate_to: bastion
+
+- name: Display OIDC refresher app deployed
+  ansible.builtin.debug:
+    msg: "✓ OIDC refresher app deployed"
+
+- name: Waiting for OIDC refresher pod to be Running
+  ansible.builtin.debug:
+    msg: "Waiting for OIDC refresher pod to be Running..."
+
+- name: Wait for OIDC refresher pod to be Running
+  ansible.builtin.shell: |
+      TIMEOUT=300
+      ELAPSED=0
+      while [ $ELAPSED -lt $TIMEOUT ]; do
+        REFRESHER_STATUS=$(oc get pods -n {{ pipelines_namespace }} -l app=oidc-token-refresher -o jsonpath='{.items[0].status.phase}' 2>/dev/null || echo "NotFound")
+        if [ "$REFRESHER_STATUS" == "Running" ]; then
+          echo "running"
+          exit 0
+        fi
+        sleep 5
+        ELAPSED=$((ELAPSED + 5))
+      done
+      echo "timeout"
+      exit 1
+  register: refresher_status
+  changed_when: false
+  failed_when: refresher_status.stdout == "timeout"
+
+- name: Display OIDC refresher pod running
+  ansible.builtin.debug:
+    msg: "✓ OIDC refresher pod is Running"
+
+- name: Waiting for oidc-token secret to have valid id-token
+  ansible.builtin.debug:
+    msg: "Waiting for oidc-token secret to have valid id-token..."
+
+- name: Wait for oidc-token secret to have valid id-token
+  ansible.builtin.shell: |
+      TIMEOUT=120
+      ELAPSED=0
+      while [ $ELAPSED -lt $TIMEOUT ]; do
+        ID_TOKEN=$(oc get secret oidc-token -n {{ pipelines_namespace }} -o jsonpath='{.data.id-token}' 2>/dev/null | base64 -d 2>/dev/null || true)
+        if [ -n "$ID_TOKEN" ] && [[ "$ID_TOKEN" == eyJ* ]]; then
+          echo "valid"
+          exit 0
+        fi
+        echo "Waiting for oidc-token secret to be populated..." >&2
+        sleep 5
+        ELAPSED=$((ELAPSED + 5))
+      done
+      echo "invalid"
+      exit 1
+  register: oidc_token_status
+  changed_when: false
+  failed_when: oidc_token_status.stdout == "invalid"
+
+- name: Display oidc-token secret valid
+  ansible.builtin.debug:
+    msg: "✓ oidc-token secret has valid id-token"
+
+- name: "Configure Tekton Chains"
+  ansible.builtin.debug:
+    msg:
+      - "Configure Tekton Chains"
+      - "--------------------------------"
+
+- name: Getting current tekton-chains-controller pod
+  ansible.builtin.debug:
+    msg: "Getting current tekton-chains-controller pod..."
+
+- name: Get current Tekton Chains controller pod name
+  ansible.builtin.shell: |
+    oc get pods -n {{ pipelines_namespace }} -l app=tekton-chains-controller -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "NotFound"
+  register: old_chains_pod
+  changed_when: false
+
+- name: Display current pod
+  ansible.builtin.debug:
+    msg: "Current pod: {{ old_chains_pod.stdout }}"
+
+- name: Patching Tekton configuration
+  ansible.builtin.debug:
+    msg: "Patching Tekton configuration..."
+
+- name: Patch Tekton Chains configuration
+  ansible.builtin.shell: |
+    oc patch tektonconfig config -n {{ pipelines_namespace }} --type=merge --patch "$(cat $(eval echo "{{ lab_assets_dir }}/tekton-chains-patch.yml"))"
+  changed_when: true
+  delegate_to: bastion
+
+- name: Display Tekton Chains patch applied
+  ansible.builtin.debug:
+    msg: "✓ Tekton Chains patch applied"
+
+- name: Waiting for tekton-chains-controller pod to be recreated
+  ansible.builtin.debug:
+    msg: "Waiting for tekton-chains-controller pod to be recreated..."
+
+- name: Wait for tekton-chains-controller pod to be recreated and ready
+  ansible.builtin.shell: |
+      TIMEOUT=180
+      ELAPSED=0
+      OLD_CHAINS_POD="{{ old_chains_pod.stdout }}"
+      while [ $ELAPSED -lt $TIMEOUT ]; do
+        NEW_CHAINS_POD=$(oc get pods -n {{ pipelines_namespace }} -l app=tekton-chains-controller -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "NotFound")
+
+        # Check if pod name changed
+        if [ "$NEW_CHAINS_POD" != "$OLD_CHAINS_POD" ] && [ "$NEW_CHAINS_POD" != "NotFound" ]; then
+          # Check if new pod is ready
+          POD_READY=$(oc get pod ${NEW_CHAINS_POD} -n {{ pipelines_namespace }} -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null || echo "False")
+          if [ "$POD_READY" == "True" ]; then
+            echo "ready:${NEW_CHAINS_POD}"
+            exit 0
+          fi
+        fi
+
+        echo "Waiting for tekton-chains-controller pod to be recreated and ready..." >&2
+        sleep 5
+        ELAPSED=$((ELAPSED + 5))
+      done
+      echo "timeout"
+      exit 1
+  register: new_chains_pod
+  changed_when: false
+  failed_when: new_chains_pod.stdout == "timeout"
+
+- name: Display Tekton Chains controller recreated
+  ansible.builtin.debug:
+    msg: "✓ Tekton Chains controller pod recreated and ready: {{ new_chains_pod.stdout.split(':')[1] }}"
+
+- name: RHTAS installation complete
+  ansible.builtin.debug:
+    msg:
+      - "========================================="
+      - "RHTAS Installation Complete!"
+      - "========================================="
+      - ""
+      - "Components deployed:"
+      - "  ✓ tas-chains realm created"
+      - "  ✓ Machine identity configured"
+      - "  ✓ Developer identity configured"
+      - "  ✓ RHTAS instance deployed (Fulcio, Rekor, Trillian, TUF)"
+      - "  ✓ OIDC token refresher running"
+      - "  ✓ Tekton Chains configured for keyless signing"
+      - ""
+      - "Next step: Run test-image-signing.sh to verify the installation"

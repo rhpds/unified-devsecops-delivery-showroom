@@ -1,0 +1,35 @@
+---
+# STEP 1.1: Reverting Tekton Chains configuration
+- name: "Step 1: Reverting Tekton Chains configuration"
+  ansible.builtin.debug:
+    msg: "Step 1: Reverting Tekton Chains configuration..."
+
+- name: Reset Tekton Chains to default configuration - remove all fields
+  ansible.builtin.shell: |
+      CHAIN_FIELDS=(
+        "artifacts.oci.format"
+        "artifacts.oci.signer"
+        "artifacts.oci.storage"
+        "artifacts.pipelinerun.format"
+        "artifacts.pipelinerun.storage"
+        "artifacts.taskrun.format"
+        "artifacts.taskrun.signer"
+        "artifacts.taskrun.storage"
+        "disabled"
+        "options"
+        "signers.x509.fulcio.address"
+        "signers.x509.fulcio.enabled"
+        "signers.x509.fulcio.issuer"
+        "signers.x509.identity.token.file"
+        "signers.x509.tuf.mirror.url"
+        "transparency.enabled"
+        "transparency.url"
+      )
+      for field in "${CHAIN_FIELDS[@]}"; do
+        oc patch tektonconfig config -n {{ pipelines_namespace }} --type=json -p="[{\"op\": \"remove\", \"path\": \"/spec/chain/$field\"}]" 2>/dev/null || true
+      done
+  changed_when: true
+
+- name: Display Tekton Chains configuration reverted
+  ansible.builtin.debug:
+    msg: "✓ Tekton Chains configuration reverted"

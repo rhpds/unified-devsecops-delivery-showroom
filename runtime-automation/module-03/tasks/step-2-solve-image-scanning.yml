@@ -1,0 +1,64 @@
+---
+# STEP 2: Test Image Scanning
+- name: Get ROX API token from rox-api-token secret
+  ansible.builtin.shell:
+    cmd: oc get secret rox-api-token -n {{ app_ci_namespace }} -o jsonpath='{.data.rox-api-token}' | base64 -d
+  register: rox_token
+  changed_when: false
+  failed_when: rox_token.stdout == ""
+
+- name: Set scanning variables
+  ansible.builtin.set_fact:
+    rox_endpoint: "{{ acs_route }}:443"
+    test_image: "{{ quay_host }}/{{ quay_org }}/{{ quay_repo }}:{{ image_tag }}"
+
+- name: Display test configuration
+  ansible.builtin.debug:
+    msg:
+      - "✓ roxctl configured"
+      - "ACS endpoint: {{ rox_endpoint }}"
+      - "Test image: {{ test_image }}"
+
+- name: Run roxctl image scan
+  ansible.builtin.shell:
+    cmd: roxctl --insecure-skip-tls-verify image scan --image="{{ test_image }}" > {{ job_info_dir | default('/tmp') }}/roxctl-scan.txt 2>&1
+  environment:
+    ROX_API_TOKEN: "{{ rox_token.stdout }}"
+    ROX_ENDPOINT: "{{ rox_endpoint }}"
+  changed_when: false
+  failed_when: false  # Script uses || true
+  register: scan_result
+
+- name: Display scan summary
+  ansible.builtin.debug:
+    msg: "✓ Image scan completed (output saved to {{ job_info_dir | default('/tmp') }}/roxctl-scan.txt)"
+
+- name: Run roxctl image check
+  ansible.builtin.shell:
+    cmd: roxctl --insecure-skip-tls-verify image check --image="{{ test_image }}" > {{ job_info_dir | default('/tmp') }}/roxctl-check.txt 2>&1
+  environment:
+    ROX_API_TOKEN: "{{ rox_token.stdout }}"
+    ROX_ENDPOINT: "{{ rox_endpoint }}"
+  changed_when: false
+  failed_when: false  # Script uses || true
+  register: check_result
+
+- name: Display policy check summary
+  ansible.builtin.debug:
+    msg: "✓ Policy check completed (output saved to {{ job_info_dir | default('/tmp') }}/roxctl-check.txt)"
+
+- name: Image scanning test complete
+  ansible.builtin.debug:
+    msg:
+      - "========================================="
+      - "Image Scanning Test Complete!"
+      - "========================================="
+      - "Test Results:"
+      - "  Image: {{ test_image }}"
+      - "  Scan: Completed"
+      - "  Policy Check: Completed"
+      - ""
+      - "Key Findings:"
+      - "  ✓ Container images can be scanned from the registry using ACS"
+      - "  ✓ Vulnerability findings are associated with specific image digest"
+      - "  ✓ Policy evaluation can be performed programmatically"

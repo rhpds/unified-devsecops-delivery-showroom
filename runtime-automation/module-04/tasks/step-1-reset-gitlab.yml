@@ -1,0 +1,189 @@
+---
+# STEP 1: Reset - Clean up GitLab Repositories
+- name: Debug GitLab credentials status
+  ansible.builtin.debug:
+    msg: "GitLab credentials available: {{ gitlab_root_user is defined and gitlab_root_password is defined and gitlab_token.stdout is defined }}"
+
+- name: Get GitLab group ID for development group
+  ansible.builtin.uri:
+    url: "{{ gitlab_url }}/api/v4/groups/{{ gitlab_group }}"
+    method: GET
+    validate_certs: false
+    headers:
+      PRIVATE-TOKEN: "{{ gitlab_token.stdout }}"
+    status_code: [200, 404]
+  register: gitlab_group_info
+  changed_when: false
+  failed_when: false
+  when: >
+    gitlab_url is defined and
+    gitlab_token.stdout is defined and
+    gitlab_token.stdout != ""
+
+- name: Get all projects in development group
+  ansible.builtin.uri:
+    url: "{{ gitlab_url }}/api/v4/groups/{{ gitlab_group_info.json.id }}/projects"
+    method: GET
+    validate_certs: false
+    headers:
+      PRIVATE-TOKEN: "{{ gitlab_token.stdout }}"
+    status_code: [200]
+  register: gitlab_projects
+  changed_when: false
+  failed_when: false
+  when: >
+    gitlab_url is defined and
+    gitlab_token.stdout is defined and
+    gitlab_token.stdout != "" and
+    gitlab_group_info.status is defined and
+    gitlab_group_info.status == 200
+
+- name: Debug projects found
+  ansible.builtin.debug:
+    msg: "Found {{ gitlab_projects.json | default([]) | length }} project(s) in development group"
+  when: gitlab_projects.json is defined
+
+- name: Mark all projects for deletion (step 1 of 2)
+  ansible.builtin.uri:
+    url: "{{ gitlab_url }}/api/v4/projects/{{ item.id }}"
+    method: DELETE
+    validate_certs: false
+    headers:
+      PRIVATE-TOKEN: "{{ gitlab_token.stdout }}"
+    status_code: [202, 204]
+  loop: "{{ gitlab_projects.json | default([]) }}"
+  when: >
+    gitlab_projects.json is defined and
+    gitlab_projects.json | length > 0
+  register: gitlab_mark_results
+  changed_when: true
+
+- name: Wait for projects to be marked for deletion
+  ansible.builtin.pause:
+    seconds: 2
+  when: >
+    gitlab_projects.json is defined and
+    gitlab_projects.json | length > 0
+
+- name: Get updated project list with deletion_scheduled paths
+  ansible.builtin.uri:
+    url: "{{ gitlab_url }}/api/v4/groups/{{ gitlab_group_info.json.id }}/projects"
+    method: GET
+    validate_certs: false
+    headers:
+      PRIVATE-TOKEN: "{{ gitlab_token.stdout }}"
+    status_code: [200, 404]
+  register: gitlab_projects_scheduled
+  changed_when: false
+  failed_when: false
+  when: >
+    gitlab_mark_results is defined and
+    gitlab_mark_results.changed
+
+- name: Permanently delete all marked projects (step 2 of 2)
+  ansible.builtin.uri:
+    url: "{{ gitlab_url }}/api/v4/projects/{{ item.id }}?permanently_remove=true&full_path={{ item.path_with_namespace | urlencode }}"
+    method: DELETE
+    validate_certs: false
+    headers:
+      PRIVATE-TOKEN: "{{ gitlab_token.stdout }}"
+    status_code: [202, 204]
+  loop: "{{ gitlab_projects_scheduled.json | default([]) }}"
+  when: >
+    gitlab_projects_scheduled.json is defined and
+    gitlab_projects_scheduled.json | length > 0
+  register: gitlab_delete_results
+  changed_when: true
+
+- name: Display GitLab cleanup results
+  ansible.builtin.debug:
+    msg: "{{ '✓ Deleted ' + (gitlab_projects.json | default([]) | length | string) + ' project(s) from development group (marked and permanently removed)' if gitlab_projects.json is defined and gitlab_projects.json | length > 0 else '✓ No projects found in development group' }}"
+  when: >
+    gitlab_url is defined and
+    gitlab_group_info.status is defined and
+    gitlab_group_info.status == 200
+
+- name: Display GitLab group not found warning
+  ansible.builtin.debug:
+    msg: "⚠ WARNING: GitLab group 'development' not found"
+  when: >
+    gitlab_url is defined and
+    gitlab_group_info.status is defined and
+    gitlab_group_info.status == 404
+
+# Reset RHDH template to default user reference
+- name: Set GitLab template repo details
+  ansible.builtin.set_fact:
+    template_repo_dir: "/tmp/reset-template-repo"
+    template_file: "/tmp/reset-template-repo/scaffolder-templates/quarkus-stssc-template/template.yaml"
+  when: gitlab_url is defined
+
+- name: Remove existing template repo directory
+  ansible.builtin.file:
+    path: "{{ template_repo_dir }}"
+    state: absent
+  when: gitlab_url is defined
+
+- name: Clone template repository
+  ansible.builtin.shell:
+    cmd: |
+      git clone https://{{ gitlab_root_user }}:{{ gitlab_root_password }}@{{ gitlab_url.split('//')[1] }}/rhdh/build-secured-dev-workflows-idp-configuration.git {{ template_repo_dir }}
+  environment:
+    GIT_SSL_NO_VERIFY: "true"
+  changed_when: false
+  when: gitlab_url is defined
+
+- name: Reset template owner to dynamic user reference (lines 110 and 144)
+  ansible.builtin.shell:
+    cmd: |
+      sed -i '110s|.*|          owner: user:default/\${% raw %}{{ user.entity.metadata.name }}{% endraw %}|; 144s|.*|          owner: user:default/\${% raw %}{{ user.entity.metadata.name }}{% endraw %}|' {{ template_file }}
+  changed_when: true
+  when: gitlab_url is defined
+
+- name: Verify template changes
+  ansible.builtin.shell:
+    cmd: |
+      grep -n "owner: user:default" {{ template_file }}
+  register: owner_lines
+  changed_when: false
+  when: gitlab_url is defined
+
+- name: Display owner lines
+  ansible.builtin.debug:
+    msg: "{{ owner_lines.stdout_lines }}"
+  when: gitlab_url is defined and owner_lines.stdout_lines is defined
+
+- name: Configure git user for commit
+  ansible.builtin.shell:
+    cmd: |
+      cd {{ template_repo_dir }}
+      git config user.email "automation@redhat.com"
+      git config user.name "Lab Automation"
+  changed_when: false
+  when: gitlab_url is defined
+
+- name: Commit template changes
+  ansible.builtin.shell:
+    cmd: |
+      cd {{ template_repo_dir }}
+      git add scaffolder-templates/quarkus-stssc-template/template.yaml
+      git commit -m "Reset template to use dynamic user reference"
+  changed_when: true
+  register: reset_commit
+  failed_when: reset_commit.rc != 0 and 'nothing to commit' not in reset_commit.stdout
+  when: gitlab_url is defined
+
+- name: Push template changes to GitLab
+  ansible.builtin.shell:
+    cmd: |
+      cd {{ template_repo_dir }}
+      git push origin main
+  environment:
+    GIT_SSL_NO_VERIFY: "true"
+  changed_when: true
+  when: gitlab_url is defined and reset_commit.changed
+
+- name: Display template reset result
+  ansible.builtin.debug:
+    msg: "✓ RHDH template reset to use dynamic user reference (${% raw %}{{ user.entity.metadata.name }}{% endraw %})"
+  when: gitlab_url is defined

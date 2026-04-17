@@ -1,524 +1,212 @@
 = Module 3: Developer workflow without developer friction
 
-include::common/send-to.adoc[]
-include::common/solve-button.adoc[]
-include::common/validate-button.adoc[]
-
 == Introduction
 
-Modern software delivery is shaped by two opposing forces. On one side, security expectations have never been higher. Organisations are under pressure to prove where their software comes from, how it was built, and whether it can be trusted across every stage of the supply chain. On the other side, developers face increasing cognitive load. Tool sprawl, fragmented workflows, and manual security steps slow delivery and create frustration when security is bolted on after the fact. Most organisations struggle to balance both. They invest heavily in security tooling or developer productivity, but rarely achieve both without friction. This is where platform engineering comes in.
+* By this point in the workshop, you have established strong foundations of trust across the software supply chain. In Module 1, you made software composition visible by ingesting and analyzing SBOMs. In Module 2, you ensured that build artifacts are signed, traceable, and verifiably produced by your CI pipeline.
 
-=== Platform Engineering and Internal Developer Portals
+* The next challenge is not technical, it is operational: how do you apply these controls consistently across teams without slowing developers down?
 
-*Platform engineering* is the discipline of designing and operating a curated internal platform that abstracts complexity and delivers secure capabilities to development teams. *Platform engineering* teams build and maintain *Internal Developer Platforms (IDPs)* that bring together the tools and capabilities developers need to deliver software effectively. These capabilities are exposed through consistent, opinionated, self-service *Golden Path templates*.
+* This is where link:https://platformengineering.org/blog/what-is-platform-engine[*platform engineering*^] comes in. Platform engineering teams build link:https://internaldeveloperplatform.org/what-is-an-internal-developer-platform/[*Internal Developer Platforms (IDPs)*^] that bring together tools, workflows, and security controls into a single, self-service experience for developers. Instead of relying on manual processes, security and best practices are embedded directly into the platform.
 
-*Golden Paths* are standardised, reusable, and secure workflows that guide developers through building, testing, and deploying software in the approved way. They reduce decision fatigue for developers while ensuring security and compliance are enforced by design. The outcome is twofold: developers focus on writing code rather than managing infrastructure or security plumbing, and security and compliance are applied consistently as part of the platform. In this workshop, the IDP you will use is *Red Hat Developer Hub (RHDH)*.
+* In this workshop, the IDP is *Red Hat Developer Hub (RHDH)*. It provides a centralized interface for developers to discover services, access documentation, and use predefined workflows that align with organizational standards.
 
-=== What is Red Hat Developer Hub (RHDH)?
-
-*Red Hat Developer Hub (RHDH)* is Red Hat's enterprise-grade developer platform for building link:https://internaldeveloperplatform.org/what-is-an-internal-developer-platform/[*Internal Developer Portals*^] *(IDPs)*. *RHDH* is based on the upstream link:https://www.backstage.io[*Backstage*^] project created by *Spotify*. In modern development environments, *IDPs* play a pivotal role by providing developers with a centralised interface to access the organisation's technology stack, eliminating the need to search for information or navigate a maze of disconnected tools and systems.
-
-*Red Hat Developer Hub (RHDH)* is equipped with a curated set of capabilities and tools, based on Red Hat's platform engineering vision and industry best practices. Together, these provide customers with an opinionated, fully supported Internal Developer Portal designed to meet the evolving needs of modern development environments.
-
-* *The Software Catalog:* A centralized directory that lists all services, libraries, and documentation, simplifying the process for developers to find the components they need.
-* *TechDocs:*  Facilitates easy access to up-to-date documentation for all software components. It supports the documentation-as-code philosophy, allowing documentation to live alongside the code, making it very easy to maintain documentation.
-* *Search:* Enables developers to efficiently locate information across the entire RHDH ecosystem. This feature is essential for quickly finding services, documentation, and other resources.
-* *Software templates:* Streamlines the setup process for new projects, services, or libraries. This ensures consistency and adherence to best practices in all new development efforts.
-* *Plugins:* Modular extensions that enhance RHDH with new features or integrate it with external tools and services.
+* Key capabilities of *RHDH* include:
++
+. *Software Catalog* – a centralized view of services, components, and ownership  
+. *TechDocs* – documentation integrated alongside code  
+. *Search* – unified discovery across services and documentation  
+. *Software Templates* – reusable, standardized workflows for creating new applications  
+. *Plugins* – integrations with CI/CD, Kubernetes, security tools, and more  
 
 image::RHDH_Core_Capablties.png[Red Hat Developer Hub Core Capabilities,link=self,window=blank]
 
-=== What You Will Learn in This Module
+* One critical challenge remains: how do we prevent unverified or unsafe images from reaching production?
+* Security controls only scale when developers do not have to think about them. If teams must manually assemble pipelines or decide when policies apply, trust quickly erodes.
+* This is where *Software Templates*, also known as *Golden Paths*, come in. They define opinionated, secure workflows that embed the guardrails established in earlier modules by design, including *SBOM* generation and analysis, code and image signing, vulnerability scanning, and *Enterprise Contract* policy checks.
 
-In this module, you will see how platform engineering principles turn the supply-chain security foundations from Modules 1 and 2 into frictionless developer workflows. You will use Configuration as Code and GitOps practices to:
+NOTE: *Enterprise Contract* is the policy engine that governs whether an application can be promoted through the delivery pipeline. It is based on the upstream open-source project link:https://conforma.dev/[*Conforma*^], which provides policy-driven verification of software supply chain evidence such as *SBOMs*, vulnerability scan results, image signatures, and build attestations.
 
-. Enable SSO-based authentication
-. Configure developer-facing plugins
-. Setup catalog auto-discovery
-
-
----
-
-== Step 1: User and Identity Configuration
-
-Before enabling *Red Hat Developer Hub (RHDH)* features, you need to create a developer identity. In this step, you will create a developer user (user1) in the sso realm. Typically a developer identity will already exist, for example from LDAP or the organisation's existing SSO system.
-
-NOTE: In this lab, RHDH, OpenShift, and OpenShift Dev Spaces all share the *sso* realm. This is intentionally different from the *tpa* realm used in Module 1. Using a shared realm enables seamless Single Sign-On (SSO) across the OpenShift Console, OpenShift Dev Spaces, and Red Hat Developer Hub.
-
-=== 1.1 Log in RHBK
-
-If you are not already logged in to *RHBK*, click the RHBK Console tab in the Showroom and log in using:
-
-*Username*:
-
-[source, role="execute", subs="attributes"]
-----
-{keycloak_admin_user}
-----
-
-*Password*:
-
-[source, role="execute", subs="attributes"]
-----
-{keycloak_admin_password}
-----
-
-After entering your credentials, click *Sign In*.
+* By the end of this module, you will see how *Red Hat Developer Hub (RHDH)* turns these trusted building blocks into repeatable, production-ready *Golden Paths*.
+* In this module, you will take on the role of a platform engineer, preparing *RHDH* for developer use by configuring access, enabling capabilities, and defining standardized workflows.
+* Every application starts secure, every promotion is governed, and teams can move quickly without bypassing trust.
 
 ---
 
-=== 1.2 Create the Developer User
+== Step 1: Hydrating the Developer Hub
 
-* Switch to the *sso* realm:
-. In the *RHBK Console* click *Manage Realm*.
-. Select the *sso* realm.
-+
-image::switch_to_sso_realm.png[Switch to SSO Realm,align="center",link=self,window=blank]
+* When *Red Hat Developer Hub (RHDH)* first starts in this lab, it is intentionally empty. No services are registered, and access is open, providing a clean starting point.
 
-*	To create a new user:
-. Navigate to *Users*.  
-. Click *Add user*.
-+
-image::add_new_user.png[add_new_user,align="center",link=self,window=blank]
+* Instead of configuring the platform manually, you will use GitOps and Infrastructure as Code to define how *RHDH* should behave. This ensures configuration is version-controlled, repeatable, and aligned with enterprise platform standards.
 
-* Set the following values:
-+
-. *Email Verified*: Toggle on (required for TAS signing)
-.	*Username*:
-+
-[source, role="execute"]
-----
-user1
-----
-+
-. *Email*:
-+
-[source, role="execute"]
-----
-user1@demo.redhat.com
-----
-+
-.	*First Name*:
-+
-[source, role="execute"]
-----
-User1
-----
-+
-. *Last Name*:
-+
-[source, role="execute"]
-----
-Demo
-----
-+
-. Click *Create*. 
-+
-* You'll see a pop-up message saying "The user has been created."
-+
-WARNING: Make sure *Email Verified* is toggled *on*. If it is disabled, authentication will fail when you attempt to sign your code in Module 4.
-+
-image::create_user1.png[create_user1,align="center",link=self,window=blank]
+=== 1.1 Verify the starting state
 
----
-
-=== 1.3 Assign Group Membership
-
-. In the user details view, click the *Groups* tab.
-
-. Click *Join Group*.
-+
-image::join_group.png[join_group,align="center",link=self,window=blank]
-
-. Select the following groups:
-+
-** tssc
-** users
-
-. Click *Join*. You'll see a pop-up message saying "Added group membership."
-+
-image::join_groups.png[join_groups,align="center",link=self,window=blank]
-
-NOTE: The tssc group mapping in RHDH ensures this user has ownership and management rights over the components you will scaffold later in this module.
-
----
-
-=== 1.4 Set User Credentials
-
-. Click the *Credentials* tab.
-. Click *Set Password*. 
-
-image::select_set_password.png[select_set_password,align="center",link=self,window=blank]
-
-. Enter the *Password* and *Password confirmation* to:
-+
-[source, role="execute", subs="attributes"]
-----
-{password}
-----
-+
-. Ensure *Temporary* is toggled off.
-+
-. Click *Save*.
-+
-* You'll see a pop-up message saying "The password has been set successfully."
-* When prompted to confirm the password for user1, click *Save password* to confirm.
-+
-image::set_password_screen.png[set_password_screen,align="center",link=self,window=blank]
-
-At this point, the developer identity is fully configured and ready to authenticate across OpenShift, Dev Spaces, and Red Hat Developer Hub.
-
----
-
-== Step 2: Hydrating the Developer Hub
-
-When *Red Hat Developer Hub (RHDH)* first starts in this lab, it runs in a vanilla state with guest access enabled and an empty catalog. Rather than enabling features manually, you will configure *Red Hat Developer Hub* using GitOps and Infrastructure as Code practices, ensuring configuration is version-controlled, reviewable, and aligned with enterprise platform standards.
-
-=== 2.1 Verify the "Before" State
-
-. In Showroom, switch to *RHDH* tab.
-
-. You'll notice that Guest access is currently enabled. This is not recommended for production environments and will be disabled in the following steps.
-
-. Click *Enter* to log in as *Guest*.
+. In Showroom, switch to the *RHDH* tab.
+. You will see that guest access is currently enabled.
+. Click *Enter* to continue as *Guest*.
 +
 image::guest_access.png[guest_access,align="center",link=self,window=blank]
-
-. Select Catalog from the left navigation.
-
-. The catalog is empty, confirming that no sources or providers are configured yet.
++
+. From the left navigation, select *Catalog*.
+. The catalog is empty, confirming that no services or components have been configured yet.
 +
 image::empty_catalog.png[empty_catalog,align="center",link=self,window=blank]
 
 ---
 
-=== 2.2 Log in to Gitlab
+=== 1.1 Create the developer user
 
-In Showroom, switch to the *GitLab* tab and login using the following credentials:
+* Before using *Red Hat Developer Hub (RHDH)*, you need a developer identity that can access the platform.
+
+* In most organizations, this identity already exists and is managed through enterprise SSO. In this workshop, you will create a sample developer user.
+
+* Navigate to the Showroom Terminal and run the following script:
+
++
+[source, role="send-to-wetty"]
+----
+~/lab-assets/create-developer-user.sh
+----
+
+* This script creates a developer user and prepares it for use across the workshop environment.
+
+* Behind the scenes, it:
+
+. Creates a developer user (*user1*)  
+. Assigns the required access  
+. Sets the user credentials  
+
+* Once completed, this user can sign in to:
+
+. OpenShift Console  
+. Red Hat Developer Hub (*RHDH*)  
+. OpenShift Dev Spaces  
+
+* This allows you to move across tools without needing to re-authenticate.
+
+---
+
+=== Step 1.2: Access the GitOps configuration
+
+* In this step, you will begin configuring *Red Hat Developer Hub (RHDH)* using GitOps, following the same approach platform engineering teams use to manage developer platforms at scale.
+
+* In Showroom, switch to the *GitLab* tab and log in using the following credentials:
 
 *Username*:
++
 [source, role="execute", subs="attributes"]
 ----
 {gitlab_root_user}
 ----
-
++
 *Password*:
++
 [source, role="execute", subs="attributes"]
 ----
 {gitlab_root_password}
 ----
 
-
-
 ---
 
-.Understanding RHDH Configuration and Plugins
-[%collapsible]
-====
+=== Step 1.3: Enable Developer Hub plugins
 
-*Red Hat Developer Hub* configuration is managed through a single declarative file, *app-config.yaml*, inherited from upstream Backstage. This file defines the platform capabilities where authentication, integrations, plugins, catalog sources, and proxy behaviour are all configured. In the next steps, you will modify four key sections that shape the platform experience:
+* *Red Hat Developer Hub (RHDH)* is designed to be modular. Plugins are used to integrate tools, expose platform capabilities, and shape the developer experience.
 
-* *dynamic.plugins* : controls which plugins are enabled.
-** These plugins surface platform capabilities to developers, CI/CD views, Argo CD visualisations, IDEs, Image Registries, OpenShift topology view, documentation and more.
-* *authentication*: defines authentication providers and login behaviour.
-** You will disable Guest access and enable OIDC login backed by Keycloak — enforcing secure authentication.
-* *catalog*: controls where *RHDH* discovers software components.
-** Later in this module, you will point the catalog at a GitOps-backed location so that platform templates and developer components appear automatically.
-* *integrations*: configure API access to external tools.
-** This allows *RHDH* to securely call external systems like GitLab and Quay without exposing user credentials, and supports plugin functions that require backend access.
+* Unlike traditional approaches where plugins are added by rebuilding the platform, *RHDH* allows plugins to be enabled through configuration. This means platform teams can manage capabilities using GitOps workflows without rebuilding container images.
 
-Below is a trimmed example of the configuration you will work with. The commented sections represent platform capabilities that you will enable as the module progresses:
+* In this step, you will enable a set of core plugins that activate key *RHDH* capabilities.
 
-[source, yaml]
-----
-global:
-  dynamic:
-    plugins:
-      # - disabled: false
-      #   package: ./dynamic-plugins/dist/backstage-plugin-kubernetes
-      # - disabled: false
-      #   package: ./dynamic-plugins/dist/backstage-community-plugin-quay
-      # - disabled: false
-      #   package: ./dynamic-plugins/dist/roadiehq-backstage-plugin-argo-cd-backend-dynamic
-
-upstream:
-  backstage:
-    extraEnvVars:
-      - name: AUTH_OIDC_METADATA_URL
-        value: https://sso.apps.cluster.example.com/realms/sso/.well-known/openid-configuration
-      - name: QUAY_URL
-        value: https://quay.apps.cluster.example.com
-
-    appConfig:
-
-      auth:
-        providers:
-          guest:
-            dangerouslyAllowOutsideDevelopment: true
-        # signInPage: "oidc"
-        # providers:
-        #   oidc:
-        #     production:
-        #       clientId: ${AUTH_OIDC_CLIENT_ID}
-        #       clientSecret: ${AUTH_OIDC_CLIENT_SECRET}
-        #       metadataUrl: ${AUTH_OIDC_METADATA_URL}
-
-      catalog:
-        # providers:
-        #   keycloakOrg:
-        #     default:
-        #       baseUrl: ${KEYCLOAK_BASE_URL}
-        #       realm: ${KEYCLOAK_REALM}
-
-      integrations:
-        gitlab:
-          - host: ${GITLAB_HOST}
-
-      proxy:
-        endpoints:
-          # '/quay/api':
-          #   headers:
-          #     Authorization: Bearer ${QUAY_API_TOKEN}
-          #   target: ${QUAY_URL}
-----
-
-====
-
----
-
-=== 2.3 Enable Plugins
-
-*Backstage*, and by extension *Red Hat Developer Hub (RHDH)*, is designed to be modular. Plugins are the primary mechanism used to integrate developer tools and extend the capabilities of the Internal Developer Portal.
-
-==== 2.3.1 Plugin management in upstream Backstage
-
-In upstream Backstage, plugins are added using a build-time model. Platform engineers must:
-
-. Clone the Backstage source code
-. Install plugins via npm
-. Import and wire them into the React frontend and Node.js backend
-. Build a new Backstage container image
-. Redeploy the updated image
-
-Each update — including plugin upgrades or security fixes — requires repeating this entire process. While functional, this approach does not scale well across multiple environments or teams and introduces operational friction.
-
----
-
-==== 2.3.2 Dynamic plugins in Red Hat Developer Hub
-
-*Red Hat Developer Hub* introduces dynamic plugins, shifting plugin management from build time to runtime configuration. Instead of rebuilding images, platform engineers enable and configure plugins declaratively using YAML and GitOps workflows. The container image remains unchanged, while plugins are mounted and activated at runtime.
-
-This approach:
-
-. Reduces operational overhead
-. Aligns with infrastructure-as-code practices
-. Enables versioned configuration and environment promotion
-. Treats the developer portal as a managed platform product
-
-In the following steps, you will begin enabling plugins through configuration, activating core *RHDH* functionality exactly as a platform engineering team would when shaping a developer experience.
-
----
-
-==== 2.3.3 Enabling RHDH plugins
-
-To enable plug-ins in this lab:
-
-. In Gitlab, open the repository `gitops / build-secured-dev-workflows-idp-gitops`.
+. In GitLab, open the repository `gitops / build-secured-dev-workflows-idp-gitops`.
 +
 image::select_gitops_repo.png[select_gitops_repo,align="center",link=self,window=blank]
 
-. Navigate to the `charts/Backstage` folder.
+. Navigate to the `charts/backstage` folder.
 +
 image::navigate_to_backstage.png[navigate_to_backstage,align="center",link=self,window=blank]
 
-. Click the file `backstage-values.yaml`.
+. Open the file `backstage-values.yaml`.
 +
 image::select_backstage_values.png[select_backstage_values,align="center",link=self,window=blank]
 
-. Select *Edit* > *Edit single file*.
+. Select *Edit* → *Edit single file*.
 +
 image::edit_single_file.png[edit_single_file,align="center",link=self,window=blank]
 
-. Locate the commented block under the *dynamic.plugins* section and uncomment it using `CMD + /` (Mac) or `CTRL + /` (Windows/Linux).
+. Locate the commented block under the `dynamic.plugins` section and uncomment it using `CMD + /` (Mac) or `CTRL + /` (Windows/Linux).
 +
 image::uncomment_plugins.png[uncomment_plugins,align="center",link=self,window=blank]
 
 ---
 
-==== 2.3.4 Understanding the dynamic.plugins configuration
+=== Step 1.4: Configure authentication
 
-Let's take a look at the *dynamic.plugins* YAML block that you've just uncommented:
+* In this step, you will replace temporary Guest access with Single Sign-On (SSO), allowing developers to securely log in using their existing identity.
 
-. Top-level structure
-** *includes*: allows you to reference a base set of plugin definitions that ship with *Red Hat Developer Hub*.
-** *plugins* is the explicit list of dynamic plugins enabled for this environment. Each entry represents one plugin, its source, and any plugin-specific configuration.
-+
-[source, yaml]
-----
-dynamic:
-  includes:
-    - dynamic-plugins.default.yaml
-  plugins:
-----
-+
-. Plugin entries:
-** Each plugin entry follows a common pattern:
-+
-[source, yaml]
-----
-- disabled: false
-  package: <plugin-location>
-  pluginConfig: <optional>
-----
-+
-** *disabled: false*: Enables the plugin. This flag allows plugins to be toggled on or off declaratively without removing configuration.
-** *package*: Defines where the plugin is loaded from. This can be:
-*** A local path baked into the RHDH image (./dynamic-plugins/dist/...)
-*** An OCI image hosted in a registry (as seen with the multi-source security viewer plugin)
-** *pluginConfig* (optional): Provides plugin-specific configuration, such as UI placement, backend settings, or integration endpoints (as seen with the tekton plugin).
+* This ensures that access to *Red Hat Developer Hub (RHDH)* is controlled, auditable, and aligned with enterprise authentication practices.
 
-One particularly important plugin in this block is the *Keycloak catalog backend* plugin:
+. In `backstage-values.yaml`, locate the `auth` section.
 
-[source, yaml]
-----
-- disabled: false
-  package: ./dynamic-plugins/dist/backstage-community-plugin-catalog-backend-module-keycloak-dynamic
-----
+. Comment the developer environment block using `CMD + /` (Mac) or `CTRL + /` (Windows/Linux).
 
-This plugin enables *Red Hat Developer Hub* to integrate with *Red Hat Build of Keycloak (RHBK)* and automatically synchronise Users and Groups into the Software Catalog. You will activate and configure this capability in the next steps.
+. Uncomment the production environment configuration.
 
----
-
-=== 2.4 Configure authentication
-
-In this step, you will replace temporary Guest access with Single Sign-On (SSO) using *Red Hat Build of Keycloak (RHBK)* via OpenID Connect (OIDC). This allows developers to log in to *Red Hat Developer Hub* using their existing organisational identity, rather than anonymous Guest access.
-
-==== 2.4.1 Configuration steps
-
-. Comment the developer environment block under authusing `CMD + /` (Mac) or `CTRL + /` (Windows/Linux).
-. Then, uncomment the production environment configuration using `CMD + /` (Mac) or `CTRL + /` (Windows/Linux). 
-. Finally uncomment the signInPage setting using `CMD + /` (Mac) or `CTRL + /` (Windows/Linux) as shown below:
+. Uncomment the `signInPage` setting as shown below:
 
 image::enable_auth.png[enable_auth,align="center",link=self,window=blank]
 
-==== 2.4.1 Understanding the authentication configuration
-
-The YAML you just uncommented configures authentication as follows:
-
-[source, yaml]
-----
-auth:
-  environment: production
-  providers:
-    oidc:
-      production:
-        clientId: ${AUTH_OIDC_CLIENT_ID}
-        clientSecret: ${AUTH_OIDC_CLIENT_SECRET}
-        metadataUrl: ${AUTH_OIDC_METADATA_URL}
-        prompt: auto
-        signIn:
-          resolvers:
-          - resolver: preferredUsernameMatchingUserEntityName
-signInPage: "oidc"
-----
-
-* *providers.oidc.production*: defines an OIDC provider that RHDH will use in "production" mode.
-* *clientId* and *clientSecret*: are the OIDC client credentials configured in RHBK for Developer Hub. They allow RHDH to redirect users to Keycloak and exchange authorisation codes for tokens.
-* *metadataUrl*: points to the OIDC discovery endpoint in RHBK (for example: *https://sso.<APPS_DOMAIN>/realms/sso/.well-known/openid-configuration)*. *RHDH* uses this to discover the correct authorisation, token and JWKS endpoints.
-* *prompt*: auto lets the identity provider decide whether to prompt the user again, enabling smoother SSO experiences when the user already has an active session.
-* *signIn.resolvers*: the resolver preferredUsernameMatchingUserEntityName tells RHDH how to map an incoming Keycloak identity to a Backstage User entity.
-* *signInPage*: *oidc* tells RHDH to use the OIDC login flow as the default sign-in experience. Once applied, the "Guest" button should no longer be the primary entry point and users will be directed to "Sign in with OIDC" backed by *RHBK*.
-
+* Once applied, Guest access is no longer the primary entry point, and users will be redirected to sign in using SSO.
 
 ---
 
-=== 2.5 Populating Software Catalog
+=== Step 1.5: Populate the Software Catalog
 
-The Software Catalog is your central inventory for everything that matters in your technology landscape. It tracks entities such as:
+* The Software Catalog provides a centralized inventory of services, resources, APIs, and teams, forming the foundation for visibility and ownership within *RHDH*.
 
-* Components: services, websites, libraries
-* Resources: databases, message brokers, object storage
-* APIs: REST, gRPC, GraphQL interfaces
-* Users and Groups: people and teams in your organisation
+* In this step, you will configure the catalog to automatically populate with data from external sources.
 
-In your YAML, providers are configured under *catalog.providers* and are usually delivered by plugins. In this step, you will enable the Keycloak catalog provider to synchronise Users and Groups from Red Hat Build of Keycloak (RHBK) into the Software Catalog.
+. In `backstage-values.yaml`, locate the `catalog` section.
 
-. In backstage-values.yaml, locate and uncomment the catalog block using `CMD + /` (Mac) or `CTRL + /` (Windows/Linux) as shown below:
-+
+. Uncomment the catalog configuration block as shown below:
+
 image::uncomment_catalog.png[uncomment_catalog,align="center",link=self,window=blank]
 
-The YAML block you just uncommented configures catalog providers as follows:
+* This configuration enables *RHDH* to:
 
+. Load catalog definitions from Git  
+. Synchronize Users and Groups from the identity provider  
+. Continuously refresh this data to keep the catalog up to date  
 
-[source, yaml]
-----
-catalog:
-  locations:
-  - target: https://gitlab-gitlab.apps.cluster-4dbcs.dynamic.redhatworkshops.io/rhdh/build-secured-dev-workflows-idp-configuration/blob/main/all-locations.yaml
-    type: url
-  rules:
-  - allow:
-    - Component
-    - System
-    - Group
-    - User
-    - Resource
-    - Location
-    - Template
-    - API
-  providers:
-    keycloakOrg:
-      default:
-        baseUrl: ${KEYCLOAK_BASE_URL}
-        clientId: ${KEYCLOAK_CLIENT_ID}
-        clientSecret: ${KEYCLOAK_CLIENT_SECRET}
-        loginRealm: ${KEYCLOAK_LOGIN_REALM}
-        realm: ${KEYCLOAK_REALM}
-        schedule:
-          frequency:
-            minutes: 2
-          initialDelay:
-            seconds: 15
-          timeout:
-            minutes: 2
-----
-
-* Catalog locations: The locations section is used to register catalog files from Git (for example all-locations.yaml in GitLab).
-* Allowed entity types: The *rules.allow* block defines which entity kinds the catalog will accept from those locations.
-* Providers: The *providers.keycloakOrg.default* block configures the Keycloak organisation provider plugin.
-** baseUrl: ${KEYCLOAK_BASE_URL} points RHDH at your RHBK instance.
-** clientId and clientSecret are the OIDC client credentials that allow RHDH to call the Keycloak Admin APIs securely.
-** loginRealm is the realm used for authentication (for example sso).
-** realm is the realm from which Users and Groups will be synchronised. In this lab they are the same, but in larger environments they may differ.
-* Sync schedule: The schedule block controls how often RHDH refreshes Users and Groups from RHBK:
-** frequency.minutes: sync every 2 minutes
-** initialDelay.seconds: wait 15 seconds after startup before the first sync
-** timeout.minutes: fail the run if the sync takes longer than 2 minutes
-
-Once this configuration is applied and RHDH restarts, the Catalog will automatically populate with User and Group entities pulled from RHBK, forming the identity backbone for ownership and permissions in later steps.
+* Once applied and the platform is refreshed, the catalog will be populated with entities, providing a structured view of your application landscape.
 
 ---
 
-=== 2.6 Integration and Proxy Configuration
+=== Step 1.6: Configure integrations and secure access
 
-In this step you enable integration between Red Hat Developer Hub and your *GitLab* instance. You will also enable the proxy configuration, allowing *Red Hat Developer Hub* to act as a secure intermediary between developers and external services such as Quay — routing requests server-side so developers never handle tokens directly or run into browser CORS issues.
+* In this step, you will connect *Red Hat Developer Hub (RHDH)* to external services and enable secure access through the platform.
 
-. In backstage-values.yaml, locate and uncomment the integrations and proxy blocks using `CMD + /` (Mac) or `CTRL + /` (Windows/Linux) as shown below.
+* This allows developers to interact with tools such as *GitLab* and *Quay* through *RHDH* without needing to manage credentials directly.
 
-. Scroll down and enter a commit message:
+. In `backstage-values.yaml`, locate the `integrations` and `proxy` sections.
+
+. Uncomment both blocks using `CMD + /` (Mac) or `CTRL + /` (Windows/Linux) as shown below.
+
+image::enable_integration_proxy.png[enable_integration_proxy,align="center",link=self,window=blank]
+
+. Scroll down and enter the following commit message:
 +
 [source, role="execute"]
 ----
 feat: Update Red Hat Developer Hub Configuration
 ----
 
-. Click *Commit Changes*.
-+
-image::enable_integration_proxy.png[enable_integration_proxy,align="center",link=self,window=blank]
+. Click *Commit changes*.
+
+* These updates enable *RHDH* to integrate with external systems and route requests securely through the platform.
 
 ---
 
-=== 2.7 Sync via Argo CD
+=== Step 1.7: Apply configuration using GitOps
+
+* In this step, you will apply the changes you committed and observe how the platform updates automatically using GitOps.
 
 . In Showroom, switch to the *Argo CD* tab and log in using the following credentials:
 +
@@ -536,38 +224,46 @@ image::enable_integration_proxy.png[enable_integration_proxy,align="center",link
 {openshift_gitops_admin_password}
 ----
 
-. Switch to the *Backstage* Application.
+. Open the *Backstage* application.
 +
 image::switch_to_backstage_app.png[switch_to_backstage_app,align="center",link=self,window=blank]
 
-. *Argo CD* is configured to automatically synchronise every two minutes. To avoid waiting for the next sync cycle, trigger *Hard Refresh* to trigger an immediate reconciliation.
-
-. Locate the Refresh button in the UI, click the down arrow next to it, and select *Hard Refresh*.
+. To apply the latest changes immediately, trigger a refresh:
 +
+* Click the *Refresh* dropdown and select *Hard Refresh*.
+
 image::hard_refresh.png[hard_refresh,align="center",link=self,window=blank]
-+
-*Argo CD* immediately begins rolling out the updated configuration. This typically takes 2–3 minutes as the *Red Hat Developer Hub* deployment is reconciled and new plugins are installed for the first time.
-+
+
+* *Argo CD* begins applying the updated configuration. This may take a few minutes as *RHDH* is updated and new capabilities are enabled.
+
 image::argo_cd_rollout.png[argo_cd_rollout,align="center",link=self,window=blank]
+
+* Wait until the application shows:
 +
-* Wait for Argo CD to complete synchronisation of the Backstage application. Confirm that APP HEALTH shows Healthy and SYNC STATUS shows Synced.
+. *Health*: Healthy  
+. *Sync Status*: Synced  
 
-You've just seen GitOps and configuration-as-code in action. Configuration changes committed to Git were automatically reconciled into *Red Hat Developer Hub* by *Argo CD*, without manual UI changes.
+* This confirms that your configuration changes have been successfully applied to *RHDH*.
 
-In the next step, you'll return to Red Hat Developer Hub to verify that these changes are now active in the portal.
+* You have now used GitOps to update the platform, where changes committed to Git are automatically reconciled into the running environment.
+
+* In the next step, you will return to *RHDH* to verify that these changes are now active.
 
 ---
 
-== Step 3: Validate the changes in RHDH
+== Step 2: Validate the changes in RHDH
 
-* Click the *RHDH* tab in the Showroom. You may need to refresh the tab. 
-* If you are logged in as Guest, click the user icon in the top-right corner, select the drop-down arrow, then choose Sign out from the menu.
+* In this step, you will return to *Red Hat Developer Hub (RHDH)* and verify that the configuration changes are now active.
+
+* Click the *RHDH* tab in the Showroom. You may need to refresh the tab.
+
+* If you are still logged in as *Guest*, sign out using the user menu in the top-right corner.
 +
 image::guest_sign_out.png[guest_sign_out.png,align="center",link=self,window=blank]
-+
-* You should immediately notice that Guest access is no longer available and the only login option is Sign in with OIDC, backed by Red Hat Build of Keycloak.
 
-. Click Sign in with OIDC.
+* You should now see that Guest access is no longer available, and the only login option is *Sign in with OIDC*.
+
+. Click *Sign in with OIDC*.
 +
 image::sign_in_with_oidc.png[sign_in_with_oidc,align="center",link=self,window=blank]
 
@@ -587,71 +283,33 @@ user1
 {password}
 ----
 
-. Once logged in, select Catalog from the left navigation menu. You should now see that the catalog is populated.
+. From the left navigation, select *Catalog*. You should now see that the catalog is populated.
 
-. Change the Kind filter to User and the catalog will display users that have been synchronised from Red Hat Build of Keycloak. Additional users are also listed. These are sample users imported from the catalog locations you provided in the Red Hat Developer Hub configuration in GitLab.
+. Change the *Kind* filter to *User* to view users synchronized from the identity provider.
 +
 image::catalog_users.png[catalog_users,align="center",link=self,window=blank]
 
----
-
-
-== Step 4: Development Environment as Code with Devfiles
-
-The concept of Development Environment as Code represents a significant shift in the way we set up and manage development environments. By treating these configurations as code, developers can leverage automation, apply version control, and ensure consistency across various setups. 
-
-This approach simplifies the complex process of configuring individual environments and aligns it with modern DevOps practices. At the heart of this paradigm is the Devfile, a YAML configuration file used by OpenShift Dev Spaces, and in this step you will update a Devfile that our developer will use in his development workspace.
-
-In this section you'll act as a Platform Engineer and update the Devfile in a Template (Golden Path) that developers will use to create new applications. The update you make ensures that commit signing is enforced in new projects created using the template.
-
-.Optional Deep Dive: Development Environment as Code with Devfiles
-[%collapsible]
-====
-
-===  Development Environment as Code with Devfiles
-
-
-* *Devfiles* act as blueprints for setting up development environments, defining everything from runtime environments to the necessary tools and commands needed for a project.
-
-=== Anatomy of a Devfile
-
-==== Projects (Optional)
-
-* The *Projects* section is used to specify source code repositories that are essential for the development environment. 
-* It includes details like the repository URL and the specific branch, tag, or commit to be used, ensuring that the *workspace* is pre-populated with the correct code version upon initialization.
-
-==== Components: 
-
-* *Components* are the building blocks of the development environment. The can be of type:
-
-. *Container*: Defines the container image containing the runtime environment, development tools, and dependencies.
-. *Kubernetes/OpenShift Resources*: Incorporates Kubernetes or OpenShift-specific resources such as Routes and BuildConfigs into the workspace.
-. *Volume*: Provides persistent storage necessary for certain data within the development environment.
-. *Plugin*: Extends the capabilities of the development environment by adding IDE features or integrating additional tools and services.
-
-==== Commands (Optional): 
-
-* The **Commands** section outlines specific actions that can be executed within the development environment, such as build, run, and test commands. 
-* These *commands* are defined to automate tasks and facilitate a consistent development workflow across different environments. 
-* Each *command* can specify a working directory, an associated container, and the actual command line to execute.
-
-==== Events (Optional): 
-
-* The *Events* section in a *devfile* handles the lifecycle events of the workspace, such as pre-start, post-start, pre-stop, and post-stop events.
-* These events trigger specific commands at different stages of the workspace lifecycle, enabling the setup or teardown of services and tools necessary for the development process.
-* This mechanism ensures that certain tasks are automatically handled at the appropriate times, enhancing both the efficiency and reliability of the development environment.
-
-image::devfile_anatomy.png[Devfile Anatomy Diagram,link=self,window=blank]
-
-* Now it’s time to try this out hands-on. In this module, you’ll experience firsthand how *OpenShift Dev Spaces* streamlines the process of joining a new project.
-
-====
+* This confirms that authentication, catalog configuration, and integrations are now active within *RHDH*.
 
 ---
 
-=== 4.1 Log Back in to GitLab Update the Devfile 
+== Step 3: Define the developer experience using Devfiles
 
-. If you are not already logged in to *Gitlab*, click the *Gitlab* tab in the Showroom and log in using:
+* In this step, you will define how developer environments are created and configured as part of your platform.
+
+* As a platform engineer, your goal is to ensure that every developer starts with a consistent, secure, and ready-to-use environment.
+
+* This is achieved using *Devfiles*, which act as templates for development environments in *OpenShift Dev Spaces*.
+
+* By managing *Devfiles* as code, you can standardize tools, automate setup, and embed security practices directly into developer workflows.
+
+* In this step, you will update a *Devfile* used in a *Golden Path template*, ensuring that commit signing is automatically configured for all new projects.
+
+---
+
+=== Step 3.1: Access the Devfile configuration
+
+. If you are not already logged in to *GitLab*, switch to the *GitLab* tab and log in using:
 +
 *Username*:
 +
@@ -667,161 +325,310 @@ image::devfile_anatomy.png[Devfile Anatomy Diagram,link=self,window=blank]
 {gitlab_root_password}
 ----
 
----
-
-=== 4.2 Update the Devfile 
-
-. At the top left click on *Gitlab Home*.
-+
-image::gitlab_home_page.png[gitlab_home_page,align="center",link=self,window=blank]
-
-. Select the repository "build-secured-dev-workflows-idp-configuration".
+. Navigate to the repository `build-secured-dev-workflows-idp-configuration`.
 +
 image::build-secured_repo.png[build-secured_repo,align="center",link=self,window=blank]
 
-. Navigate to the paths "scaffolder-templates/quarkus-stssc-template".
-+
-image::navigate_to_quarkus_template.png[navigate_to_quarkus_template,align="center",link=self,window=blank]
+. Open the path `scaffolder-templates/quarkus-stssc-template/skeleton`.
 
-. Open the folder *skeleton*.
-+
-image::open_skelton.png[open_skelton,align="center",link=self,window=blank]
-
-. Select the the file *devfile.yaml*.
+. Select the file `devfile.yaml` and open it for editing.
 +
 image::select_devfile.png[select_devfile,align="center",link=self,window=blank]
 
-. Select *Edit* > *Edit single file*.
-+
-image::devfile_single_edit.png[devfile_single_edit,align="center",link=self,window=blank]
+---
 
-. In devfile.yaml, locate and uncomment the *attributes* section using `CMD + /` (Mac) or `CTRL + /` (Windows/Linux) as shown below:
-+
-** These attributes allow configuration from a ConfigMap you'll create in the next module to be injected into workspaces managed by OpenShift Dev Spaces.
+=== Step 3.2: Update the Devfile
+
+* In this step, you will enable configuration that ensures every developer workspace is prepared for secure Git commit signing.
+
+. Uncomment the `attributes` section.
 +
 image::dev_tools_atributes.png[dev_tools_atributes,align="center",link=self,window=blank]
 
-. Next, under the commands section, uncomment the *init-git-config* command using using `CMD + /` (Mac) or `CTRL + /` (Windows/Linux) as shown below:
-+
-** This command updates the Git configuration for the current workspace session using the injected environment variables, enabling commit signing.
+. Uncomment the `init-git-config` command under the `commands` section.
 +
 image::init_git_config_command.png[init_git_config_command,align="center",link=self,window=blank]
 
-. Finally, under the events section, uncomment the postStart event using CMD + / (Mac) or CTRL + / (Windows/Linux).
-+
-** This *post-start* event automatically triggers the *init-git-config* command as soon as the workspace starts.
+. Uncomment the `postStart` event under the `events` section.
 +
 image::poststart_Event.png[poststart_Event.png,align="center",link=self,window=blank]
 
-. Scroll down and enter a commit message:
+* These updates ensure that Git configuration is automatically applied when a workspace starts, enabling commit signing without manual setup.
+
+. Scroll down and enter the following commit message:
 +
 [source, role="execute"]
 ----
-feat: Update Devfile Configuration.
+feat: Update Devfile Configuration
 ----
 
-. Click *Commit Changes*. 
+. Click *Commit Changes*.
 
 ---
 
-=== 4.3 Create the tas-git-config ConfigMap for Dev Spaces
+=== Step 3.3: Configure Dev Spaces workspace settings
 
-In this step, you will create a ConfigMap for *Dev Spaces* so that every developer workspace automatically inherits the information required for OIDC-based Git commit signing, without manual setup.
+* In this step, you will apply environment-level configuration that is automatically injected into developer workspaces.
 
-Create a new ConfigMap in the openshift-devspaces namespace using this command in the Terminal:
-
-[source, role="send-to", subs="attributes"]
+. Run the following script in the terminal:
++
+[source, role="send-to-wetty", subs="attributes"]
 ----
-cat << 'EOF' | oc apply -n openshift-devspaces -f -
-apiVersion: v1
-kind: ConfigMap
+~/lab-assets/create-devspaces-configmap.sh
+----
+
+* This script creates the ConfigMap used by OpenShift Dev Spaces to provide the required environment variables for commit signing.
+* It configures workspace access to the Trusted Artifact Signer services, including *Fulcio*, *Rekor*, and the identity provider settings.
+* Once applied, new developer workspaces automatically receive these settings without requiring manual configuration.
+
+---
+
+=== Step 3.4: Configure pipeline access
+
+* In this step, you will prepare the secrets required for the CI pipeline to securely authenticate to the services used in the delivery workflow.
+
+. Run the following script in the terminal:
++
+[source, role="send-to-wetty"]
+----
+~/lab-assets/create-pipeline-secrets.sh
+----
+
+* This script creates the secrets needed by the pipeline to connect to *RHTPA* and *GitLab*.
+* It retrieves the required values from the environment and cluster, then applies them to the *tssc-app-ci* namespace.
+* This ensures that the pipeline can securely interact with the required services during application creation and delivery.
+
+---
+
+
+
+== Step 4: Set up image vulnerability scanning
+
+* *Red Hat Advanced Cluster Security (ACS)* provides vulnerability analysis and policy evaluation for container images.
+* By integrating ACS with *Quay*, images can be scanned automatically before they are deployed or promoted.
+
+---
+
+=== Step 4.1: Configure ACS and integrate with Quay
+
+* In this step, you will connect *ACS* to *Quay* so that images stored in the registry can be scanned for vulnerabilities.
+
+. In Showroom, switch to the *ACS* tab and log in using the following credentials:
++
+* *Username*:
++
+[source, role="execute", subs="attributes"]
+----
+{rhacs_admin_user}
+----
++
+* *Password*:
++
+[source, role="execute", subs="attributes"]
+----
+{rhacs_admin_password}
+----
+
+. In the *ACS console*, navigate to:
++
+*Platform Configuration* → *Integrations*
+
+. Select *Red Hat Quay.io*, then click *New Integration*.
+
+image::acs_new_integration.png[acs_new_integration,align="center",link=self,window=blank]
+
+. Provide the required details:
++
+* Integration name: `acs_quay`
+* Type: *Registry + Scanner*
+* Endpoint: `{quay_host}`
+* Credentials: Use the provided Quay admin username, password, and OAuth token
+
+. Click *Test* to validate the connection, then click *Save*.
+
+
+
+* Once completed, *ACS* can securely access images stored in *Quay* and automatically scan them for vulnerabilities.
+* This ensures that security checks are applied before images are promoted through the software supply chain.
+
+---
+
+
+.Optional Deep Dive: How the Platform Works Together
+[%collapsible]
+====
+
+You’ve now completed this module. The section below is optional and explains how this module introduced three key control layers in the platform. Each layer is responsible for a different aspect of how the developer experience is delivered and enforced.
+
+Dynamic Plugins (Platform Capabilities)
+
+In *Red Hat Developer Hub*, plugins are not baked into the application at build time. Instead, they are enabled dynamically through configuration.
+
+Plugins are defined in configuration (for example, in ConfigMaps or Helm values) under the `dynamic.plugins` section. Each plugin entry specifies:
+
+- Whether the plugin is enabled or disabled  
+- Where the plugin is loaded from (local package or OCI image)  
+- Optional plugin-specific configuration  
+
+For example:
+
+[source, yaml]
+----
+dynamic:
+  plugins:
+    - disabled: false
+      package: ./dynamic-plugins/dist/backstage-plugin-kubernetes
+----
+
+When this configuration is applied through GitOps:
+- The platform loads the plugin at runtime  
+- No rebuild of the Developer Hub image is required  
+- Changes can be versioned, reviewed, and promoted across environments  
+
+This means platform capabilities are controlled declaratively. Adding or removing functionality becomes a configuration change, not a rebuild process.
+
+---
+
+Devfiles (Development Environment Behavior)
+
+A *Devfile* defines how a developer workspace is constructed and behaves.
+
+A Devfile typically includes:
+
+- *Projects*: source code repositories to be loaded into the workspace  
+- *Components*: containers, tools, and dependencies that make up the runtime  
+- *Commands*: actions such as build, run, and test  
+- *Events*: lifecycle hooks that trigger commands at specific stages  
+
+image::devfile_anatomy.png[Devfile Anatomy Diagram,link=self,window=blank]
+
+In this module, multiple parts of the Devfile work together:
+
+- Environment variables are injected into the workspace from a ConfigMap  
+- A command (`init-git-config`) uses those variables to configure Git  
+- A *postStart* event automatically runs that command when the workspace starts  
+
+This is critical.
+
+It means:
+- Developers do not manually configure commit signing  
+- Every workspace is initialized with the same behavior  
+- Security controls are enforced as part of the environment lifecycle  
+
+The Devfile becomes the enforcement point for developer experience. Instead of relying on instructions, the platform ensures the correct setup is applied automatically.
+
+---
+
+Golden Paths (Application Delivery Standardization)
+
+Golden Paths are exposed in *Red Hat Developer Hub* through *Software Templates*.
+
+A Software Template defines how an application is created and delivered. It is written in YAML and executed by the *Scaffolder*, which automates the creation process.
+
+At a high level, a template includes:
+
+- *Header*: metadata used to display the template in the UI  
+- *Parameters*: inputs collected from the developer via forms  
+- *Steps*: actions executed by the Scaffolder  
+- *Output*: links or results shown after execution  
+
+Example structure:
+
+[source, yaml]
+----
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
 metadata:
-  name: tas-git-config
-  annotations:
-    controller.devfile.io/mount-as: env
-  labels:
-    app.kubernetes.io/part-of: che.eclipse.org
-    app.kubernetes.io/component: workspaces-config
-data:
-  TAS_FULCIO_URL: "{tas_fulcio_url}"
-  TAS_REKOR_URL: "{tas_rekor_url}"
-  TAS_ISSUER_URL: "https://sso.{openshift_cluster_ingress_domain}/realms/sso"
-  TAS_CLIENT_ID: "trusted-artifact-signer"
-EOF
+  name: example-template
+spec:
+  parameters:
+    - title: Application Details
+      properties:
+        name:
+          type: string
+  steps:
+    - id: publish
+      action: publish:gitlab
+  output:
+    links:
+      - title: Repository
+        url: ${{ steps.publish.output.remoteUrl }}
 ----
 
-This ConfigMap defines the endpoints and identity configuration required by *gitsign*, the tool used to perform keyless Git commit signing via *RHTAS*.
+How this works in practice:
 
-NOTE: The label app.kubernetes.io/component=workspaces-config instructs Dev Spaces to inject these values into every developer workspace as environment variables.
+1. The developer selects a template in the UI  
+2. The platform renders a form based on the *parameters* section  
+3. The developer provides input  
+4. The *Scaffolder* executes the defined *steps*  
+5. The application, repository, and pipeline are created automatically  
+
+Steps can:
+- Create repositories  
+- Register components in the catalog  
+- Trigger pipelines  
+- Apply security controls such as signing and scanning  
+
+Golden Paths shift responsibility:
+
+- Platform teams define the approved way of building and delivering software  
+- Developers consume that capability through self-service  
+
+This ensures that every application created:
+- Follows the same structure  
+- Uses the same delivery pipeline  
+- Includes the same security and compliance controls  
 
 ---
 
-=== 4.4 Configure pipeline authentication secrets
+Putting It Together
 
-Before moving on to executing the software template as a developer, the CI pipeline must be able to authenticate to the systems it interacts with. All application pipelines in this workshop run in the tssc-app-ci namespace. Any credentials required by the pipeline must be available there as Kubernetes Secrets.
+These three layers operate together:
 
-In this step, you will create two secrets required by the pipeline:
+- *Dynamic plugins* control what capabilities are available in the platform  
+- *Devfiles* control how developer environments are configured and behave  
+- *Software Templates (Golden Paths)* control how applications are created and delivered  
 
-* *tpa-secret*: Credentials for uploading SBOMs to *Red Hat Trusted Profile Analyzer (RHTPA)*
-* *gitlab-auth-secret*: Credentials for authenticating to GitLab when creating repositories and interacting with source code
+This creates a system where:
 
-Let's get started.
+- Platform behavior is defined as code and managed through Git  
+- Developer environments are automatically configured and consistent  
+- Application delivery follows a standard, secure, and repeatable process  
 
-. Run the following command to set the TPA_SERVER_URL
-+
-[source,role="send-to"]
-----
-export TPA_SERVER_URL="https://$(oc get route -l app.kubernetes.io/component=server -n tssc-tpa -o json \
-  | jq -r '.items[0].spec.host')"
-----
-+
-. Then run this command to create the secret *tpa-secret*:
-+
-[source,role="send-to"]
-----
-envsubst < ~/lab-assets/tpa-secret.yml | oc apply -n tssc-app-ci -f -
-----
-+
-. Next, create the GitLab authentication secret. First, retrieve the GitLab personal access token:
-+
-[source,role="send-to"]
-----
-export GITLAB_TOKEN=$(oc get secret root-user-personal-token -n gitlab -o jsonpath='{.data.token}' | base64 -d)
-----
-+
-. Next, create the *gitlab-auth-secret* secret:
-+
-[source,role="send-to"]
-----
-envsubst < ~/lab-assets/gitlab-auth-secret.yml | oc apply -n tssc-app-ci -f -
-----
+====
 
-In the next module, you will edit code using OpenShift Dev Spaces and commit it to Git. This commit will be automatically signed using your OIDC identity.
-
----
 
 === Module 3 Summary
 
-In this module, you acted as a platform engineer, configuring Red Hat Developer Hub using GitOps and configuration as code.
+In this module, you took the role of a platform engineer and configured *Red Hat Developer Hub* using GitOps and configuration as code.
 
-For consultants, this module demonstrates how to design and implement an Internal Developer Platform in practice: translating customer requirements into repeatable, version-controlled platform configuration that scales across teams and environments.
+You established the foundations of an Internal Developer Platform by:
+. Standardizing developer environments
+. Embedding security controls into workflows
+. Enabling consistent, repeatable onboarding through templates
 
-For technical sellers, this provides a concrete way to address common customer challenges — tool sprawl, inconsistent onboarding, and security friction — by positioning Red Hat Developer Hub as the foundation for platform engineering, not just another developer tool. It shows how security, compliance, and productivity are delivered together, which is often the deciding factor in winning the deal.
+This step brings the platform into a more consistent and controlled state, moving away from fragmented tools and manual setup towards a standardized, self-service platform that can be used across teams.
 
-In the next module, you will switch personas and act as a developer, consuming the platform through a Software Template (Golden Path) to build and deploy an application.
+In practice, this helps reduce:
+. Tool sprawl and inconsistent ways of working  
+. Delays during onboarding and environment setup  
+. Gaps in how security and compliance are applied during development  
 
+The result is a platform where developers can get started faster, while still working within defined standards.
+
+In the next module, you will switch roles and act as a developer, consuming this platform through a *Software Template (Golden Path)* to build and deploy an application.
 ---
 
 == Module 3: Automation
 
-=== Solve Module 3
-++++
-<div class="solve-button-placeholder" data-module="module-03"></div>
-++++
-
 === Validate Module 3
 ++++
 <div class="validate-button-placeholder" data-module="module-03"></div>
+++++
+
+=== Solve Module 3
+++++
+<div class="solve-button-placeholder" data-module="module-03"></div>
 ++++
 
 ---

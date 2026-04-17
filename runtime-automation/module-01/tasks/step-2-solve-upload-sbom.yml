@@ -1,0 +1,81 @@
+---
+# STEP 2: Upload SBOM (upload-sbom.sh)
+- name: Check TPA endpoint availability
+  ansible.builtin.uri:
+    url: "https://server-{{ tpa_namespace }}.{{ cluster_domain }}"
+    validate_certs: false
+    status_code:
+      - 200
+      - 302
+      - 401
+  register: tpa_endpoint_check
+  until: tpa_endpoint_check.status in [200, 302, 401]
+  retries: 30
+  delay: 10
+  changed_when: false
+
+- name: Display TPA endpoint status
+  ansible.builtin.debug:
+    msg: "✓ TPA endpoint is ready"
+
+- name: Get Keycloak OIDC configuration
+  ansible.builtin.uri:
+    url: "{{ keycloak_admin_console }}/realms/{{ tpa_realm }}/.well-known/openid-configuration"
+    method: GET
+    return_content: true
+    validate_certs: false
+    status_code: 200
+  register: oidc_config
+  until: oidc_config.status == 200 and oidc_config.json.token_endpoint is defined
+  retries: 24
+  delay: 5
+  changed_when: false
+
+- name: Display token endpoint status
+  ansible.builtin.debug:
+    msg:
+      - "✓ Token endpoint available"
+      - "Token endpoint URL: {{ oidc_config.json.token_endpoint }}"
+
+- name: Get OAuth access token
+  ansible.builtin.uri:
+    url: "{{ oidc_config.json.token_endpoint }}"
+    method: POST
+    body_format: form-urlencoded
+    body:
+      grant_type: client_credentials
+      client_id: cli
+      client_secret: "{{ tpa_cli_client_secret }}"
+    return_content: true
+    validate_certs: false
+    status_code: [200, 201]
+  register: oauth_response
+  until: oauth_response.status in [200, 201] and oauth_response.json.access_token is defined
+  retries: 12
+  delay: 5
+  changed_when: false
+
+- name: Set OAuth token fact
+  ansible.builtin.set_fact:
+    oauth_token: "{{ oauth_response.json.access_token }}"
+
+- name: Display OAuth token status
+  ansible.builtin.debug:
+    msg: "✓ OAuth access token obtained"
+
+- name: Upload SBOM to RHTPA
+  ansible.builtin.shell:
+    cmd: |
+      TPA_SERVER_URL="https://server-{{ tpa_namespace }}.{{ cluster_domain }}"
+      curl -k -X POST ${TPA_SERVER_URL}/api/v2/sbom?id={{ sbom_id }} \
+        -H "Authorization: Bearer {{ oauth_token }}" \
+        -H "Content-Type: application/json" \
+        --data-binary @{{ sbom_file }}
+  changed_when: true
+
+- name: SBOM upload complete
+  ansible.builtin.debug:
+    msg:
+      - "✓ SBOM uploaded successfully"
+      - "SBOM ID: {{ sbom_id }}"
+      - "Console: https://server-{{ tpa_namespace }}.{{ cluster_domain }}"

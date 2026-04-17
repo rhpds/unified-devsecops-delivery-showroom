@@ -1,0 +1,59 @@
+---
+# STEP 2.4: Test Commit Signing with RHTAS
+- name: Get current timestamp
+  ansible.builtin.setup:
+    filter: ansible_date_time
+
+- name: Set commit signing script paths
+  ansible.builtin.set_fact:
+    commit_signing_script_template: "{{ playbook_dir }}/templates/commit-signing.sh.j2"
+    commit_signing_script: "/tmp/commit-signing-{{ ansible_date_time.epoch }}.sh"
+
+- name: Template commit signing script
+  ansible.builtin.template:
+    src: "{{ commit_signing_script_template }}"
+    dest: "{{ commit_signing_script }}"
+    mode: '0755'
+
+- name: Run commit signing script
+  ansible.builtin.shell:
+    cmd: "{{ commit_signing_script }}"
+  register: commit_signing_result
+  changed_when: true
+
+- name: Display commit signing results
+  ansible.builtin.debug:
+    msg: "{{ commit_signing_result.stdout_lines }}"
+
+- name: Check if commit signing succeeded
+  ansible.builtin.assert:
+    that:
+      - commit_signing_result.rc == 0
+      - "'SUCCESS: Commit signing works!' in commit_signing_result.stdout"
+    fail_msg: "Commit signing failed"
+    success_msg: "✓ Commit signing completed successfully"
+
+- name: Cleanup commit signing script
+  ansible.builtin.file:
+    path: "{{ commit_signing_script }}"
+    state: absent
+
+- name: Wait for maven-image-build PipelineRun to be created and complete successfully
+  kubernetes.core.k8s_info:
+    api_version: tekton.dev/v1
+    kind: PipelineRun
+    namespace: "{{ app_ci_namespace }}"
+    label_selectors:
+      - pipelinesascode.tekton.dev/original-prname=maven-image-build
+  register: pipeline_check
+  until: >
+    pipeline_check.resources | length > 0 and
+    (pipeline_check.resources | sort(attribute='metadata.creationTimestamp') | last).status is defined and
+    (pipeline_check.resources | sort(attribute='metadata.creationTimestamp') | last).status.conditions is defined and
+    (pipeline_check.resources | sort(attribute='metadata.creationTimestamp') | last).status.conditions | selectattr('type', 'equalto', 'Succeeded') | map(attribute='status') | first | default('') == 'True'
+  retries: 120
+  delay: 10
+
+- name: Display PipelineRun completed
+  ansible.builtin.debug:
+    msg: "✓ PipelineRun {{ (pipeline_check.resources | sort(attribute='metadata.creationTimestamp') | last).metadata.name }} completed successfully"

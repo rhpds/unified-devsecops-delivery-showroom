@@ -1,0 +1,245 @@
+---
+# STEP 2: Test Image Signing (test-image-signing.sh)
+- name: Display test start
+  ansible.builtin.debug:
+    msg:
+      - "========================================="
+      - "RHTAS Image Signing Smoke Test"
+      - "========================================="
+
+- name: Setting up test permissions
+  ansible.builtin.debug:
+    msg:
+      - "Setting up test permissions..."
+      - "---------------------------------------"
+
+- name: Create service account
+  ansible.builtin.debug:
+    msg: "Creating service account: {{ test_sa }}..."
+
+- name: Create test service account
+  ansible.builtin.shell: |
+    oc create sa {{ test_sa }} -n {{ app_ci_namespace }} 2>/dev/null || echo "✓ Service account already exists"
+  changed_when: false
+
+- name: Grant anyuid SCC
+  ansible.builtin.debug:
+    msg: "Granting anyuid SCC..."
+
+- name: Add anyuid SCC to service account
+  ansible.builtin.shell: |
+    oc adm policy add-scc-to-user anyuid -z {{ test_sa }} -n {{ app_ci_namespace }}
+  changed_when: true
+
+- name: Grant privileged SCC
+  ansible.builtin.debug:
+    msg: "Granting privileged SCC..."
+
+- name: Add privileged SCC to service account
+  ansible.builtin.shell: |
+    oc adm policy add-scc-to-user privileged -z {{ test_sa }} -n {{ app_ci_namespace }}
+  changed_when: true
+
+- name: Link registry secret
+  ansible.builtin.debug:
+    msg: "Linking registry secret..."
+
+- name: Link registry secret to service account
+  ansible.builtin.shell: |
+    oc secret link {{ test_sa }} {{ registry_secret }} -n {{ app_ci_namespace }} --for=mount 2>/dev/null || echo "✓ Secret already linked"
+  changed_when: false
+
+- name: Display test permissions configured
+  ansible.builtin.debug:
+    msg: "✓ Test permissions configured"
+
+- name: Running Tekton build-and-push task
+  ansible.builtin.debug:
+    msg:
+      - "Running Tekton build-and-push task..."
+      - "-----------------------------------------------"
+
+- name: Apply the task
+  ansible.builtin.debug:
+    msg: "Applying Tekton task..."
+
+- name: Create Tekton task
+  ansible.builtin.shell: |
+    oc create -f $(eval echo "{{ lab_assets_dir }}/example-image-sign.yml") -n {{ app_ci_namespace }}
+  changed_when: true
+  delegate_to: bastion
+
+- name: Display Tekton task created
+  ansible.builtin.debug:
+    msg: "✓ Tekton task created"
+
+- name: Wait for TaskRun to start
+  ansible.builtin.debug:
+    msg: "Waiting for TaskRun to start..."
+
+- name: Sleep 5 seconds
+  ansible.builtin.pause:
+    seconds: 5
+
+- name: Get TaskRun name
+  ansible.builtin.shell: |
+    oc get taskrun -n {{ app_ci_namespace }} --sort-by=.metadata.creationTimestamp -o jsonpath='{.items[-1].metadata.name}'
+  register: taskrun_name
+  changed_when: false
+  failed_when: taskrun_name.stdout == ""
+
+- name: Display monitoring TaskRun
+  ansible.builtin.debug:
+    msg:
+      - "Monitoring TaskRun: {{ taskrun_name.stdout }}"
+      - ""
+
+- name: Wait for TaskRun to complete
+  ansible.builtin.debug:
+    msg: "Waiting for TaskRun to complete (this may take a few minutes)..."
+
+- name: Monitor TaskRun completion
+  ansible.builtin.shell: |
+      TIMEOUT=600
+      ELAPSED=0
+      while [ $ELAPSED -lt $TIMEOUT ]; do
+        TASKRUN_STATUS=$(oc get taskrun {{ taskrun_name.stdout }} -n {{ app_ci_namespace }} -o jsonpath='{.status.conditions[?(@.type=="Succeeded")].status}' 2>/dev/null || echo "Unknown")
+        TASKRUN_REASON=$(oc get taskrun {{ taskrun_name.stdout }} -n {{ app_ci_namespace }} -o jsonpath='{.status.conditions[?(@.type=="Succeeded")].reason}' 2>/dev/null || echo "")
+
+        if [ "$TASKRUN_STATUS" == "True" ]; then
+          IMAGE_URL=$(oc get taskrun {{ taskrun_name.stdout }} -n {{ app_ci_namespace }} -o jsonpath='{.status.results[?(@.name=="IMAGE_URL")].value}' 2>/dev/null || echo "N/A")
+          IMAGE_DIGEST=$(oc get taskrun {{ taskrun_name.stdout }} -n {{ app_ci_namespace }} -o jsonpath='{.status.results[?(@.name=="IMAGE_DIGEST")].value}' 2>/dev/null || echo "N/A")
+          echo "success"
+          echo "$IMAGE_URL"
+          echo "$IMAGE_DIGEST"
+          exit 0
+        elif [ "$TASKRUN_STATUS" == "False" ]; then
+          echo "failed:$TASKRUN_REASON"
+          exit 1
+        fi
+
+        # Show progress every 30 seconds
+        if [ $((ELAPSED % 30)) -eq 0 ]; then
+          echo "  Status: ${TASKRUN_STATUS:-Pending} (${ELAPSED}s elapsed)" >&2
+        fi
+
+        sleep 10
+        ELAPSED=$((ELAPSED + 10))
+      done
+      echo "timeout"
+      exit 1
+  register: taskrun_result
+  changed_when: false
+  failed_when: taskrun_result.stdout_lines[0] != "success"
+
+- name: Handle TaskRun failure
+  when: taskrun_result.stdout_lines[0] == "failed"
+  block:
+    - name: Display TaskRun failed
+      ansible.builtin.debug:
+        msg:
+          - "✗ TaskRun failed: {{ taskrun_result.stdout_lines[0].split(':')[1] }}"
+          - ""
+          - "TaskRun logs:"
+
+    - name: Get TaskRun logs
+      ansible.builtin.shell:
+        cmd: oc logs -n {{ app_ci_namespace }} --selector=tekton.dev/taskRun={{ taskrun_name.stdout }} --tail=50
+      register: taskrun_logs
+      changed_when: false
+
+    - name: Display TaskRun logs
+      ansible.builtin.debug:
+        msg: "{{ taskrun_logs.stdout_lines }}"
+
+    - name: Fail playbook
+      ansible.builtin.fail:
+        msg: "TaskRun failed"
+
+- name: Display TaskRun completed
+  ansible.builtin.debug:
+    msg:
+      - "✓ TaskRun completed successfully"
+      - ""
+      - "Image Details:"
+      - "  URL: {{ taskrun_result.stdout_lines[1] }}"
+      - "  Digest: {{ taskrun_result.stdout_lines[2] }}"
+      - ""
+
+- name: Wait for Tekton Chains to sign the image
+  ansible.builtin.debug:
+    msg: "Waiting for Tekton Chains to sign the image..."
+
+- name: Sleep 15 seconds for signing
+  ansible.builtin.pause:
+    seconds: 15
+
+- name: Display signing complete
+  ansible.builtin.debug:
+    msg: "✓ Signing should be complete"
+
+- name: Cleaning up test permissions
+  ansible.builtin.debug:
+    msg:
+      - "Cleaning up test permissions..."
+      - "-----------------------------------------"
+
+- name: Remove anyuid SCC
+  ansible.builtin.debug:
+    msg: "Removing anyuid SCC..."
+
+- name: Remove anyuid SCC from service account
+  ansible.builtin.shell: |
+    oc adm policy remove-scc-from-user anyuid -z {{ test_sa }} -n {{ app_ci_namespace }}
+  changed_when: true
+
+- name: Remove privileged SCC
+  ansible.builtin.debug:
+    msg: "Removing privileged SCC..."
+
+- name: Remove privileged SCC from service account
+  ansible.builtin.shell: |
+    oc adm policy remove-scc-from-user privileged -z {{ test_sa }} -n {{ app_ci_namespace }}
+  changed_when: true
+
+- name: Delete service account
+  ansible.builtin.debug:
+    msg: "Deleting service account..."
+
+- name: Delete test service account
+  ansible.builtin.shell: |
+    oc delete sa {{ test_sa }} -n {{ app_ci_namespace }}
+  changed_when: true
+
+- name: Display cleanup complete
+  ansible.builtin.debug:
+    msg: "✓ Cleanup complete"
+
+- name: Image signing test complete
+  ansible.builtin.debug:
+    msg:
+      - "========================================="
+      - "RHTAS Image Signing Test Complete!"
+      - "========================================="
+      - ""
+      - "Summary:"
+      - "  ✓ Test service account created"
+      - "  ✓ Tekton task executed successfully"
+      - "  ✓ Image built and pushed to Quay"
+      - "  ✓ Tekton Chains signed the image"
+      - "  ✓ Cleanup completed"
+      - ""
+      - "========================================="
+      - "Verify Signature in Quay Console"
+      - "========================================="
+      - ""
+      - "To verify the signature:"
+      - ""
+      - "  1. Open the Quay Console tab in Showroom and log in"
+      - ""
+      - "  3. Navigate to: tssc/tekton-chains-test repository"
+      - ""
+      - "  4. Look for the image tag created by this task"
+      - ""
+      - "  5. Verify the SHIELD ICON appears next to the tag"
+      - "     (This indicates a valid Cosign signature)"

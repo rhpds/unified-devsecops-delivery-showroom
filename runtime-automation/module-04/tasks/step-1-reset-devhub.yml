@@ -1,0 +1,67 @@
+---
+# STEP 1: Clean up Developer Hub Components (via catalog locations)
+- name: Wait for Developer Hub pods to be ready
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Pod
+    namespace: backstage
+    label_selectors:
+      - app.kubernetes.io/name=developer-hub
+  register: devhub_pods
+  until: >
+    devhub_pods.resources | length > 0 and
+    devhub_pods.resources | selectattr('status', 'defined') | selectattr('status.phase', 'defined') | selectattr('status.phase', 'equalto', 'Running') | list | length == devhub_pods.resources | length and
+    devhub_pods.resources | selectattr('status', 'defined') | selectattr('status.conditions', 'defined') | map(attribute='status.conditions') | flatten | selectattr('type', 'equalto', 'Ready') | selectattr('status', 'equalto', 'True') | list | length == devhub_pods.resources | length
+  retries: 60
+  delay: 10
+  failed_when: false
+
+- name: Display Developer Hub pod readiness result
+  ansible.builtin.debug:
+    msg: "{{ '✓ All Developer Hub pods are ready (' + (devhub_pods.resources | length | string) + ' pod(s))' if (devhub_pods.resources | length > 0 and devhub_pods.resources | selectattr('status', 'defined') | selectattr('status.phase', 'defined') | selectattr('status.phase', 'equalto', 'Running') | list | length == devhub_pods.resources | length) else '⚠ Developer Hub pods not ready or timed out' }}"
+
+- name: Get catalog locations from Developer Hub
+  ansible.builtin.uri:
+    url: "{{ developer_hub_url }}/api/catalog/locations"
+    method: GET
+    validate_certs: false
+    headers:
+      Authorization: "Bearer {{ rhdh_api_token }}"
+    status_code: [200]
+  register: rhdh_locations
+  changed_when: false
+  failed_when: false
+  when: >
+    developer_hub_url is defined and
+    rhdh_api_token is defined
+
+- name: Filter locations to delete (my-quarkus-tkn*)
+  ansible.builtin.set_fact:
+    locations_to_delete: "{{ rhdh_locations.json | default([]) | selectattr('data.target', 'search', 'my-quarkus-tkn') | map(attribute='data') | list }}"
+  when: >
+    rhdh_locations.json is defined
+
+- name: Display locations found
+  ansible.builtin.debug:
+    msg: "Found {{ locations_to_delete | default([]) | length }} catalog location(s) to delete: {{ locations_to_delete | default([]) | map(attribute='target') | list }}"
+  when: locations_to_delete is defined
+
+- name: Delete my-quarkus-tkn catalog locations from Developer Hub
+  ansible.builtin.uri:
+    url: "{{ developer_hub_url }}/api/catalog/locations/{{ item.id }}"
+    method: DELETE
+    validate_certs: false
+    headers:
+      Authorization: "Bearer {{ rhdh_api_token }}"
+    status_code: [204, 404]
+  loop: "{{ locations_to_delete | default([]) }}"
+  when: >
+    locations_to_delete is defined and
+    locations_to_delete | length > 0
+  register: rhdh_delete_results
+  changed_when: true
+
+- name: Display RHDH cleanup results
+  ansible.builtin.debug:
+    msg: "{{ '✓ Deleted ' + (locations_to_delete | default([]) | length | string) + ' catalog location(s) from Developer Hub (components auto-removed)' if locations_to_delete is defined and locations_to_delete | length > 0 else '✓ No matching catalog locations found in Developer Hub' }}"
+  when: developer_hub_url is defined

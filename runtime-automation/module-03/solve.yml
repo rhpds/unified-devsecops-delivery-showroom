@@ -24,6 +24,12 @@
     developer_firstname: "User1"
     developer_lastname: "Demo"
     lab_assets_dir: "/home/lab-user/lab-assets"
+    # ACS variables (from module 4)
+    acs_namespace: "stackrox"
+    acs_integration_name: "acs_quay"
+    quay_org: "tssc"
+    quay_repo: "tekton-chains-test"
+    image_tag: "latest"
 
   module_defaults:
     group/kubernetes.core.k8s:
@@ -45,404 +51,66 @@
       ansible.builtin.debug:
         msg: "Solving Module 03: Developer Setup and Platform Configuration"
 
+    - name: Login to OpenShift cluster
+      ansible.builtin.shell: |
+        oc login {{ openshift_api_server_url }} --token={{ (lookup('file', k8s_kubeconfig) | from_yaml).users[0].user.token }} --insecure-skip-tls-verify=true
+      changed_when: false
+
     ###########################################
-    # STEP 0: Reset Module 3 (reset-module-3.sh)
+    # STEP 1: Reset Module 3
     ###########################################
-    - name: "STEP 0: Reset Module 3"
-      delegate_to: bastion
+    - name: "STEP 1: Reset Module 3"
       block:
-        - name: Check if tpa-secret exists
-          ansible.builtin.shell:
-            cmd: oc get secret tpa-secret -n {{ app_ci_namespace }} 2>/dev/null
-          register: tpa_secret_check
-          changed_when: false
-          failed_when: false
-
-        - name: Delete tpa-secret
-          when: tpa_secret_check.rc == 0
-          ansible.builtin.shell:
-            cmd: oc delete secret tpa-secret -n {{ app_ci_namespace }}
-          changed_when: true
-
-        - name: Check if gitlab-auth-secret exists
-          ansible.builtin.shell:
-            cmd: oc get secret gitlab-auth-secret -n {{ app_ci_namespace }} 2>/dev/null
-          register: gitlab_secret_check
-          changed_when: false
-          failed_when: false
-
-        - name: Delete gitlab-auth-secret
-          when: gitlab_secret_check.rc == 0
-          ansible.builtin.shell:
-            cmd: oc delete secret gitlab-auth-secret -n {{ app_ci_namespace }}
-          changed_when: true
-
-        - name: Check if tas-git-config ConfigMap exists
-          ansible.builtin.shell:
-            cmd: oc get configmap tas-git-config -n {{ devspaces_namespace }} 2>/dev/null
-          register: tas_configmap_check
-          changed_when: false
-          failed_when: false
-
-        - name: Delete tas-git-config ConfigMap
-          when: tas_configmap_check.rc == 0
-          ansible.builtin.shell:
-            cmd: oc delete configmap tas-git-config -n {{ devspaces_namespace }}
-          changed_when: true
-
-        - name: Get Keycloak admin credentials
-          ansible.builtin.shell:
-            cmd: |
-              ADMIN_USER=$(oc get secret keycloak-initial-admin -n {{ keycloak_namespace }} -o jsonpath='{.data.username}' | base64 -d)
-              ADMIN_PASS=$(oc get secret keycloak-initial-admin -n {{ keycloak_namespace }} -o jsonpath='{.data.password}' | base64 -d)
-              echo "${ADMIN_USER}:${ADMIN_PASS}"
-          changed_when: false
-          register: kc_reset_creds
-
-        - name: Get Keycloak admin token
-          ansible.builtin.shell:
-            cmd: |
-              ADMIN_USER=$(echo "{{ kc_reset_creds.stdout }}" | cut -d: -f1)
-              ADMIN_PASS=$(echo "{{ kc_reset_creds.stdout }}" | cut -d: -f2)
-              curl -s -X POST "{{ keycloak_admin_console }}/realms/master/protocol/openid-connect/token" \
-                -H "Content-Type: application/x-www-form-urlencoded" \
-                -d "client_id=admin-cli" \
-                -d "username=${ADMIN_USER}" \
-                -d "password=${ADMIN_PASS}" \
-                -d "grant_type=password" | jq -r '.access_token'
-          changed_when: false
-          register: reset_admin_token
-
-        - name: Check if token is valid
-          ansible.builtin.set_fact:
-            reset_token_valid: "{{ reset_admin_token.stdout != '' and reset_admin_token.stdout != 'null' }}"
-
-        - name: Delete developer user from Keycloak
-          when: reset_token_valid | bool
-          block:
-            - name: Get user ID
-              ansible.builtin.shell:
-                cmd: |
-                  curl -s -H "Authorization: Bearer {{ reset_admin_token.stdout }}" \
-                    "{{ keycloak_admin_console }}/admin/realms/{{ sso_realm }}/users?username={{ developer_username }}" | jq -r '.[0].id // empty'
-              register: reset_user_id
-              changed_when: false
-
-            - name: Delete user if exists
-              when: reset_user_id.stdout != ""
-              ansible.builtin.shell:
-                cmd: |
-                  curl -s -X DELETE "{{ keycloak_admin_console }}/admin/realms/{{ sso_realm }}/users/{{ reset_user_id.stdout }}" \
-                    -H "Authorization: Bearer {{ reset_admin_token.stdout }}"
-              changed_when: true
-
-            - name: Verify user deletion
-              when: reset_user_id.stdout != ""
-              ansible.builtin.shell:
-                cmd: |
-                  curl -s -H "Authorization: Bearer {{ reset_admin_token.stdout }}" \
-                    "{{ keycloak_admin_console }}/admin/realms/{{ sso_realm }}/users?username={{ developer_username }}" | jq -r '.[0].id // empty'
-              register: verify_user_delete
-              changed_when: false
-
-        - name: Reset GitOps Backstage Configuration
-          ansible.builtin.shell:
-            cmd: bash {{ lab_assets_dir }}/update-gitops-backstage-config.sh reset
-          changed_when: true
-
-        - name: Reset RHDH Devfile Configuration
-          ansible.builtin.shell:
-            cmd: bash {{ lab_assets_dir }}/update-rhdh-devfile-config.sh reset
-          changed_when: true
-
-        - name: Reset complete
-          ansible.builtin.debug:
-            msg: "✓ Module 3 reset complete"
+        - include_tasks: tasks/step-1-reset.yml
 
     ###########################################
-    # STEP 1: Create Developer User (create-developer-user.sh)
+    # STEP 2: Create Developer User
     ###########################################
-    - name: "STEP 1: Create Developer User"
-      delegate_to: bastion
+    - name: "STEP 2: Create Developer User"
       block:
-        - name: Get Keycloak admin credentials for user creation
-          ansible.builtin.shell:
-            cmd: |
-              ADMIN_USER=$(oc get secret keycloak-initial-admin -n {{ keycloak_namespace }} -o jsonpath='{.data.username}' | base64 -d)
-              ADMIN_PASS=$(oc get secret keycloak-initial-admin -n {{ keycloak_namespace }} -o jsonpath='{.data.password}' | base64 -d)
-              echo "${ADMIN_USER}:${ADMIN_PASS}"
-          changed_when: false
-          register: kc_create_creds
-
-        - name: Get Keycloak admin token for user creation
-          ansible.builtin.shell:
-            cmd: |
-              ADMIN_USER=$(echo "{{ kc_create_creds.stdout }}" | cut -d: -f1)
-              ADMIN_PASS=$(echo "{{ kc_create_creds.stdout }}" | cut -d: -f2)
-              curl -s -X POST "{{ keycloak_admin_console }}/realms/master/protocol/openid-connect/token" \
-                -H "Content-Type: application/x-www-form-urlencoded" \
-                -d "client_id=admin-cli" \
-                -d "username=${ADMIN_USER}" \
-                -d "password=${ADMIN_PASS}" \
-                -d "grant_type=password" | jq -r '.access_token'
-          changed_when: false
-          register: create_admin_token
-
-        - name: Verify admin token
-          ansible.builtin.fail:
-            msg: "Failed to authenticate with Keycloak"
-          when: create_admin_token.stdout == "" or create_admin_token.stdout == "null"
-
-        - name: Check if developer user exists
-          ansible.builtin.shell:
-            cmd: |
-              curl -s -H "Authorization: Bearer {{ create_admin_token.stdout }}" \
-                "{{ keycloak_admin_console }}/admin/realms/{{ sso_realm }}/users?username={{ developer_username }}" | jq -r '.[0].id // empty'
-          changed_when: false
-          register: existing_user_id
-
-        - name: Create developer user
-          when: existing_user_id.stdout == ""
-          ansible.builtin.shell:
-            cmd: |
-              curl -s -X POST "{{ keycloak_admin_console }}/admin/realms/{{ sso_realm }}/users" \
-                -H "Authorization: Bearer {{ create_admin_token.stdout }}" \
-                -H "Content-Type: application/json" \
-                -d "{
-                  \"username\": \"{{ developer_username }}\",
-                  \"email\": \"{{ developer_email }}\",
-                  \"firstName\": \"{{ developer_firstname }}\",
-                  \"lastName\": \"{{ developer_lastname }}\",
-                  \"emailVerified\": true,
-                  \"enabled\": true
-                }"
-          changed_when: true
-
-        - name: Wait for user creation
-          when: existing_user_id.stdout == ""
-          ansible.builtin.pause:
-            seconds: 2
-
-        - name: Get user ID
-          ansible.builtin.shell:
-            cmd: |
-              curl -s -H "Authorization: Bearer {{ create_admin_token.stdout }}" \
-                "{{ keycloak_admin_console }}/admin/realms/{{ sso_realm }}/users?username={{ developer_username }}" | jq -r '.[0].id'
-          changed_when: false
-          register: user_id
-
-        - name: Verify user ID exists
-          ansible.builtin.fail:
-            msg: "Failed to get user ID"
-          when: user_id.stdout == "" or user_id.stdout == "null"
-
-        - name: Get tssc group ID
-          ansible.builtin.shell:
-            cmd: |
-              curl -s -H "Authorization: Bearer {{ create_admin_token.stdout }}" \
-                "{{ keycloak_admin_console }}/admin/realms/{{ sso_realm }}/groups?search=tssc" | jq -r '.[0].id // empty'
-          changed_when: false
-          register: tssc_group_id
-
-        - name: Get users group ID
-          ansible.builtin.shell:
-            cmd: |
-              curl -s -H "Authorization: Bearer {{ create_admin_token.stdout }}" \
-                "{{ keycloak_admin_console }}/admin/realms/{{ sso_realm }}/groups?search=users" | jq -r '.[0].id // empty'
-          changed_when: false
-          register: users_group_id
-
-        - name: Check if user is member of tssc group
-          when: tssc_group_id.stdout != ""
-          ansible.builtin.shell:
-            cmd: |
-              curl -s -H "Authorization: Bearer {{ create_admin_token.stdout }}" \
-                "{{ keycloak_admin_console }}/admin/realms/{{ sso_realm }}/users/{{ user_id.stdout }}/groups" | jq -r ".[] | select(.id==\"{{ tssc_group_id.stdout }}\") | .id"
-          register: tssc_member_check
-          changed_when: false
-
-        - name: Add user to tssc group
-          when: tssc_group_id.stdout != "" and tssc_member_check.stdout == ""
-          ansible.builtin.shell:
-            cmd: |
-              curl -s -X PUT "{{ keycloak_admin_console }}/admin/realms/{{ sso_realm }}/users/{{ user_id.stdout }}/groups/{{ tssc_group_id.stdout }}" \
-                -H "Authorization: Bearer {{ create_admin_token.stdout }}"
-          changed_when: true
-
-        - name: Check if user is member of users group
-          when: users_group_id.stdout != ""
-          ansible.builtin.shell:
-            cmd: |
-              curl -s -H "Authorization: Bearer {{ create_admin_token.stdout }}" \
-                "{{ keycloak_admin_console }}/admin/realms/{{ sso_realm }}/users/{{ user_id.stdout }}/groups" | jq -r ".[] | select(.id==\"{{ users_group_id.stdout }}\") | .id"
-          register: users_member_check
-          changed_when: false
-
-        - name: Add user to users group
-          when: users_group_id.stdout != "" and users_member_check.stdout == ""
-          ansible.builtin.shell:
-            cmd: |
-              curl -s -X PUT "{{ keycloak_admin_console }}/admin/realms/{{ sso_realm }}/users/{{ user_id.stdout }}/groups/{{ users_group_id.stdout }}" \
-                -H "Authorization: Bearer {{ create_admin_token.stdout }}"
-          changed_when: true
-
-        - name: Set user password
-          ansible.builtin.shell:
-            cmd: |
-              curl -s -X PUT "{{ keycloak_admin_console }}/admin/realms/{{ sso_realm }}/users/{{ user_id.stdout }}/reset-password" \
-                -H "Authorization: Bearer {{ create_admin_token.stdout }}" \
-                -H "Content-Type: application/json" \
-                -d "{
-                  \"type\": \"password\",
-                  \"value\": \"{{ developer_password }}\",
-                  \"temporary\": false
-                }"
-          changed_when: true
-
-        - name: Developer user creation complete
-          ansible.builtin.debug:
-            msg: "✓ Developer user created: {{ developer_username }}"
+        - include_tasks: tasks/step-2-solve-create-developer-user.yml
 
     ###########################################
-    # STEP 2: Update GitOps Backstage Config (update-gitops-backstage-config.sh)
+    # STEP 2: Update GitOps Backstage Config
     ###########################################
     - name: "STEP 2: Update GitOps Backstage Configuration"
-      delegate_to: bastion
       block:
-        - name: Update GitOps Backstage configuration
-          ansible.builtin.shell:
-            cmd: bash {{ lab_assets_dir }}/update-gitops-backstage-config.sh update
-          changed_when: true
-
-        - name: GitOps config update complete
-          ansible.builtin.debug:
-            msg: "✓ GitOps Backstage configuration updated"
+        - include_tasks: tasks/step-2-solve-update-gitops-backstage-config.yml
 
     ###########################################
-    # STEP 3: Update RHDH Devfile Config (update-rhdh-devfile-config.sh)
+    # STEP 2: Update RHDH Devfile Config
     ###########################################
-    - name: "STEP 3: Update RHDH Devfile Configuration"
-      delegate_to: bastion
+    - name: "STEP 2: Update RHDH Devfile Configuration"
       block:
-        - name: Update RHDH Devfile configuration
-          ansible.builtin.shell:
-            cmd: bash {{ lab_assets_dir }}/update-rhdh-devfile-config.sh update
-          changed_when: true
-
-        - name: RHDH devfile config update complete
-          ansible.builtin.debug:
-            msg: "✓ RHDH Devfile configuration updated"
+        - include_tasks: tasks/step-2-solve-update-rhdh-devfile-config.yml
 
     ###########################################
-    # STEP 4: Create Dev Spaces ConfigMap (create-devspaces-configmap.sh)
+    # STEP 2: Create Dev Spaces ConfigMap
     ###########################################
-    - name: "STEP 4: Create Dev Spaces ConfigMap"
-      delegate_to: bastion
+    - name: "STEP 2: Create Dev Spaces ConfigMap"
       block:
-        - name: Set TAS service URLs
-          ansible.builtin.set_fact:
-            fulcio_url: "https://fulcio-server-{{ tas_namespace }}.{{ cluster_domain }}"
-            rekor_url: "https://rekor-server-{{ tas_namespace }}.{{ cluster_domain }}"
-            issuer_url: "{{ keycloak_admin_console }}/realms/{{ sso_realm }}"
-
-        - name: Create Dev Spaces ConfigMap
-          ansible.builtin.shell:
-            cmd: |
-              cat <<EOF | oc apply -n {{ devspaces_namespace }} -f -
-              apiVersion: v1
-              kind: ConfigMap
-              metadata:
-                name: tas-git-config
-                annotations:
-                  controller.devfile.io/mount-as: env
-                labels:
-                  app.kubernetes.io/part-of: che.eclipse.org
-                  app.kubernetes.io/component: workspaces-config
-              data:
-                TAS_FULCIO_URL: "{{ fulcio_url }}"
-                TAS_REKOR_URL: "{{ rekor_url }}"
-                TAS_ISSUER_URL: "{{ issuer_url }}"
-                TAS_CLIENT_ID: "{{ tas_sso_client_id }}"
-              EOF
-          changed_when: true
-
-        - name: Dev Spaces ConfigMap created
-          ansible.builtin.debug:
-            msg: "✓ Dev Spaces ConfigMap created with TAS configuration"
+        - include_tasks: tasks/step-2-solve-create-devspaces-configmap.yml
 
     ###########################################
-    # STEP 5: Create Pipeline Secrets (create-pipeline-secrets.sh)
+    # STEP 2: Create Pipeline Secrets
     ###########################################
-    - name: "STEP 5: Create Pipeline Secrets"
-      delegate_to: bastion
+    - name: "STEP 2: Create Pipeline Secrets"
       block:
-        - name: Get TPA server URL from route
-          ansible.builtin.shell:
-            cmd: |
-              oc get route -l app.kubernetes.io/component=server -n {{ tpa_namespace }} -o json | jq -r '.items[0].spec.host'
-          changed_when: false
-          register: tpa_server_host
+        - include_tasks: tasks/step-2-solve-create-pipeline-secrets.yml
 
-        - name: Verify TPA server URL
-          ansible.builtin.fail:
-            msg: "Failed to retrieve TPA server URL"
-          when: tpa_server_host.stdout == "" or tpa_server_host.stdout == "null"
+    ###########################################
+    # STEP 2: Configure ACS-Quay Integration
+    ###########################################
+    - name: "STEP 2: Configure ACS-Quay Integration"
+      block:
+        - include_tasks: tasks/step-2-solve-acs.yml
 
-        - name: Set TPA server URL
-          ansible.builtin.set_fact:
-            tpa_server_url: "https://{{ tpa_server_host.stdout }}"
-
-        - name: Create tpa-secret
-          ansible.builtin.shell:
-            cmd: |
-              cat <<EOF | oc apply -n {{ app_ci_namespace }} -f -
-              kind: Secret
-              apiVersion: v1
-              metadata:
-                name: tpa-secret
-              stringData:
-                bombastic_api_url: {{ tpa_server_url }}
-                oidc_client_id: cli
-                oidc_client_secret: {{ tpa_cli_client_secret }}
-                oidc_issuer_url: {{ keycloak_admin_console }}/realms/{{ tpa_realm }}
-                supported_cyclonedx_version: "1.4"
-              type: Opaque
-              EOF
-          changed_when: true
-
-        - name: Get GitLab personal access token
-          ansible.builtin.shell:
-            cmd: |
-              oc get secret root-user-personal-token -n {{ gitlab_namespace }} -o jsonpath='{.data.token}' | base64 -d
-          changed_when: false
-          register: gitlab_token
-
-        - name: Verify GitLab token
-          ansible.builtin.fail:
-            msg: "Failed to retrieve GitLab token"
-          when: gitlab_token.stdout == ""
-
-        - name: Create gitlab-auth-secret
-          ansible.builtin.shell:
-            cmd: |
-              cat <<EOF | oc apply -n {{ app_ci_namespace }} -f -
-              kind: Secret
-              apiVersion: v1
-              metadata:
-                name: gitlab-auth-secret
-              stringData:
-                password: {{ gitlab_token.stdout }}
-                username: oauth2
-              type: kubernetes.io/basic-auth
-              EOF
-          changed_when: true
-
-        - name: Pipeline secrets created
-          ansible.builtin.debug:
-            msg:
-              - "✓ Pipeline secrets created:"
-              - "  - tpa-secret (RHTPA authentication)"
-              - "  - gitlab-auth-secret (GitLab authentication)"
+    ###########################################
+    # STEP 2: Test Image Scanning
+    ###########################################
+    - name: "STEP 2: Test Image Scanning"
+      block:
+        - include_tasks: tasks/step-2-solve-image-scanning.yml
 
     ###########################################
     # Module Summary
@@ -462,5 +130,7 @@
           - "    - gitlab-auth-secret (GitLab authentication)"
           - "  ✓ GitOps backstage configuration updated"
           - "  ✓ RHDH devfile configuration updated"
+          - "  ✓ ACS-Quay integration configured"
+          - "  ✓ Image scanning tested with roxctl"
           - ""
           - "The developer environment is now fully configured!"

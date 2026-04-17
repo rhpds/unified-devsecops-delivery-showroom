@@ -1,0 +1,51 @@
+---
+# STEP 1.5: Cleaning up TaskRuns and PipelineRuns
+- name: "Step 5: Cleaning up TaskRuns and PipelineRuns"
+  ansible.builtin.debug:
+    msg: "Step 5: Cleaning up TaskRuns and PipelineRuns..."
+
+- name: Get TaskRun count
+  ansible.builtin.shell: |
+    oc get taskrun -n {{ app_ci_namespace }} --no-headers 2>/dev/null | wc -l || echo 0
+  register: taskrun_count
+  changed_when: false
+
+- name: Delete all TaskRuns
+  when: taskrun_count.stdout | int > 0
+  block:
+    - name: Delete all TaskRuns
+      ansible.builtin.shell: |
+        oc delete taskrun --all -n {{ app_ci_namespace }}
+      changed_when: true
+
+    - name: Display TaskRun deletion result
+      ansible.builtin.debug:
+        msg: "✓ Deleted {{ taskrun_count.stdout }} TaskRun(s)"
+
+- name: Display no TaskRuns found
+  when: taskrun_count.stdout | int == 0
+  ansible.builtin.debug:
+    msg: "✓ No TaskRuns found"
+
+- name: Get PipelineRun count
+  ansible.builtin.shell: |
+    oc get pipelinerun -n {{ app_ci_namespace }} --no-headers 2>/dev/null | wc -l || echo 0
+  register: pipelinerun_count
+  changed_when: false
+
+- name: Delete all PipelineRuns
+  when: pipelinerun_count.stdout | int > 0
+  block:
+    - name: Delete all PipelineRuns
+      ansible.builtin.shell: |
+        oc delete pipelinerun --all -n {{ app_ci_namespace }}
+      changed_when: true
+
+    - name: Display PipelineRun deletion result
+      ansible.builtin.debug:
+        msg: "✓ Deleted {{ pipelinerun_count.stdout }} PipelineRun(s)"
+
+- name: Display no PipelineRuns found
+  when: pipelinerun_count.stdout | int == 0
+  ansible.builtin.debug:
+    msg: "✓ No PipelineRuns found"

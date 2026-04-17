@@ -1,0 +1,234 @@
+---
+# STEP 2.3: Update and Run RHDH Template
+- name: Set GitLab repo details
+  ansible.builtin.set_fact:
+    gitlab_repo_dir: "/tmp/build-secured-dev-workflows-idp-configuration"
+    template_file: "/tmp/build-secured-dev-workflows-idp-configuration/scaffolder-templates/quarkus-stssc-template/template.yaml"
+
+- name: Remove existing repo directory
+  ansible.builtin.file:
+    path: "{{ gitlab_repo_dir }}"
+    state: absent
+
+- name: Clone GitLab repository
+  ansible.builtin.shell:
+    cmd: |
+      git clone https://{{ gitlab_root_user }}:{{ gitlab_root_password }}@{{ gitlab_url.split('//')[1] }}/rhdh/build-secured-dev-workflows-idp-configuration.git {{ gitlab_repo_dir }}
+  environment:
+    GIT_SSL_NO_VERIFY: "true"
+  changed_when: true
+
+- name: Set template owner to static user1 reference (lines 110 and 144)
+  ansible.builtin.shell:
+    cmd: |
+      sed -i '110s|.*|          owner: user:default/user1|; 144s|.*|          owner: user:default/user1|' {{ template_file }}
+  changed_when: true
+
+- name: Configure git user for commit
+  ansible.builtin.shell:
+    cmd: |
+      cd {{ gitlab_repo_dir }}
+      git config user.email "automation@redhat.com"
+      git config user.name "Lab Automation"
+  changed_when: false
+
+- name: Commit template changes for user1
+  ansible.builtin.shell:
+    cmd: |
+      cd {{ gitlab_repo_dir }}
+      git add scaffolder-templates/quarkus-stssc-template/template.yaml
+      git commit -m "Update template to use static user1 reference"
+  changed_when: true
+  register: git_commit_user1
+  failed_when: git_commit_user1.rc != 0 and 'nothing to commit' not in git_commit_user1.stdout
+
+- name: Push changes to GitLab
+  ansible.builtin.shell:
+    cmd: |
+      cd {{ gitlab_repo_dir }}
+      git push origin main
+  environment:
+    GIT_SSL_NO_VERIFY: "true"
+  changed_when: true
+  when: git_commit_user1.changed
+
+- name: Display git push result
+  ansible.builtin.debug:
+    msg: "✓ Template changes pushed to GitLab (owner: user:default/user1)"
+
+- name: Refresh template in Developer Hub
+  ansible.builtin.uri:
+    url: "{{ developer_hub_url }}/api/catalog/refresh"
+    method: POST
+    validate_certs: false
+    headers:
+      Authorization: "Bearer {{ rhdh_api_token }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      entityRef: "template:default/quarkus-stssc-template"
+    status_code: [200, 202]
+    timeout: 300
+  register: template_refresh
+  until: template_refresh.status in [200, 202]
+  retries: 30
+  delay: 10
+  when: >
+    developer_hub_url is defined and
+    rhdh_api_token is defined
+
+- name: Display template refresh result
+  ansible.builtin.debug:
+    msg: "✓ RHDH template refresh triggered"
+  when: template_refresh.status is defined and template_refresh.status in [200, 202]
+
+- name: Wait for template to be updated with user1 reference
+  ansible.builtin.uri:
+    url: "{{ developer_hub_url }}/api/catalog/entities/by-name/template/default/quarkus-stssc-template"
+    method: GET
+    validate_certs: false
+    headers:
+      Authorization: "Bearer {{ rhdh_api_token }}"
+    status_code: [200]
+    return_content: true
+  register: template_entity
+  until: template_entity.json.spec.steps | selectattr('input.values.owner', 'defined') | selectattr('input.values.owner', 'equalto', 'user:default/user1') | list | length > 0
+  retries: 30
+  delay: 2
+  when: >
+    developer_hub_url is defined and
+    rhdh_api_token is defined
+
+- name: Run template with verify commits enabled
+  ansible.builtin.uri:
+    url: "{{ developer_hub_url }}/api/scaffolder/v2/tasks"
+    method: POST
+    validate_certs: false
+    headers:
+      Authorization: "Bearer {{ rhdh_api_token }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      templateRef: "template:default/quarkus-stssc-template"
+      values:
+        name: "my-quarkus-tkn"
+        groupId: "redhat.rhdh"
+        artifactId: "my-quarkus-tkn"
+        javaPackageName: "org.redhat.rhdh"
+        description: "A Quarkus application that uses Langchain and Software Supply Chain Security with Tekton CI"
+        imageHost: "Quay"
+        imageOrganization: "tssc"
+        repoHost: "GitLab"
+        repoOwner: "development"
+        repoVerifyCommits: "enabled"
+    status_code: [201]
+  register: scaffolder_task
+  when: >
+    developer_hub_url is defined and
+    rhdh_api_token is defined
+
+- name: Set scaffolder task ID
+  ansible.builtin.set_fact:
+    task_id: "{{ scaffolder_task.json.id }}"
+  when: >
+    scaffolder_task.json is defined and
+    scaffolder_task.json.id is defined
+
+- name: Display scaffolder task started
+  ansible.builtin.debug:
+    msg: "✓ Scaffolder task started: {{ task_id }}"
+  when: task_id is defined
+
+- name: Wait for scaffolder task to complete
+  ansible.builtin.uri:
+    url: "{{ developer_hub_url }}/api/scaffolder/v2/tasks/{{ task_id }}"
+    method: GET
+    validate_certs: false
+    headers:
+      Authorization: "Bearer {{ rhdh_api_token }}"
+    status_code: [200]
+  register: task_status
+  until: task_status.json.status in ['completed', 'failed']
+  retries: 60
+  delay: 10
+  when: task_id is defined
+
+- name: Display scaffolder task result
+  ansible.builtin.debug:
+    msg: "{{ '✓ Scaffolder task completed successfully' if task_status.json.status == 'completed' else '✗ Scaffolder task failed: ' + (task_status.json.error | default('Unknown error')) }}"
+  when: task_status.json is defined
+
+- name: Reset template owner to dynamic user reference (lines 110 and 144)
+  ansible.builtin.shell:
+    cmd: |
+      sed -i '110s|.*|          owner: user:default/\${% raw %}{{ user.entity.metadata.name }}{% endraw %}|; 144s|.*|          owner: user:default/\${% raw %}{{ user.entity.metadata.name }}{% endraw %}|' {{ template_file }}
+  changed_when: true
+  when: task_status.json is defined
+
+- name: Commit template reset to dynamic reference
+  ansible.builtin.shell:
+    cmd: |
+      cd {{ gitlab_repo_dir }}
+      git add scaffolder-templates/quarkus-stssc-template/template.yaml
+      git commit -m "Reset template to use dynamic user reference"
+  changed_when: true
+  register: git_commit_reset
+  failed_when: git_commit_reset.rc != 0 and 'nothing to commit' not in git_commit_reset.stdout
+  when: task_status.json is defined
+
+- name: Push reset changes to GitLab
+  ansible.builtin.shell:
+    cmd: |
+      cd {{ gitlab_repo_dir }}
+      git push origin main
+  environment:
+    GIT_SSL_NO_VERIFY: "true"
+  changed_when: true
+  when: >
+    task_status.json is defined and
+    git_commit_reset.changed
+
+- name: Display reset push result
+  ansible.builtin.debug:
+    msg: "✓ Template reset to dynamic user reference (${% raw %}{{ user.entity.metadata.name }}{% endraw %}) and pushed to GitLab"
+  when: task_status.json is defined
+
+- name: Refresh template in Developer Hub after reset
+  ansible.builtin.uri:
+    url: "{{ developer_hub_url }}/api/catalog/refresh"
+    method: POST
+    validate_certs: false
+    headers:
+      Authorization: "Bearer {{ rhdh_api_token }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      entityRef: "template:default/quarkus-stssc-template"
+    status_code: [200, 202]
+    timeout: 300
+  register: template_refresh_reset
+  until: template_refresh_reset.status in [200, 202]
+  retries: 30
+  delay: 10
+  when: >
+    task_status.json is defined and
+    developer_hub_url is defined and
+    rhdh_api_token is defined
+
+- name: Display template refresh after reset
+  ansible.builtin.debug:
+    msg: "✓ RHDH template refreshed with dynamic user reference"
+  when: >
+    template_refresh_reset.status is defined and
+    template_refresh_reset.status in [200, 202]
+
+- name: Template update and run complete
+  ansible.builtin.debug:
+    msg:
+      - "✓ Template updated to use static user1 reference"
+      - "✓ Changes committed and pushed to GitLab"
+      - "✓ RHDH template catalog refreshed"
+      - "✓ Template executed with verify commits enabled"
+      - "✓ Template reset to dynamic user reference (${% raw %}{{ user.entity.metadata.name }}{% endraw %})"
+      - "✓ Dynamic reference committed and pushed to GitLab"
+      - "✓ RHDH template refreshed with clean content"
