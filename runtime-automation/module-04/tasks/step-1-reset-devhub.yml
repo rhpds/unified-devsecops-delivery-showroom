@@ -1,5 +1,25 @@
 ---
 # STEP 1: Clean up Developer Hub Components (via catalog locations)
+- name: Wait for Developer Hub pods to be ready
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Pod
+    namespace: backstage
+    label_selectors:
+      - app.kubernetes.io/name=developer-hub
+  register: devhub_pods
+  until: >
+    devhub_pods.resources | length > 0 and
+    devhub_pods.resources | selectattr('status.phase', 'equalto', 'Running') | list | length == devhub_pods.resources | length and
+    devhub_pods.resources | map(attribute='status.conditions') | flatten | selectattr('type', 'equalto', 'Ready') | selectattr('status', 'equalto', 'True') | list | length == devhub_pods.resources | length
+  retries: 60
+  delay: 10
+  failed_when: false
+
+- name: Display Developer Hub pod readiness result
+  ansible.builtin.debug:
+    msg: "{{ '✓ All Developer Hub pods are ready (' + (devhub_pods.resources | length | string) + ' pod(s))' if (devhub_pods.resources | length > 0 and devhub_pods.resources | selectattr('status.phase', 'equalto', 'Running') | list | length == devhub_pods.resources | length) else '⚠ Developer Hub pods not ready or timed out' }}"
+
 - name: Get catalog locations from Developer Hub
   ansible.builtin.uri:
     url: "{{ developer_hub_url }}/api/catalog/locations"
