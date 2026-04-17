@@ -1,5 +1,24 @@
 ---
 # STEP 1: Clean up Developer Hub Components (via catalog locations)
+- name: Wait for Developer Hub health check
+  ansible.builtin.uri:
+    url: "{{ developer_hub_url }}/healthcheck"
+    method: GET
+    validate_certs: false
+    status_code: [200]
+    timeout: 10
+  register: rhdh_health
+  until: rhdh_health.status == 200
+  retries: 60
+  delay: 10
+  when: developer_hub_url is defined
+  failed_when: false
+
+- name: Display Developer Hub health check result
+  ansible.builtin.debug:
+    msg: "{{ '✓ Developer Hub is healthy' if rhdh_health.status is defined and rhdh_health.status == 200 else '⚠ Developer Hub health check failed or timed out' }}"
+  when: developer_hub_url is defined
+
 - name: Get catalog locations from Developer Hub
   ansible.builtin.uri:
     url: "{{ developer_hub_url }}/api/catalog/locations"
