@@ -181,7 +181,7 @@ image::open_new_terminal.png[open_new_terminal,align="center"]
 +
 Then run the following command, you may be prompted by your browser to allow paste access into the terminal. If so, approve the prompt to proceed.
 +
-[source, role="send-to-wetty"]
+[source, role="execute"]
 ----
 git config --global --list
 ----
@@ -297,9 +297,9 @@ image::Verify_Commit_Log.png[Verify Commit Task Log Output,align="center",link=s
 
 * The output confirms:
 +
-. The commit was signed successfully  
-. The identity of the developer (*user1*) is verified  
-. The signature is valid and trusted  
+. The commit was signed successfully
+. The identity of the developer (*user1*) is verified
+. The signature is valid and trusted
 +
 * This ensures that every code change can be traced back to a verified developer, establishing trust at the source.
 
@@ -355,7 +355,7 @@ image::ACS_Image_Check_Task.png[ACS Image Check Task,align="center",window=blank
 
 * These checks cover:
 
-* *Image Check*  
+* *Image Check*
 Ensures compliance with policies such as:
 +
 . Non-root execution
@@ -364,10 +364,10 @@ Ensures compliance with policies such as:
 
 image::ACS_Image_Scan.png[ACS Image Scan Task Results,link=self,window=blank]
 
-* *Image Scan*  
+* *Image Scan*
 Identifies known vulnerabilities (CVEs) in the image.
 
-* *Deploy Check*  
+* *Deploy Check*
 Determines whether the image is allowed to be deployed based on all prior checks.
 
 image::ACS_Deploy_Check.png[ACS Deploy Check,link=self,window=blank]
@@ -590,10 +590,10 @@ image::create_tag.png[create_tag,align="center",link=self,window=blank]
 
 * The pipeline begins by preparing the release:
 
-* *extract-destination-image-tag*  
+* *extract-destination-image-tag*
 Resolves the release version from the Git tag.
 
-* *gather-images-to-verify*  
+* *gather-images-to-verify*
 Identifies the previously built image and links it to the release, ensuring traceability.
 
 ---
@@ -622,10 +622,10 @@ image::verify-enterprise-contract.png[verify-enterprise-contract,align="center",
 
 * Once validated, the pipeline promotes the image:
 
-. *copy-image*  
+. *copy-image*
 Retags the verified image for production (for example, *prod-v1.0*)
 
-. *update-deployment*  
+. *update-deployment*
 Updates deployment configuration to use the promoted image
 
 * Through GitOps integration, tools like *Argo CD* automatically deploy the updated version.
