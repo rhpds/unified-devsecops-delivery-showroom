@@ -17,7 +17,7 @@
 . Managing secrets and integrations
 +
 * As a developer, you don’t need to worry about the underlying infrastructure or tooling.
-* You are provided with a standardised, approved path to production, allowing you to focus on writing and delivering features.
+* You are provided with a standardized, approved path to production, allowing you to focus on writing and delivering features.
 
 * By the end of this module, you will see how the platform enables teams to move fast, while ensuring that every change is trusted, compliant, and production-ready by design.
 
@@ -285,8 +285,9 @@ image::secure_pipeline_in_progress.png[Secure Pipeline Execution in Progress,ali
 
 === 3.2 Verify Commit
 
-* The first task ensures the code change was made by a trusted identity.
-* It validates the commit signature created earlier using *gitsign*.
+* This task verifies that the code change was made by a trusted identity.
+
+* It checks that the commit was signed and can be linked back to the developer who made the change.
 
 image::verify_commit.png[verify_commit,align="center",link=self,window=blank]
 
@@ -296,11 +297,11 @@ image::Verify_Commit_Log.png[Verify Commit Task Log Output,align="center",link=s
 
 * The output confirms:
 +
-. A valid signature from *user1*
-. Fulcio certificate verification
-. Rekor transparency log entry
+. The commit was signed successfully  
+. The identity of the developer (*user1*) is verified  
+. The signature is valid and trusted  
 +
-* This establishes trusted provenance at the source.
+* This ensures that every code change can be traced back to a verified developer, establishing trust at the source.
 
 ---
 
@@ -415,7 +416,7 @@ image::deployment_check_output.png[deployment_check_output,link=self,window=blan
 +
 * The key takeaway:
 +
-*Security is not a final checkpoint, it is continuously enforced throughout the delivery process.*
+* Security is not a final checkpoint, it is continuously enforced throughout the delivery process.*
 
 ---
 
@@ -517,7 +518,7 @@ image:quarkus-rag-chat.png[quarkus-rag-chat,align="center",link=self,window=blan
 +
 * The key takeaway:
 +
-*Developers focus on building features, while the platform handles infrastructure, security, and compliance by default.*
+* Developers focus on building features, while the platform handles infrastructure, security, and compliance by default.*
 
 ---
 
@@ -611,7 +612,7 @@ image::verify-enterprise-contract.png[verify-enterprise-contract,align="center",
 . *Identity* — the image is signed and linked to a verified identity
 . *Integrity* — the image and its attestations have not been tampered with
 . *Composition* — an SBOM is present and attached
-. *Policy* — vulnerabilities and organisational rules are enforced
+. *Policy* — vulnerabilities and organizational rules are enforced
 
 * Only images that pass all checks are eligible for promotion.
 

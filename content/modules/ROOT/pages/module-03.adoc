@@ -32,13 +32,32 @@ NOTE: *Enterprise Contract* is the policy engine that governs whether an applica
 
 ---
 
-== Step 1: Configure developer identity
+== Step 1: Hydrating the Developer Hub
+
+* When *Red Hat Developer Hub (RHDH)* first starts in this lab, it is intentionally empty. No services are registered, and access is open, providing a clean starting point.
+
+* Instead of configuring the platform manually, you will use GitOps and Infrastructure as Code to define how *RHDH* should behave. This ensures configuration is version-controlled, repeatable, and aligned with enterprise platform standards.
+
+=== 1.1 Verify the starting state
+
+. In Showroom, switch to the *RHDH* tab.
+. You will see that guest access is currently enabled.
+. Click *Enter* to continue as *Guest*.
++
+image::guest_access.png[guest_access,align="center",link=self,window=blank]
++
+. From the left navigation, select *Catalog*.
+. The catalog is empty, confirming that no services or components have been configured yet.
++
+image::empty_catalog.png[empty_catalog,align="center",link=self,window=blank]
+
+---
+
+=== 1.1 Create the developer user
 
 * Before using *Red Hat Developer Hub (RHDH)*, you need a developer identity that can access the platform.
 
 * In most organizations, this identity already exists and is managed through enterprise SSO. In this workshop, you will create a sample developer user.
-
-=== 1.1 Create the developer user
 
 * Navigate to the Showroom Terminal and run the following script:
 
@@ -66,28 +85,7 @@ NOTE: *Enterprise Contract* is the policy engine that governs whether an applica
 
 ---
 
-== Step 2: Hydrating the Developer Hub
-
-* When *Red Hat Developer Hub (RHDH)* first starts in this lab, it is intentionally empty. No services are registered, and access is open, providing a clean starting point.
-
-* Instead of configuring the platform manually, you will use GitOps and Infrastructure as Code to define how *RHDH* should behave. This ensures configuration is version-controlled, repeatable, and aligned with enterprise platform standards.
-
-=== 2.1 Verify the starting state
-
-. In Showroom, switch to the *RHDH* tab.
-. You will see that guest access is currently enabled.
-. Click *Enter* to continue as *Guest*.
-+
-image::guest_access.png[guest_access,align="center",link=self,window=blank]
-+
-. From the left navigation, select *Catalog*.
-. The catalog is empty, confirming that no services or components have been configured yet.
-+
-image::empty_catalog.png[empty_catalog,align="center",link=self,window=blank]
-
----
-
-=== Step 2.2: Access the GitOps configuration
+=== Step 1.2: Access the GitOps configuration
 
 * In this step, you will begin configuring *Red Hat Developer Hub (RHDH)* using GitOps, following the same approach platform engineering teams use to manage developer platforms at scale.
 
@@ -109,7 +107,7 @@ image::empty_catalog.png[empty_catalog,align="center",link=self,window=blank]
 
 ---
 
-=== Step 2.3: Enable Developer Hub plugins
+=== Step 1.3: Enable Developer Hub plugins
 
 * *Red Hat Developer Hub (RHDH)* is designed to be modular. Plugins are used to integrate tools, expose platform capabilities, and shape the developer experience.
 
@@ -139,7 +137,7 @@ image::uncomment_plugins.png[uncomment_plugins,align="center",link=self,window=b
 
 ---
 
-=== Step 2.4: Configure authentication
+=== Step 1.4: Configure authentication
 
 * In this step, you will replace temporary Guest access with Single Sign-On (SSO), allowing developers to securely log in using their existing identity.
 
@@ -159,7 +157,7 @@ image::enable_auth.png[enable_auth,align="center",link=self,window=blank]
 
 ---
 
-=== Step 2.5: Populate the Software Catalog
+=== Step 1.5: Populate the Software Catalog
 
 * The Software Catalog provides a centralized inventory of services, resources, APIs, and teams, forming the foundation for visibility and ownership within *RHDH*.
 
@@ -181,7 +179,7 @@ image::uncomment_catalog.png[uncomment_catalog,align="center",link=self,window=b
 
 ---
 
-=== Step 2.6: Configure integrations and secure access
+=== Step 1.6: Configure integrations and secure access
 
 * In this step, you will connect *Red Hat Developer Hub (RHDH)* to external services and enable secure access through the platform.
 
@@ -206,7 +204,7 @@ feat: Update Red Hat Developer Hub Configuration
 
 ---
 
-=== Step 2.7: Apply configuration using GitOps
+=== Step 1.7: Apply configuration using GitOps
 
 * In this step, you will apply the changes you committed and observe how the platform updates automatically using GitOps.
 
@@ -253,7 +251,7 @@ image::argo_cd_rollout.png[argo_cd_rollout,align="center",link=self,window=blank
 
 ---
 
-== Step 3: Validate the changes in RHDH
+== Step 2: Validate the changes in RHDH
 
 * In this step, you will return to *Red Hat Developer Hub (RHDH)* and verify that the configuration changes are now active.
 
@@ -295,7 +293,7 @@ image::catalog_users.png[catalog_users,align="center",link=self,window=blank]
 
 ---
 
-== Step 4: Define the developer experience using Devfiles
+== Step 3: Define the developer experience using Devfiles
 
 * In this step, you will define how developer environments are created and configured as part of your platform.
 
@@ -309,7 +307,7 @@ image::catalog_users.png[catalog_users,align="center",link=self,window=blank]
 
 ---
 
-=== Step 4.1: Access the Devfile configuration
+=== Step 3.1: Access the Devfile configuration
 
 . If you are not already logged in to *GitLab*, switch to the *GitLab* tab and log in using:
 +
@@ -339,7 +337,7 @@ image::select_devfile.png[select_devfile,align="center",link=self,window=blank]
 
 ---
 
-=== Step 4.2: Update the Devfile
+=== Step 3.2: Update the Devfile
 
 * In this step, you will enable configuration that ensures every developer workspace is prepared for secure Git commit signing.
 
@@ -368,7 +366,7 @@ feat: Update Devfile Configuration
 
 ---
 
-=== Step 4.3: Configure Dev Spaces workspace settings
+=== Step 3.3: Configure Dev Spaces workspace settings
 
 * In this step, you will apply environment-level configuration that is automatically injected into developer workspaces.
 
@@ -385,7 +383,7 @@ feat: Update Devfile Configuration
 
 ---
 
-=== Step 4.4: Configure pipeline access
+=== Step 3.4: Configure pipeline access
 
 * In this step, you will prepare the secrets required for the CI pipeline to securely authenticate to the services used in the delivery workflow.
 
@@ -404,14 +402,14 @@ feat: Update Devfile Configuration
 
 
 
-== Step 5: Set up image vulnerability scanning
+== Step 4: Set up image vulnerability scanning
 
 * *Red Hat Advanced Cluster Security (ACS)* provides vulnerability analysis and policy evaluation for container images.
 * By integrating ACS with *Quay*, images can be scanned automatically before they are deployed or promoted.
 
 ---
 
-=== Step 5.1: Configure ACS and integrate with Quay
+=== Step 4.1: Configure ACS and integrate with Quay
 
 * In this step, you will connect *ACS* to *Quay* so that images stored in the registry can be scanned for vulnerabilities.
 
@@ -462,7 +460,7 @@ image::acs_new_integration.png[acs_new_integration,align="center",link=self,wind
 
 You’ve now completed this module. The section below is optional and explains how this module introduced three key control layers in the platform. Each layer is responsible for a different aspect of how the developer experience is delivered and enforced.
 
-=== Dynamic Plugins (Platform Capabilities)
+Dynamic Plugins (Platform Capabilities)
 
 In *Red Hat Developer Hub*, plugins are not baked into the application at build time. Instead, they are enabled dynamically through configuration.
 
@@ -491,7 +489,7 @@ This means platform capabilities are controlled declaratively. Adding or removin
 
 ---
 
-=== Devfiles (Development Environment Behavior)
+Devfiles (Development Environment Behavior)
 
 A *Devfile* defines how a developer workspace is constructed and behaves.
 
@@ -521,7 +519,7 @@ The Devfile becomes the enforcement point for developer experience. Instead of r
 
 ---
 
-=== Golden Paths (Application Delivery Standardization)
+Golden Paths (Application Delivery Standardization)
 
 Golden Paths are exposed in *Red Hat Developer Hub* through *Software Templates*.
 
@@ -583,7 +581,7 @@ This ensures that every application created:
 
 ---
 
-=== Putting It Together
+Putting It Together
 
 These three layers operate together:
 

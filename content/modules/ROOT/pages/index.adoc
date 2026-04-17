@@ -1,4 +1,4 @@
-= Unifying DevSecOps: Secure, Standardized Application Delivery Across Containers and VMs
+= Unifying DevSecOps: Secure, Standardized Application Delivery Across Containers
 
 image::rhads-logo.png[RHADS Logo,align="center",width=200,link=self,window=blank]
 

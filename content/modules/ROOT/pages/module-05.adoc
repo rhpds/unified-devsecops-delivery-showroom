@@ -1,6 +1,6 @@
 = Conclusion and Next Steps
 
-Congratulations! You've completed the *Unifying DevSecOps: Secure, Standardized Application Delivery Across Containers and VMs* workshop.
+Congratulations! You've completed the *Unifying DevSecOps: Secure, Standardized Application Delivery Across Containers* workshop.
 
 == What You've Learned
 
