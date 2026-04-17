@@ -48,6 +48,8 @@
   register: pipeline_check
   until: >
     pipeline_check.resources | length > 0 and
+    (pipeline_check.resources | sort(attribute='metadata.creationTimestamp') | last).status is defined and
+    (pipeline_check.resources | sort(attribute='metadata.creationTimestamp') | last).status.conditions is defined and
     (pipeline_check.resources | sort(attribute='metadata.creationTimestamp') | last).status.conditions | selectattr('type', 'equalto', 'Succeeded') | map(attribute='status') | first | default('') == 'True'
   retries: 120
   delay: 10
