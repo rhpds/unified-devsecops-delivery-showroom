@@ -1,12 +1,12 @@
 name: modules
-title: Default Title
+title: Build Secure, Streamlined Developer Workflows with Red Hat Advanced Developer Suite
 version: master
 nav:
   - modules/ROOT/nav.adoc
 
 asciidoc:
   attributes:
-    lab_name: "I'm the lab_name var"
+    lab_name: "Build Secure, Streamlined Developer Workflows with Red Hat Advanced Developer Suite"
     release-version: master
     page-pagination: true
     my_var: "foo"
