@@ -48,3 +48,5 @@ tabs:
   - name: Argo CD
     url: 'https://argocd-server-openshift-gitops.${DOMAIN}'
     external: false
+  - name: ACS
+    url: 'https://central-stackrox.${DOMAIN}'

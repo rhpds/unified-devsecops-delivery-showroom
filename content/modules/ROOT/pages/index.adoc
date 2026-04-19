@@ -6,9 +6,7 @@ image::rhads-logo.png[RHADS Logo,align="center",width=200,link=self,window=blank
 
 This hands-on workshop demonstrates how to deliver applications through a *secure, standardized, and automated path to production* using the *Red Hat Advanced Developer Suite (RHADS)*.
 
-You will experience how platform engineering enables developers to move fast, while ensuring that every change is trusted, verified, and compliant, across both containerized and virtualised environments.
-
-Rather than focusing on individual tools, this workshop shows how these capabilities come together as a single, integrated workflow.
+You will experience how platform engineering enables developers to move fast, while ensuring that every change is trusted, verified, and compliant.
 
 ---
 
@@ -22,7 +20,7 @@ It provides a unified platform that balances developer productivity with softwar
 
 === Core Benefits
 
-* **Standardised Path to Production**  
+* **Standardized Path to Production**  
 Developers follow a consistent, approved workflow to build and deliver applications, regardless of environment.
 
 * **End-to-End Trust and Provenance**  
