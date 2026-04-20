@@ -138,18 +138,19 @@ image::confirm_trust.png[confirm_trust.png,align="center"]
 image::devspaces_gitlab_login.png[devspaces_gitlab_login,align="center"]
 +
 . Provide your credentials follows:
-** *Username*:
++
+*Username*:
++
+[source, role="execute"]
+----
+user1
+----
++
+*Password*:
 +
 [source, role="execute", subs="attributes"]
 ----
-{gitlab_root_user}
-----
-+
-** *Password*:
-+
-[source, role="execute", subs="attributes"]
-----
-{gitlab_root_password}
+{password}
 ----
 +
 . When prompted, authorize  *OpenShift Dev Spaces* to access *GitLab* by clicking *Authorize devspaces*.
