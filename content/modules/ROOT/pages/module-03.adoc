@@ -47,8 +47,10 @@ NOTE: *Enterprise Contract* is the policy engine that governs whether an applica
 image::guest_access.png[guest_access,align="center",link=self,window=blank]
 +
 . From the left navigation, select *Catalog*.
-. The catalog is empty, confirming that no services or components have been configured yet.
-+
+. The *Catalog* is empty, confirming that no services or components have been configured yet. 
+
+NOTE:  If the *Catalog* is not visible, click *Hide* in the bottom-right corner.
+
 image::empty_catalog.png[empty_catalog,align="center",link=self,window=blank]
 
 ---
@@ -56,69 +58,56 @@ image::empty_catalog.png[empty_catalog,align="center",link=self,window=blank]
 === 1.1 Create the developer user
 
 * Before using *Red Hat Developer Hub (RHDH)*, you need a developer identity that can access the platform.
-
 * In most organizations, this identity already exists and is managed through enterprise SSO. In this workshop, you will create a sample developer user.
-
 * Navigate to the Showroom Terminal and run the following script:
-
 +
 [source, role="send-to-wetty"]
 ----
 ~/lab-assets/create-developer-user.sh
 ----
-
++
 * This script creates a developer user and prepares it for use across the workshop environment.
-
 * Behind the scenes, it:
-
 . Creates a developer user (*user1*)  
 . Assigns the required access  
 . Sets the user credentials  
-
 * Once completed, this user can sign in to:
-
 . OpenShift Console  
 . Red Hat Developer Hub (*RHDH*)  
 . OpenShift Dev Spaces  
-
 * This allows you to move across tools without needing to re-authenticate.
 
 ---
 
-=== Step 1.2: Access the GitOps configuration
+=== Step 1.2: Enable Developer Hub plugins
 
-* In this step, you will begin configuring *Red Hat Developer Hub (RHDH)* using GitOps, following the same approach platform engineering teams use to manage developer platforms at scale.
-
+* *Red Hat Developer Hub (RHDH)* is designed to be modular. Plugins are used to integrate tools, expose platform capabilities, and shape the developer experience.
+* Unlike traditional approaches where plugins are added by rebuilding the platform, *RHDH* allows plugins to be enabled through configuration. This means platform teams can manage capabilities using GitOps workflows without rebuilding container images.
+* In this step, you will enable a set of core plugins that activate key *RHDH* capabilities using GitOps, following the same approach platform engineering teams use to manage developer platforms at scale.
 * In Showroom, switch to the *GitLab* tab and log in using the following credentials:
-
-*Username*:
+* *Username*:
 +
 [source, role="execute", subs="attributes"]
 ----
 {gitlab_root_user}
 ----
 +
-*Password*:
+* *Password*:
 +
 [source, role="execute", subs="attributes"]
 ----
 {gitlab_root_password}
 ----
-
----
-
-=== Step 1.3: Enable Developer Hub plugins
-
-* *Red Hat Developer Hub (RHDH)* is designed to be modular. Plugins are used to integrate tools, expose platform capabilities, and shape the developer experience.
-
-* Unlike traditional approaches where plugins are added by rebuilding the platform, *RHDH* allows plugins to be enabled through configuration. This means platform teams can manage capabilities using GitOps workflows without rebuilding container images.
-
-* In this step, you will enable a set of core plugins that activate key *RHDH* capabilities.
-
-. In GitLab, open the repository `gitops / build-secured-dev-workflows-idp-gitops`.
++
+* Click *Sign In*
+* Expand the left-hand menu using the menu icon in the top-left corner, then select *Projects*.
++
+image::select_projects_gitlab.png[select_projects_gitlab,align="center",link=self,window=blank]
++
+. Open the repository `gitops / build-secured-dev-workflows-idp-gitops`.
 +
 image::select_gitops_repo.png[select_gitops_repo,align="center",link=self,window=blank]
-
++
 . Navigate to the `charts/backstage` folder.
 +
 image::navigate_to_backstage.png[navigate_to_backstage,align="center",link=self,window=blank]
@@ -137,7 +126,7 @@ image::uncomment_plugins.png[uncomment_plugins,align="center",link=self,window=b
 
 ---
 
-=== Step 1.4: Configure authentication
+=== Step 1.3: Configure authentication
 
 * In this step, you will replace temporary Guest access with Single Sign-On (SSO), allowing developers to securely log in using their existing identity.
 
@@ -157,7 +146,7 @@ image::enable_auth.png[enable_auth,align="center",link=self,window=blank]
 
 ---
 
-=== Step 1.5: Populate the Software Catalog
+=== Step 1.4: Populate the Software Catalog
 
 * The Software Catalog provides a centralized inventory of services, resources, APIs, and teams, forming the foundation for visibility and ownership within *RHDH*.
 
@@ -179,32 +168,32 @@ image::uncomment_catalog.png[uncomment_catalog,align="center",link=self,window=b
 
 ---
 
-=== Step 1.6: Configure integrations and secure access
+=== Step 1.5: Configure integrations and secure access
 
 * In this step, you will connect *Red Hat Developer Hub (RHDH)* to external services and enable secure access through the platform.
-
 * This allows developers to interact with tools such as *GitLab* and *Quay* through *RHDH* without needing to manage credentials directly.
-
 . In `backstage-values.yaml`, locate the `integrations` and `proxy` sections.
-
 . Uncomment both blocks using `CMD + /` (Mac) or `CTRL + /` (Windows/Linux) as shown below.
-
++
 image::enable_integration_proxy.png[enable_integration_proxy,align="center",link=self,window=blank]
-
-. Scroll down and enter the following commit message:
++
+. Click *Commit changes* in the top-right corner.
+. In the pop-up, enter the following commit message:
 +
 [source, role="execute"]
 ----
 feat: Update Red Hat Developer Hub Configuration
 ----
-
++
 . Click *Commit changes*.
-
++
+image::commit_popup.png[commit_popup,align="center",link=self,window=blank]
++
 * These updates enable *RHDH* to integrate with external systems and route requests securely through the platform.
 
 ---
 
-=== Step 1.7: Apply configuration using GitOps
+=== Step 1.6: Apply configuration using GitOps
 
 * In this step, you will apply the changes you committed and observe how the platform updates automatically using GitOps.
 
@@ -227,17 +216,16 @@ feat: Update Red Hat Developer Hub Configuration
 . Open the *Backstage* application.
 +
 image::switch_to_backstage_app.png[switch_to_backstage_app,align="center",link=self,window=blank]
-
-. To apply the latest changes immediately, trigger a refresh:
 +
-* Click the *Refresh* dropdown and select *Hard Refresh*.
-
+. To apply the latest changes immediately, trigger a refresh:
+. Click the *Refresh* dropdown and select *Hard Refresh*.
++
 image::hard_refresh.png[hard_refresh,align="center",link=self,window=blank]
-
++
 * *Argo CD* begins applying the updated configuration. This may take a few minutes as *RHDH* is updated and new capabilities are enabled.
-
++
 image::argo_cd_rollout.png[argo_cd_rollout,align="center",link=self,window=blank]
-
++
 * Wait until the application shows:
 +
 . *Health*: Healthy  
@@ -290,6 +278,7 @@ user1
 image::catalog_users.png[catalog_users,align="center",link=self,window=blank]
 
 * This confirms that authentication, catalog configuration, and integrations are now active within *RHDH*.
+* In the next module, you will take on the role of a developer and experience firsthand how this setup, particularly software templates, elevates the developer experience.
 
 ---
 
@@ -325,13 +314,14 @@ image::catalog_users.png[catalog_users,align="center",link=self,window=blank]
 {gitlab_root_password}
 ----
 
-. Navigate to the repository `build-secured-dev-workflows-idp-configuration`.
+. From the top-left, select *Homepage*.
+. Select *Projects*.
+. Open the `build-secured-dev-workflows-idp-configuration` project.
 +
-image::build-secured_repo.png[build-secured_repo,align="center",link=self,window=blank]
-
+image::switch_to_idp_config_proj.png[switch_to_idp_config_proj,align="center",link=self,window=blank]
++
 . Open the path `scaffolder-templates/quarkus-stssc-template/skeleton`.
-
-. Select the file `devfile.yaml` and open it for editing.
+. Select the file `.devfile.yaml` and open it for editing.
 +
 image::select_devfile.png[select_devfile,align="center",link=self,window=blank]
 
@@ -351,18 +341,19 @@ image::init_git_config_command.png[init_git_config_command,align="center",link=s
 
 . Uncomment the `postStart` event under the `events` section.
 +
-image::poststart_Event.png[poststart_Event.png,align="center",link=self,window=blank]
-
+image::poststart_Event.png[poststart_Event,align="center",link=self,window=blank]
++
 * These updates ensure that Git configuration is automatically applied when a workspace starts, enabling commit signing without manual setup.
-
-. Scroll down and enter the following commit message:
+. Click *Commit changes* in the top-right corner.
+. In the pop-up, enter the following commit message:
 +
 [source, role="execute"]
 ----
 feat: Update Devfile Configuration
 ----
-
 . Click *Commit Changes*.
++
+image::update_devfile.png[update_devfile,align="center",link=self,window=blank]
 
 ---
 
@@ -409,50 +400,31 @@ feat: Update Devfile Configuration
 
 ---
 
-=== Step 4.1: Configure ACS and integrate with Quay
 
-* In this step, you will connect *ACS* to *Quay* so that images stored in the registry can be scanned for vulnerabilities.
+== Step 4: Set up image vulnerability scanning
 
-. In Showroom, switch to the *ACS* tab and log in using the following credentials:
+* The final step is to enable vulnerability analysis and policy evaluation for container images as part of the software delivery process.
+
+* *Red Hat Advanced Cluster Security (ACS)* is used to analyze container images for known vulnerabilities and enforce security policies before they are promoted.
+
+* By integrating *ACS* with *Quay*, images stored in the registry are automatically scanned, ensuring that security checks are applied consistently across the pipeline.
+
+* In this step, you will configure *ACS* to connect to *Quay* so that images can be scanned for vulnerabilities.
+
+* Navigate to the Showroom Terminal and run the following script:
 +
-* *Username*:
-+
-[source, role="execute", subs="attributes"]
+[source, role="send-to-wetty"]
 ----
-{rhacs_admin_user}
-----
-+
-* *Password*:
-+
-[source, role="execute", subs="attributes"]
-----
-{rhacs_admin_password}
+~/lab-assets/configure-acs.sh
 ----
 
-. In the *ACS console*, navigate to:
-+
-*Platform Configuration* → *Integrations*
+* This script sets up the integration between *ACS* and *Quay*.
 
-. Select *Red Hat Quay.io*, then click *New Integration*.
+* Behind the scenes, it enables *ACS* to access images in the registry and perform vulnerability scanning automatically.
 
-image::acs_new_integration.png[acs_new_integration,align="center",link=self,window=blank]
-
-. Provide the required details:
-+
-* Integration name: `acs_quay`
-* Type: *Registry + Scanner*
-* Endpoint: `{quay_host}`
-* Credentials: Use the provided Quay admin username, password, and OAuth token
-
-. Click *Test* to validate the connection, then click *Save*.
-
-
-
-* Once completed, *ACS* can securely access images stored in *Quay* and automatically scan them for vulnerabilities.
-* This ensures that security checks are applied before images are promoted through the software supply chain.
+* Once configured, image scanning becomes part of the delivery flow, helping ensure that only compliant images are promoted.
 
 ---
-
 
 .Optional Deep Dive: How the Platform Works Together
 [%collapsible]

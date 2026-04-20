@@ -84,6 +84,7 @@ image::install-rhtpa.png[Install RHTPA ,align="center",link=self,window=blank]
 ----
 +
 * After entering your credentials, click the *Sign In* button.
+* Expand the left-hand menu using the menu icon in the top-left corner.
 * Navigate to: Workloads → Pods
 +
 image::validate_tpa_pods.png[Navigate to Pods View,align="center",link=self,window=blank]
@@ -200,7 +201,7 @@ You’ve now completed this module. The section below is optional and provides a
 
 ---
 
-=== 1. Identity and access control
+* *Identity and access control*
 
 *RHTPA* does not manage users directly. Instead, it relies on *Red Hat build of Keycloak (RHBK)* as an external identity provider.
 
@@ -219,7 +220,7 @@ This model ensures that all access to SBOM data is controlled and tied to a spec
 
 ---
 
-=== 2. SBOM ingestion and indexing
+* *SBOM ingestion and indexing*
 
 When an SBOM is uploaded:
 
@@ -234,7 +235,7 @@ This graph structure allows *RHTPA* to:
 
 ---
 
-=== 3. Continuous vulnerability correlation
+* *Continuous vulnerability correlation*
 
 SBOM data alone is not enough. *RHTPA* continuously enriches this data using vulnerability intelligence.
 
@@ -254,7 +255,7 @@ This is why, in a fresh environment, the vulnerability tab may initially appear 
 
 ---
 
-=== Putting it all together
+*Putting it all together*
 
 *RHTPA* provides a continuous, identity-aware view of software composition:
 
@@ -265,6 +266,8 @@ This is why, in a fresh environment, the vulnerability tab may initially appear 
 Together, this enables organizations to move from static SBOM files to a live, queryable, and auditable view of their software supply chain.
 
 ====
+
+---
 
 == Module 1: Summary
 

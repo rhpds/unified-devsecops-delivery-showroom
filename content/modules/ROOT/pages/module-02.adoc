@@ -60,7 +60,6 @@ tssc-tas
 +
 . Then select the *tssc-tas* project.
 +
-+
 image::select_tssc-tas_project.png[Select tssc-tas project,align="center",link=self,window=blank]
 +
 * You should now see the RHTAS components running in this namespace. These services are responsible for enabling artifact signing and verification.
@@ -73,7 +72,7 @@ image::rhtas_pods.png[RHTAS Pods,align="center",link=self,window=blank]
 == Step 2: Trigger artifact signing
 
 * In this step, you will configure and run a simple CI pipeline that builds and signs an artifact, confirming that signing is working as expected.
-* *Tekton* is the pipeline engine used in this workshop. A *Task* represents a unit of work, such as building and pushing a container image, while *Tekton Chains* extends the pipeline to automatically sign and verify artifacts.
+* link:https://tekton.dev/[*Tekton*^] is the pipeline engine used in this workshop. A *Task* represents a unit of work, such as building and pushing a container image, while *Tekton Chains* extends the pipeline to automatically sign and verify artifacts.
 * Navigate to the Showroom Terminal and click the run button to run the script that configures and runs the pipeline task:
 +
 [source, role="send-to-wetty"]
@@ -82,6 +81,7 @@ image::rhtas_pods.png[RHTAS Pods,align="center",link=self,window=blank]
 ----
 +
 * The script might take a few minutes to complete. Once the script has completed, you will see an output similar to the following screenshot:
++
 image::test-sign-script.png[Test Sign Script,align="center",link=self,window=blank]
 +
 * This script configures *Tekton Chains* and then triggers the *Tekton Task* that builds and pushes a container image. Because *Tekton Chains* was configured, it will automatically:
@@ -170,6 +170,8 @@ This reduces operational overhead while significantly improving trust and tracea
 
 ====
 
+---
+
 === Module 2: Summary
 
 * In this module, you addressed the second customer challenge: “How do we know that our code and images were produced by a trusted process and haven’t been tampered with?”
@@ -177,7 +179,7 @@ This reduces operational overhead while significantly improving trust and tracea
 * This gives organizations a reliable way to ensure software integrity, reducing the risk of tampering and strengthening trust across the delivery lifecycle.
 * Combined with the previous module, you now have both visibility into what is in your software and confidence that it can be trusted.
 * With these foundations in place, the next challenge becomes: “How do we keep developers fast without compromising security?”
-* In Module 3, you will focus on developer workflows and see how *Red Hat Advanced Developer Suite (RHADS)* embeds security guardrails directly into the development process without slowing teams down.
+* In Module 3, you will focus on developer workflows and see how *Red Hat Developer Hub (RHDH)* embeds security guardrails directly into the development process without slowing teams down.
 
 ---
 
