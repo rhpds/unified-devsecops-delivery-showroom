@@ -400,50 +400,31 @@ image::update_devfile.png[update_devfile,align="center",link=self,window=blank]
 
 ---
 
-=== Step 4.1: Configure ACS and integrate with Quay
 
-* In this step, you will connect *ACS* to *Quay* so that images stored in the registry can be scanned for vulnerabilities.
+== Step 4: Set up image vulnerability scanning
 
-. In Showroom, switch to the *ACS* tab and log in using the following credentials:
+* The final step is to enable vulnerability analysis and policy evaluation for container images as part of the software delivery process.
+
+* *Red Hat Advanced Cluster Security (ACS)* is used to analyze container images for known vulnerabilities and enforce security policies before they are promoted.
+
+* By integrating *ACS* with *Quay*, images stored in the registry are automatically scanned, ensuring that security checks are applied consistently across the pipeline.
+
+* In this step, you will configure *ACS* to connect to *Quay* so that images can be scanned for vulnerabilities.
+
+* Navigate to the Showroom Terminal and run the following script:
 +
-* *Username*:
-+
-[source, role="execute", subs="attributes"]
+[source, role="send-to-wetty"]
 ----
-{rhacs_admin_user}
-----
-+
-* *Password*:
-+
-[source, role="execute", subs="attributes"]
-----
-{rhacs_admin_password}
+~/lab-assets/configure-acs.sh
 ----
 
-. In the *ACS console*, navigate to:
-+
-*Platform Configuration* → *Integrations*
+* This script sets up the integration between *ACS* and *Quay*.
 
-. Select *Red Hat Quay.io*, then click *New Integration*.
+* Behind the scenes, it enables *ACS* to access images in the registry and perform vulnerability scanning automatically.
 
-image::acs_new_integration.png[acs_new_integration,align="center",link=self,window=blank]
-
-. Provide the required details:
-+
-* Integration name: `acs_quay`
-* Type: *Registry + Scanner*
-* Endpoint: `{quay_host}`
-* Credentials: Use the provided Quay admin username, password, and OAuth token
-
-. Click *Test* to validate the connection, then click *Save*.
-
-
-
-* Once completed, *ACS* can securely access images stored in *Quay* and automatically scan them for vulnerabilities.
-* This ensures that security checks are applied before images are promoted through the software supply chain.
+* Once configured, image scanning becomes part of the delivery flow, helping ensure that only compliant images are promoted.
 
 ---
-
 
 .Optional Deep Dive: How the Platform Works Together
 [%collapsible]
