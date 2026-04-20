@@ -71,6 +71,7 @@
         -H "Authorization: Bearer {{ oauth_token }}" \
         -H "Content-Type: application/json" \
         --data-binary @{{ sbom_file }}
+  delegate_to: bastion
   changed_when: true
 
 - name: SBOM upload complete
