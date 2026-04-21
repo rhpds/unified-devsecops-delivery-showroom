@@ -392,15 +392,6 @@ image::update_devfile.png[update_devfile,align="center",link=self,window=blank]
 ---
 
 
-
-== Step 4: Set up image vulnerability scanning
-
-* *Red Hat Advanced Cluster Security (ACS)* provides vulnerability analysis and policy evaluation for container images.
-* By integrating ACS with *Quay*, images can be scanned automatically before they are deployed or promoted.
-
----
-
-
 == Step 4: Set up image vulnerability scanning
 
 * The final step is to enable vulnerability analysis and policy evaluation for container images as part of the software delivery process.
@@ -432,7 +423,7 @@ image::update_devfile.png[update_devfile,align="center",link=self,window=blank]
 
 You’ve now completed this module. The section below is optional and explains how this module introduced three key control layers in the platform. Each layer is responsible for a different aspect of how the developer experience is delivered and enforced.
 
-Dynamic Plugins (Platform Capabilities)
+*Dynamic Plugins (Platform Capabilities)*
 
 In *Red Hat Developer Hub*, plugins are not baked into the application at build time. Instead, they are enabled dynamically through configuration.
 
@@ -461,7 +452,7 @@ This means platform capabilities are controlled declaratively. Adding or removin
 
 ---
 
-Devfiles (Development Environment Behavior)
+*Devfiles (Development Environment Behavior)*
 
 A *Devfile* defines how a developer workspace is constructed and behaves.
 
@@ -491,7 +482,7 @@ The Devfile becomes the enforcement point for developer experience. Instead of r
 
 ---
 
-Golden Paths (Application Delivery Standardization)
+*Golden Paths (Application Delivery Standardization)*
 
 Golden Paths are exposed in *Red Hat Developer Hub* through *Software Templates*.
 
@@ -553,7 +544,7 @@ This ensures that every application created:
 
 ---
 
-Putting It Together
+*Putting It Together*
 
 These three layers operate together:
 

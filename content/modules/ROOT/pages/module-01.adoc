@@ -22,6 +22,21 @@ echo "Run button executed successfully."
 . To validate your progress, navigate to the *Validate* section at the end of each module and click the *Validate Module* button. This will generate a detailed log highlighting which steps have completed successfully and clearly identifying any failures that need attention.
 . If you are short on time, you can click the *Solve Module* button located at the end of each module. This will automatically execute all the required steps for the module so you can move on. However, we recommend going through the steps yourself first to understand how the platform works and how the capabilities are implemented.
 
+=== Navigating the Showroom Interface
+
+* The Showroom interface provides flexible viewing options to improve your experience during the workshop.
++
+image::viewing_options.png[viewing_options.png ,align="center",link=self,window=blank]
++
+* You can switch between:
++
+- *Instruction*: Focus entirely on the step-by-step instructions.
+- *Split View*: Display both the Guide and Tool Tabs side by side for a hands-on experience.
+- *Tabs*: Fullscreen tool tabs to maximize the workspace when interacting with tools and consoles.
++
+* This is particularly useful when working on smaller screens or when additional space is needed to clearly view and interact with the environment.
+* Use the controls at the top of the interface to switch between these modes at any time.
+
 === Optional Sections
 
 Along the way, you will encounter collapsible sections marked as `*Optional Deep Dive:* <section name>`. These sections provide additional technical detail for those who want to better understand how the components in this workshop work behind the scenes.

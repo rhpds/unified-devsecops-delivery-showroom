@@ -48,7 +48,7 @@ image::select_software_template.png[select_software_template,align="center",link
 * You will now be guided through a four-step wizard.
 * This workflow replaces manual setup and automatically applies platform standards defined by the template.
 
-* In the first form, enter the application details.
+* In the first form, review the application details.
 * The default values are already provided, so keep them as-is and click *Next*.
 
 image::software_template_step1.png[software_template_step1,align="center",link=self,window=blank]
@@ -66,18 +66,22 @@ image::software_template_Step2.png[software_template_Step2,align="center",link=s
 
 image::software_template_step3.png[software_template_step3,align="center",link=self,window=blank]
 
-* You will now see a summary of all parameters that will be passed to the *Scaffolder*.
+
+* You will now see a summary of the configuration that will be used to set up your development environment and associated resources.
+
 * These values are used to:
 +
-. Create the Git repository and application skeleton
-. Configure CI pipelines
-. Register the component in the RHDH Software Catalog
+. Create the Git repository and application structure  
+. Provision a development workspace in *OpenShift Dev Spaces* 
+. Configure CI pipelines  
+. Deploy and manage application resources using GitOps with *Argo CD* 
+. Register the component in the *RHDH Software Catalog*  
 +
-* Review the values, then click *Create* to start the scaffolding process.
+* Review the values, then click *Create* to begin the setup process.
 
 image::software_template_review.png[software_template_review,align="center",link=self,window=blank]
 
-* After a short time, the scaffolder workflow will complete and each step will show a green checkmark.
+* After a short time, the *Software Template* will complete and each step will show a green checkmark.
 * Click *Open Component in Catalog* to view your newly created application in Developer Hub.
 
 image::open_component_in_catalog.png[open_component_in_catalog,align="center",link=self,window=blank]
@@ -86,9 +90,9 @@ image::open_component_in_catalog.png[open_component_in_catalog,align="center",li
 
 === 1.3 Step summary
 
-* In this step, you used a Software Template to create a new service through a self-service workflow.
+* In this step, you used a *Software Template* to create a new service through a self-service workflow.
 * Instead of raising tickets or manually setting up repositories and pipelines, the platform applied the required standards automatically.
-* This is the value of Golden Paths, helping developers move faster while staying aligned with platform and security requirements.
+* This is the value of *Software Template*, helping developers move faster while staying aligned with platform and security requirements.
 
 ---
 
@@ -133,11 +137,7 @@ image::allow_Selcted_permissions.png[allow_Selcted_permissions,align="center"]
 +
 image::confirm_trust.png[confirm_trust.png,align="center"]
 +
-. You will then be prompted to provide *GitLab* credentials.
-+
-image::devspaces_gitlab_login.png[devspaces_gitlab_login,align="center"]
-+
-. Provide your credentials follows:
+. You will then be prompted to provide *GitLab* credentials. Provide your credentials follows and then *Sign In*:
 +
 *Username*:
 +
@@ -222,7 +222,7 @@ image::xdg_error.png[xdg_error,align="center",self,window=blank]
 +
 image::open_sso.png[open_sso,align="center",self,window=blank]
 +
-. The browser will prompt you for your credentials.
+. The browser may prompt you for your credentials.
 +
 . Provide your credentials follows:
 ** *Username*:
@@ -560,7 +560,7 @@ image:quarkus-rag-chat.png[quarkus-rag-chat,align="center",link=self,window=blan
 +
 image::gitlab_home_page.png[gitlab_home_page,align="center",link=self,window=blank]
 +
-. Open the repository *my-quarkus-tkn*.
+. Open the project *my-quarkus-tkn*.
 +
 image::my-quarkus-tkn_repo.png[my-quarkus-tkn_repo,align="center",link=self,window=blank]
 +
