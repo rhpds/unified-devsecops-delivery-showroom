@@ -6,7 +6,7 @@
 
 * The next challenge is not technical, it is operational: how do you apply these controls consistently across teams without slowing developers down?
 
-* This is where link:https://platformengineering.org/blog/what-is-platform-engine[*platform engineering*^] comes in. Platform engineering teams build link:https://internaldeveloperplatform.org/what-is-an-internal-developer-platform/[*Internal Developer Platforms (IDPs)*^] that bring together tools, workflows, and security controls into a single, self-service experience for developers. Instead of relying on manual processes, security and best practices are embedded directly into the platform.
+* This is where link:https://platformengineering.org/blog/what-is-platform-engineering[*platform engineering*^] comes in. Platform engineering teams build link:https://internaldeveloperplatform.org/what-is-an-internal-developer-platform/[*Internal Developer Platforms (IDPs)*^] that bring together tools, workflows, and security controls into a single, self-service experience for developers. Instead of relying on manual processes, security and best practices are embedded directly into the platform.
 
 * In this workshop, the IDP is *Red Hat Developer Hub (RHDH)*. It provides a centralized interface for developers to discover services, access documentation, and use predefined workflows that align with organizational standards.
 
@@ -429,9 +429,9 @@ In *Red Hat Developer Hub*, plugins are not baked into the application at build 
 
 Plugins are defined in configuration (for example, in ConfigMaps or Helm values) under the `dynamic.plugins` section. Each plugin entry specifies:
 
-- Whether the plugin is enabled or disabled  
-- Where the plugin is loaded from (local package or OCI image)  
-- Optional plugin-specific configuration  
+. Whether the plugin is enabled or disabled  
+. Where the plugin is loaded from (local package or OCI image)  
+. Optional plugin-specific configuration  
 
 For example:
 
@@ -444,9 +444,9 @@ dynamic:
 ----
 
 When this configuration is applied through GitOps:
-- The platform loads the plugin at runtime  
-- No rebuild of the Developer Hub image is required  
-- Changes can be versioned, reviewed, and promoted across environments  
+. The platform loads the plugin at runtime  
+. No rebuild of the Developer Hub image is required  
+. Changes can be versioned, reviewed, and promoted across environments  
 
 This means platform capabilities are controlled declaratively. Adding or removing functionality becomes a configuration change, not a rebuild process.
 
@@ -458,25 +458,25 @@ A *Devfile* defines how a developer workspace is constructed and behaves.
 
 A Devfile typically includes:
 
-- *Projects*: source code repositories to be loaded into the workspace  
-- *Components*: containers, tools, and dependencies that make up the runtime  
-- *Commands*: actions such as build, run, and test  
-- *Events*: lifecycle hooks that trigger commands at specific stages  
+. *Projects*: source code repositories to be loaded into the workspace  
+. *Components*: containers, tools, and dependencies that make up the runtime  
+. *Commands*: actions such as build, run, and test  
+. *Events*: lifecycle hooks that trigger commands at specific stages  
 
 image::devfile_anatomy.png[Devfile Anatomy Diagram,link=self,window=blank]
 
 In this module, multiple parts of the Devfile work together:
 
-- Environment variables are injected into the workspace from a ConfigMap  
-- A command (`init-git-config`) uses those variables to configure Git  
-- A *postStart* event automatically runs that command when the workspace starts  
+. Environment variables are injected into the workspace from a ConfigMap  
+. A command (`init-git-config`) uses those variables to configure Git  
+. A *postStart* event automatically runs that command when the workspace starts  
 
 This is critical.
 
 It means:
-- Developers do not manually configure commit signing  
-- Every workspace is initialized with the same behavior  
-- Security controls are enforced as part of the environment lifecycle  
+. Developers do not manually configure commit signing  
+. Every workspace is initialized with the same behavior  
+. Security controls are enforced as part of the environment lifecycle  
 
 The Devfile becomes the enforcement point for developer experience. Instead of relying on instructions, the platform ensures the correct setup is applied automatically.
 
@@ -490,10 +490,10 @@ A Software Template defines how an application is created and delivered. It is w
 
 At a high level, a template includes:
 
-- *Header*: metadata used to display the template in the UI  
-- *Parameters*: inputs collected from the developer via forms  
-- *Steps*: actions executed by the Scaffolder  
-- *Output*: links or results shown after execution  
+. *Header*: metadata used to display the template in the UI  
+. *Parameters*: inputs collected from the developer via forms  
+. *Steps*: actions executed by the Scaffolder  
+. *Output*: links or results shown after execution  
 
 Example structure:
 
@@ -527,36 +527,36 @@ How this works in practice:
 5. The application, repository, and pipeline are created automatically  
 
 Steps can:
-- Create repositories  
-- Register components in the catalog  
-- Trigger pipelines  
-- Apply security controls such as signing and scanning  
+. Create repositories  
+. Register components in the catalog  
+. Trigger pipelines  
+. Apply security controls such as signing and scanning  
 
 Golden Paths shift responsibility:
 
-- Platform teams define the approved way of building and delivering software  
-- Developers consume that capability through self-service  
+. Platform teams define the approved way of building and delivering software  
+. Developers consume that capability through self-service  
 
 This ensures that every application created:
-- Follows the same structure  
-- Uses the same delivery pipeline  
-- Includes the same security and compliance controls  
+. Follows the same structure  
+. Uses the same delivery pipeline  
+. Includes the same security and compliance controls  
 
 ---
 
-*Putting It Together*
+* *Putting It Together*
 
 These three layers operate together:
 
-- *Dynamic plugins* control what capabilities are available in the platform  
-- *Devfiles* control how developer environments are configured and behave  
-- *Software Templates (Golden Paths)* control how applications are created and delivered  
+. *Dynamic plugins* control what capabilities are available in the platform  
+. *Devfiles* control how developer environments are configured and behave  
+. *Software Templates (Golden Paths)* control how applications are created and delivered  
 
 This creates a system where:
 
-- Platform behavior is defined as code and managed through Git  
-- Developer environments are automatically configured and consistent  
-- Application delivery follows a standard, secure, and repeatable process  
+. Platform behavior is defined as code and managed through Git  
+. Developer environments are automatically configured and consistent  
+. Application delivery follows a standard, secure, and repeatable process  
 
 ====
 

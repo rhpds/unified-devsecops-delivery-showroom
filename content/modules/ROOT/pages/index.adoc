@@ -20,16 +20,16 @@ It provides a unified platform that balances developer productivity with softwar
 
 === Core Benefits
 
-* **Standardized Path to Production**  
+* **Standardized Path to Production**:  
 Developers follow a consistent, approved workflow to build and deliver applications, regardless of environment.
 
-* **End-to-End Trust and Provenance**  
+* **End-to-End Trust and Provenance**:  
 Every artifact is signed, verified, and traceable, ensuring integrity across the entire software supply chain.
 
-* **Built-in Security and Compliance**  
+* **Built-in Security and Compliance**:  
 Policies are enforced automatically throughout the pipeline, reducing risk without introducing manual gates.
 
-* **Full Visibility and Risk Awareness**  
+* **Full Visibility and Risk Awareness**:  
 SBOM analysis and vulnerability insights provide clear visibility into software composition and risk.
 
 ---
@@ -112,6 +112,6 @@ Ensure only trusted and compliant software is promoted across environments.
 
 ---
 
-* Throughout the workshop, you will see how these capabilities work together to provide a secure, standardized path to production.*
+* Throughout the workshop, you will see how these capabilities work together to provide a secure, standardized path to production.
 
-* Ready to embrace the principle to "Move Fast, Stay Safe?" Let's begin implementing the policy-driven automation necessary to accelerate developer productivity and strengthen software supply chain security with *RHADS*.
+* Ready to move fast and stay safe? Let’s begin implementing policy-driven automation to accelerate developer productivity and strengthen software supply chain security with *RHADS*.

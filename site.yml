@@ -1,6 +1,6 @@
 ---
 site:
-  title: Build Secure, Streamlined Developer Workflows with Red Hat Advanced Developer Suite
+  title: Unifying DevSecOps - Secure, Standardized Application Delivery Across Containers
   url: https://redhat-scholars.github.io/course-template
   start_page: modules::index.adoc
 

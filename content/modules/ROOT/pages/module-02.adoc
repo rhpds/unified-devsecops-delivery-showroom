@@ -143,7 +143,7 @@ Together, these components ensure that every signature is tied to a real identit
 
 ---
 
-*Signing flow in this workshop*
+* *Signing flow in this workshop*
 
 . A *Tekton Task* builds and pushes an image to the registry
 . *Tekton Chains* detects the successful pipeline execution
@@ -156,7 +156,7 @@ image::keyless_signing_flow.png[keyless_signing_flow,align="center",link=self,wi
 
 ---
 
-*Why keyless signing matters*
+* *Why keyless signing matters*
 
 Traditional signing relies on long-lived private keys that must be created, stored, and rotated.
 

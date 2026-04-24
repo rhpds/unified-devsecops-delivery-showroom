@@ -54,7 +54,7 @@ To address this, organizations are adopting link:https://www.cisa.gov/sbom[*Soft
 This is where *Red Hat Trusted Profile Analyzer*, or *RHTPA*, plays a critical role. *RHTPA* ingests *SBOM* documents, builds a detailed graph of the software components they contain, and correlates that information with known vulnerabilities and security advisories. Instead of static reports, organizations gain a continuously updated and searchable view of their software composition, allowing them to understand risk, answer audit questions, and make informed decisions about their applications.
 
 === In this module you will: 
-. Install an *RHTPA* Instance using an operator
+. Install an *RHTPA* instance using an operator
 . Ingest an *SBOM* and view it in *RHTPA*
 
 ---
@@ -72,8 +72,8 @@ This is where *Red Hat Trusted Profile Analyzer*, or *RHTPA*, plays a critical r
 ~/lab-assets/install-rhtpa.sh
 ----
 +
-* This script prepares the environment for *Trusted Profile Analyzer* by configuring identity integration and applying the required platform resources.
-. Behind the scenes, this step integrates *RHTPA* with *Red Hat build of Keycloak*, which acts as the identity provider for the platform. *Keycloak* manages users, roles, and access policies, ensuring that only authorized users and systems can interact with software composition data.
+* This script prepares the environment for *RHTPA* by configuring identity integration and applying the required platform resources.
+. Behind the scenes, this step integrates *RHTPA* with *Red Hat Build of Keycloak (RHBK)*, which acts as the identity provider for the platform. *RHBK* manages users, roles, and access policies, ensuring that only authorized users and systems can interact with software composition data.
 . As part of this setup, a dedicated realm is created along with the roles and permissions required by *RHTPA*. These define how different actors, such as developers, automation pipelines, or platform administrators, access and interact with *SBOM* data.
 . Finally, the script deploys the *RHTPA* instance using its Custom Resource. This instructs the *RHTPA Operator* to provision the required components in the cluster, making the service available for *SBOM* ingestion and analysis.
 * The script might take a few minutes to complete. Once the script has completed, you will see an output similar to the following screenshot:
@@ -228,8 +228,8 @@ At a high level:
 . *RHTPA* evaluates the token to determine whether the operation is allowed
 
 In this workshop:
-- The *frontend* client is used by human users accessing the UI
-- The *cli* client is used by pipelines to upload SBOMs programmatically
+. The *frontend* client is used by human users accessing the UI
+. The *cli* client is used by pipelines to upload SBOMs programmatically
 
 This model ensures that all access to SBOM data is controlled and tied to a specific identity.
 
@@ -244,9 +244,9 @@ When an SBOM is uploaded:
 . This data is stored as a graph representing the full software composition
 
 This graph structure allows *RHTPA* to:
-- trace dependencies across layers
-- understand transitive relationships
-- support complex queries across components
+. trace dependencies across layers
+. understand transitive relationships
+. support complex queries across components
 
 ---
 
@@ -274,9 +274,9 @@ This is why, in a fresh environment, the vulnerability tab may initially appear 
 
 *RHTPA* provides a continuous, identity-aware view of software composition:
 
-- Identity ensures only authorized users and systems interact with the data  
-- SBOM ingestion builds a structured inventory of components  
-- Importers continuously enrich that inventory with vulnerability intelligence  
+. Identity ensures only authorized users and systems interact with the data  
+. SBOM ingestion builds a structured inventory of components  
+. Importers continuously enrich that inventory with vulnerability intelligence  
 
 Together, this enables organizations to move from static SBOM files to a live, queryable, and auditable view of their software supply chain.
 

@@ -6,10 +6,10 @@ Congratulations! You've completed the *Unifying DevSecOps: Secure, Standardized 
 
 Throughout this workshop, you’ve seen how a unified platform enables secure, standardized application delivery across environments.
 
-* You established software composition trust by ingesting and analyzing SBOMs, gaining clear visibility into components and vulnerabilities
-* You implemented identity-based signing and verification, ensuring every artifact is cryptographically linked to a trusted source
-* You used an Internal Developer Portal to provide developers with a self-service, standardized path to create and deliver applications
-* You enforced policy-driven promotion, ensuring only verified, compliant software is allowed to progress through the delivery pipeline
+* You established software composition trust by ingesting and analyzing SBOMs, gaining clear visibility into components and vulnerabilities.
+* You implemented identity-based signing and verification, ensuring every artifact is cryptographically linked to a trusted source.
+* You used an Internal Developer Portal to provide developers with a self-service, standardized path to create and deliver applications.
+* You enforced policy-driven promotion, ensuring only verified, compliant software is allowed to progress through the delivery pipeline.
 
 *Most importantly, you saw how these capabilities work together as a single, integrated workflow, not as isolated tools.*
 
@@ -17,17 +17,13 @@ Throughout this workshop, you’ve seen how a unified platform enables secure, s
 
 == Key Takeaways
 
-. *Standardization Enables Scale*  
-Developers follow a consistent, approved path to production, regardless of whether applications run on containers or virtual machines.
+. *Standardization Enables Scale*: Developers follow a consistent, approved path to production, regardless of whether applications run on containers or virtual machines.
 
-. *Trust Is Continuously Verified*  
-From code to deployment, identity, integrity, and provenance are validated at every step, not just at release time.
+. *Trust Is Continuously Verified*: From code to deployment, identity, integrity, and provenance are validated at every step, not just at release time.
 
-. *Security Without Friction*  
-Security, compliance, and governance are embedded into the platform, allowing developers to focus on building features rather than managing infrastructure or controls.
+. *Security Without Friction*: Security, compliance, and governance are embedded into the platform, allowing developers to focus on building features rather than managing infrastructure or controls.
 
-. *Policy-Driven Automation Reduces Risk*  
-Promotion decisions are enforced automatically through policy, ensuring that only trusted and compliant software reaches production.
+. *Policy-Driven Automation Reduces Risk*: Promotion decisions are enforced automatically through policy, ensuring that only trusted and compliant software reaches production.
 
 ---
 
@@ -105,6 +101,6 @@ Thank you for your time.
 
 ---
 
-**Workshop**: Build secure streamlined developer workflows with Red Hat Advanced Developer Suite +
+**Workshop**: Unifying DevSecOps: Secure, Standardized Application Delivery Across Containers +
 **Completed**: {localdate} +
 **Platform**: Red Hat Showroom

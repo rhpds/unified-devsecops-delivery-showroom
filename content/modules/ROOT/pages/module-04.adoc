@@ -104,9 +104,9 @@ image::open_component_in_catalog.png[open_component_in_catalog,align="center",li
 
 === 2.1 Sign in to OpenShift Dev Spaces
 
-. *Right Click* the link for *OpenShift Dev Spaces* and choose *Open in Inconito Window*. This will launch your cloud-based development environment in a separate browser window.
+. *Right Click* the link for *OpenShift Dev Spaces* and choose *Open in Incognito Window*. This will launch your cloud-based development environment in a separate browser window.
 +
-image::open_devspaces.png[open_devspaces,align="center"]
+image::open_devspaces.png[open_devspaces, align="center"]
 +
 WARNING: If you do not use a Private/Incognito window, your session will open using the admin credentials instead of the intended user1 account. Since code signing is configured specifically for user1, it will not work correctly when logged in as the admin user, which can prevent your development workspace from functioning as expected.
 +
@@ -212,7 +212,7 @@ git add .
 git commit -m "feat: test secure signing."
 ----
 +
-. You will notice that you receive an error message that states *error opening browser: exec: "xdg-open": executable file not found in $PATH*.  This is because our *VS Code* terminal is trying to open a browser window to obtain your credentials for signing but is unable to as it is running as a container. * However, Gitsign allows you to provide your signing credentials by copying and pasting the url it outputs into a separate browser window.
+. You will notice that you receive an error message that states *error opening browser: exec: "xdg-open": executable file not found in $PATH*.  This is because our *VS Code* terminal is trying to open a browser window to obtain your credentials for signing but is unable to as it is running as a container.  However, Gitsign allows you to provide your signing credentials by copying and pasting the url it outputs into a separate browser window.
 +
 image::xdg_error.png[xdg_error,align="center",self,window=blank]
 +
@@ -417,7 +417,7 @@ image::deployment_check_output.png[deployment_check_output,link=self,window=blan
 +
 * The key takeaway:
 +
-* Security is not a final checkpoint, it is continuously enforced throughout the delivery process.*
+* Security is not a final checkpoint, it is continuously enforced throughout the delivery process.
 
 ---
 
@@ -519,7 +519,7 @@ image:quarkus-rag-chat.png[quarkus-rag-chat,align="center",link=self,window=blan
 +
 * The key takeaway:
 +
-* Developers focus on building features, while the platform handles infrastructure, security, and compliance by default.*
+* Developers focus on building features, while the platform handles infrastructure, security, and compliance by default.
 
 ---
 
@@ -590,12 +590,8 @@ image::create_tag.png[create_tag,align="center",link=self,window=blank]
 ---
 
 * The pipeline begins by preparing the release:
-
-* *extract-destination-image-tag*
-Resolves the release version from the Git tag.
-
-* *gather-images-to-verify*
-Identifies the previously built image and links it to the release, ensuring traceability.
+. *extract-destination-image-tag*: Resolves the release version from the Git tag.
+. *gather-images-to-verify*: Identifies the previously built image and links it to the release, ensuring traceability.
 
 ---
 
@@ -605,9 +601,7 @@ Identifies the previously built image and links it to the release, ensuring trac
 
 image::verify-enterprise-contract.png[verify-enterprise-contract,align="center",link=self,window=blank]
 
-. Open the task and review the logs.
-
-* This validation ensures:
+* Open the task and review the logs.bThis validation ensures:
 
 . *Provenance* — the image was built by a trusted pipeline
 . *Identity* — the image is signed and linked to a verified identity
@@ -623,11 +617,9 @@ image::verify-enterprise-contract.png[verify-enterprise-contract,align="center",
 
 * Once validated, the pipeline promotes the image:
 
-. *copy-image*
-Retags the verified image for production (for example, *prod-v1.0*)
+. *copy-image*: retags the verified image for production (for example, *prod-v1.0*)
 
-. *update-deployment*
-Updates deployment configuration to use the promoted image
+. *update-deployment*: updates deployment configuration to use the promoted image
 
 * Through GitOps integration, tools like *Argo CD* automatically deploy the updated version.
 
@@ -641,7 +633,7 @@ Updates deployment configuration to use the promoted image
 
 * The key takeaway:
 +
-*Promotion is no longer a risk point, it becomes a controlled, verifiable, and automated step in the delivery process.*
+* Promotion is no longer a risk point, it becomes a controlled, verifiable, and automated step in the delivery process.
 
 ---
 
@@ -652,7 +644,7 @@ Updates deployment configuration to use the promoted image
 
 * What’s important is how this was experienced:
 +
-*As a developer, you simply launched a Software Template and followed a guided workflow.*
+* As a developer, you simply launched a Software Template and followed a guided workflow.
 
 * Behind the scenes, the platform handled everything else:
 +
@@ -670,9 +662,9 @@ Updates deployment configuration to use the promoted image
 
 * The result is clear:
 +
-*Developers follow a simple, standardised path, while the platform ensures every change is trusted, compliant, and production-ready.*
+* Developers follow a simple, standardized path, while the platform ensures every change is trusted, compliant, and production-ready.
 
-* For your organisation, this means:
+* For your organization, this means:
 +
 . Reduced risk of vulnerable or untrusted software reaching production
 . Full auditability of how software is built and promoted
@@ -681,7 +673,7 @@ Updates deployment configuration to use the promoted image
 
 * The key takeaway:
 +
-*Developers focus on writing great code, while the platform provides a sanctioned, secure path to production where trust is continuously verified and enforced by design.*
+* Developers focus on writing great code, while the platform provides a sanctioned, secure path to production where trust is continuously verified and enforced by design.
 
 ---
 
